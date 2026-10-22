@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CreateGameResponse, GameView, JoinGameResponse } from "@atg/core";
 import { createApp } from "./app.ts";
+import { sqliteDb } from "./sqlite.ts";
 import { GameStore } from "./store.ts";
 
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  app = createApp(new GameStore(":memory:"));
+  app = createApp(new GameStore(sqliteDb(":memory:")));
 });
 
 const post = (path: string, body: unknown, token?: string) =>

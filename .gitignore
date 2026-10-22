@@ -5,3 +5,5 @@ data/
 *.db-journal
 .DS_Store
 .claude/
+.wrangler/
+.playwright-mcp/

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "async-turn-game",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../web/dist",
+    // どの URL を開いても index.html を返す（画面側で振り分ける）
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "async-turn-game",
+      "database_id": "e8ae1dea-3ca0-40af-b9b2-4af53993dbd9",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

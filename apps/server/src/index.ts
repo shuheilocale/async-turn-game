@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { createApp } from "./app.ts";
+import { sqliteDb } from "./sqlite.ts";
 import { GameStore } from "./store.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -12,7 +13,7 @@ const dbPath = process.env.DB_PATH ?? resolve(here, "../../../data/games.db");
 const port = Number(process.env.PORT ?? 8787);
 
 mkdirSync(dirname(dbPath), { recursive: true });
-const store = new GameStore(dbPath);
+const store = new GameStore(sqliteDb(dbPath));
 
 const root = new Hono();
 root.route("/", createApp(store));

@@ -11,6 +11,8 @@
 | ヒット＆ブロー | `hitblow` | 相手に隠す情報があるゲーム |
 | 数字のせり | `auction` | 相手に隠す情報があるゲーム |
 
+公開中: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev （Cloudflare Workers + D1）
+
 企画の内容は [docs/企画書.md](docs/企画書.md) を参照。
 
 ## 必要なもの
@@ -30,10 +32,28 @@ npm run dev
 npm test
 npm run typecheck
 
-# 本番相当（画面をビルドして、サーバ 1 つで配る）
+# 本番相当を Node.js で（画面をビルドして、サーバ 1 つで配る）
 npm run build
 npm start            # → http://localhost:8787
+
+# 本番と同じ Workers + D1 を手元で動かす（データは apps/server/.wrangler/ に入る）
+npm run build
+npx -w @atg/server wrangler d1 migrations apply async-turn-game --local
+npm run dev:worker -w @atg/server   # → http://localhost:8787
 ```
+
+### 公開（Cloudflare）
+
+最初に一度だけ `cd apps/server && npx wrangler login` で Cloudflare にログインする。
+
+```bash
+npm run db:migrate   # 本番の D1 にテーブルの変更を反映する（migrations/ に SQL を足したとき）
+npm run deploy       # 画面をビルドして Workers に公開する
+```
+
+- 設定は [apps/server/wrangler.jsonc](apps/server/wrangler.jsonc)。`/api/*` だけを Worker が受け、それ以外は画面のファイル（見つからなければ `index.html`）を返す
+- テーブルを変えるときは、`apps/server/migrations/` に `0002_〜.sql` のように番号順で SQL を足す。手元の SQLite も起動時に同じファイルを流す
+- 公開後のログは `npx -w @atg/server wrangler tail` で見られる
 
 環境変数
 
@@ -42,14 +62,22 @@ npm start            # → http://localhost:8787
 | `PORT` | `8787` | サーバのポート |
 | `DB_PATH` | `data/games.db` | 対局データを保存する SQLite ファイル |
 
+これらは Node.js で動かすときだけ使う。Workers では D1 を `wrangler.jsonc` の `DB` という名前でつなぐ。
+
 ## フォルダ構成
 
 ```
 packages/core/      ゲームのルール（純粋関数）と、サーバ⇔画面でやりとりする型
   src/games/        ゲームごとのルール（1 ゲーム 1 ファイル）とテスト
-apps/server/        API サーバ（Hono + SQLite）
-  src/store.ts      保存処理（別のデータベースに移すときはここを差し替える）
+apps/server/        API サーバ（Hono。本番は Cloudflare Workers + D1、手元は Node.js + SQLite）
+  migrations/       テーブルを作る・変える SQL（D1 と手元の SQLite で共通）
   src/app.ts        API の定義
+  src/store.ts      保存処理。SQL の実行口（sql.ts）だけを差し替えて使う
+  src/sqlite.ts     実行口：Node.js 組み込みの SQLite（開発・テスト用）
+  src/d1.ts         実行口：Cloudflare D1（本番）
+  src/index.ts      Node.js 用の入口
+  src/worker.ts     Cloudflare Workers 用の入口
+  wrangler.jsonc    Cloudflare の設定
 apps/web/           画面（React + Vite）
   src/boards/       ゲームごとの盤の見た目
   src/i18n/         画面の文言（ja.ts が基準、en.ts / th.ts は同じキーを持つ）

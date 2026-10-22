@@ -1,6 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
-import { createHash, randomBytes } from "node:crypto";
 import type { Seat } from "@atg/core";
+import { q, type Sql } from "./sql.ts";
 
 export interface PlayerRecord {
   seat: Seat;
@@ -19,67 +18,42 @@ export interface GameRecord {
   updatedAt: string;
 }
 
-export const newToken = (bytes = 24) => randomBytes(bytes).toString("base64url");
-const hash = (token: string) => createHash("sha256").update(token).digest("hex");
+// Node.js と Workers の両方で動くよう、Web Crypto を使う
+export const newToken = (bytes = 24) => {
+  const raw = String.fromCharCode(...crypto.getRandomValues(new Uint8Array(bytes)));
+  return btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const hash = async (token: string) => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
 const now = () => new Date().toISOString();
 
 /**
- * 対局データの保存先。SQLite を使うが、ほかの保存先（Cloudflare D1 など）に
- * 乗り換えるときはこのクラスと同じメソッドを持つものを用意すればよい。
+ * 対局データの保存先。SQL の実行口（Sql）を差し替えれば、手元の SQLite でも
+ * Cloudflare D1 でも同じように動く。D1 では BEGIN/COMMIT が使えないので、
+ * 書き込みはすべて batch（全部成功か全部取り消し）で行い、条件は SQL の中に書く。
  */
 export class GameStore {
-  private db: DatabaseSync;
-
-  constructor(path: string) {
-    this.db = new DatabaseSync(path);
-    this.db.exec(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS games (
-        id TEXT PRIMARY KEY,
-        game_type TEXT NOT NULL,
-        state_json TEXT NOT NULL,
-        version INTEGER NOT NULL,
-        invite_code TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS players (
-        game_id TEXT NOT NULL,
-        seat INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        token_hash TEXT NOT NULL,
-        PRIMARY KEY (game_id, seat)
-      );
-      CREATE TABLE IF NOT EXISTS moves (
-        game_id TEXT NOT NULL,
-        seq INTEGER NOT NULL,
-        seat INTEGER NOT NULL,
-        move_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        PRIMARY KEY (game_id, seq)
-      );
-    `);
-  }
+  constructor(private db: Sql) {}
 
   /** 対局を作り、作成者のトークンを返す */
-  create(gameType: string, state: unknown, creator: PlayerRecord): { id: string; token: string; inviteCode: string } {
+  async create(gameType: string, state: unknown, creator: PlayerRecord): Promise<{ id: string; token: string; inviteCode: string }> {
     const id = newToken(9);
     const token = newToken();
     const inviteCode = newToken(9);
     const t = now();
-    this.db
-      .prepare("INSERT INTO games VALUES (?, ?, ?, 0, ?, ?, ?)")
-      .run(id, gameType, JSON.stringify(state), inviteCode, t, t);
-    this.db.prepare("INSERT INTO players VALUES (?, ?, ?, ?)").run(id, creator.seat, creator.name, hash(token));
+    await this.db.batch([
+      q("INSERT INTO games VALUES (?, ?, ?, 0, ?, ?, ?)", id, gameType, JSON.stringify(state), inviteCode, t, t),
+      q("INSERT INTO players VALUES (?, ?, ?, ?)", id, creator.seat, creator.name, await hash(token)),
+    ]);
     return { id, token, inviteCode };
   }
 
-  get(id: string): GameRecord | null {
-    const row = this.db.prepare("SELECT * FROM games WHERE id = ?").get(id) as Record<string, any> | undefined;
+  async get(id: string): Promise<GameRecord | null> {
+    const [row] = await this.db.all<Record<string, any>>("SELECT * FROM games WHERE id = ?", id);
     if (!row) return null;
-    const players = this.db
-      .prepare("SELECT seat, name FROM players WHERE game_id = ? ORDER BY seat")
-      .all(id) as unknown as PlayerRecord[];
+    const players = await this.db.all<PlayerRecord>("SELECT seat, name FROM players WHERE game_id = ? ORDER BY seat", id);
     return {
       id: row.id,
       gameType: row.game_type,
@@ -93,69 +67,73 @@ export class GameStore {
   }
 
   /** トークンからその対局での席を調べる。該当しなければ null */
-  seatOf(id: string, token: string | undefined): Seat | null {
+  async seatOf(id: string, token: string | undefined): Promise<Seat | null> {
     if (!token) return null;
-    const row = this.db
-      .prepare("SELECT seat FROM players WHERE game_id = ? AND token_hash = ?")
-      .get(id, hash(token)) as { seat: Seat } | undefined;
+    const [row] = await this.db.all<{ seat: Seat }>(
+      "SELECT seat FROM players WHERE game_id = ? AND token_hash = ?",
+      id,
+      await hash(token),
+    );
     return row ? row.seat : null;
   }
 
   /** 招待コードで参加する。成功したら参加者のトークンを返す */
-  join(id: string, inviteCode: string, name: string): { token: string; seat: Seat } | null {
-    const game = this.get(id);
+  async join(id: string, inviteCode: string, name: string): Promise<{ token: string; seat: Seat } | null> {
+    const game = await this.get(id);
     if (!game || game.inviteCode === null || game.inviteCode !== inviteCode) return null;
     const taken = game.players[0]?.seat;
     const seat: Seat = taken === 0 ? 1 : 0;
     const token = newToken();
-    this.db.exec("BEGIN");
-    try {
-      const res = this.db
-        .prepare("UPDATE games SET invite_code = NULL, updated_at = ? WHERE id = ? AND invite_code = ?")
-        .run(now(), id, inviteCode);
-      if (res.changes === 0) {
-        this.db.exec("ROLLBACK");
-        return null;
-      }
-      this.db.prepare("INSERT INTO players VALUES (?, ?, ?, ?)").run(id, seat, name, hash(token));
-      this.db.exec("COMMIT");
-    } catch (e) {
-      this.db.exec("ROLLBACK");
-      throw e;
-    }
-    return { token, seat };
+    // 招待コードがまだ残っているときだけ参加者を足し、同時にコードを消す
+    const [inserted] = await this.db.batch([
+      q(
+        "INSERT INTO players SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM games WHERE id = ? AND invite_code = ?)",
+        id,
+        seat,
+        name,
+        await hash(token),
+        id,
+        inviteCode,
+      ),
+      q("UPDATE games SET invite_code = NULL, updated_at = ? WHERE id = ? AND invite_code = ?", now(), id, inviteCode),
+    ]);
+    return inserted ? { token, seat } : null;
   }
 
   /**
    * 手を記録して状態を更新する。expectedVersion が今の版と違えば（別の端末から先に
    * 指されていたら）何もせず false を返す。
    */
-  recordMove(id: string, expectedVersion: number, seat: Seat, move: unknown, nextState: unknown): boolean {
+  async recordMove(id: string, expectedVersion: number, seat: Seat, move: unknown, nextState: unknown): Promise<boolean> {
     const t = now();
-    this.db.exec("BEGIN");
-    try {
-      const res = this.db
-        .prepare("UPDATE games SET state_json = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ?")
-        .run(JSON.stringify(nextState), t, id, expectedVersion);
-      if (res.changes === 0) {
-        this.db.exec("ROLLBACK");
-        return false;
-      }
-      this.db
-        .prepare("INSERT INTO moves VALUES (?, ?, ?, ?, ?)")
-        .run(id, expectedVersion + 1, seat, JSON.stringify(move), t);
-      this.db.exec("COMMIT");
-      return true;
-    } catch (e) {
-      this.db.exec("ROLLBACK");
-      throw e;
-    }
+    // どちらの文も「版が expectedVersion のとき」だけ効くので、違えば両方とも何もしない
+    const [inserted] = await this.db.batch([
+      q(
+        "INSERT INTO moves SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM games WHERE id = ? AND version = ?)",
+        id,
+        expectedVersion + 1,
+        seat,
+        JSON.stringify(move),
+        t,
+        id,
+        expectedVersion,
+      ),
+      q(
+        "UPDATE games SET state_json = ?, version = version + 1, updated_at = ? WHERE id = ? AND version = ?",
+        JSON.stringify(nextState),
+        t,
+        id,
+        expectedVersion,
+      ),
+    ]);
+    return inserted === 1;
   }
 
-  moves(id: string): { seq: number; seat: Seat; move: unknown; createdAt: string }[] {
-    const rows = this.db
-      .prepare("SELECT seq, seat, move_json, created_at FROM moves WHERE game_id = ? ORDER BY seq")
-      .all(id) as Record<string, any>[];
+  async moves(id: string): Promise<{ seq: number; seat: Seat; move: unknown; createdAt: string }[]> {
+    const rows = await this.db.all<Record<string, any>>(
+      "SELECT seq, seat, move_json, created_at FROM moves WHERE game_id = ? ORDER BY seq",
+      id,
+    );
     return rows.map((r) => ({ seq: r.seq, seat: r.seat, move: JSON.parse(r.move_json), createdAt: r.created_at }));
   }
 }

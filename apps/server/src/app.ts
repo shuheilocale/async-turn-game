@@ -58,33 +58,33 @@ export function createApp(store: GameStore) {
     if (!def) return c.json({ error: "unknown_game" }, 400);
     const seat: Seat =
       body.seat === 0 || body.seat === 1 ? body.seat : Math.random() < 0.5 ? 0 : 1;
-    const { id, token, inviteCode } = store.create(def.id, def.initialState(Math.random), {
+    const { id, token, inviteCode } = await store.create(def.id, def.initialState(Math.random), {
       seat,
       name: cleanName(body.name),
     });
     return c.json<CreateGameResponse>({ id, token, seat, inviteCode }, 201);
   });
 
-  app.get("/games/:id", (c) => {
+  app.get("/games/:id", async (c) => {
     const id = c.req.param("id");
-    const game = store.get(id);
+    const game = await store.get(id);
     if (!game) return c.json({ error: "not_found" }, 404);
-    return c.json(toView(game, store.seatOf(id, bearer(c))));
+    return c.json(toView(game, await store.seatOf(id, bearer(c))));
   });
 
   app.post("/games/:id/join", async (c) => {
     const id = c.req.param("id");
     const body = await jsonBody(c);
-    const joined = store.join(id, String(body.inviteCode ?? ""), cleanName(body.name));
+    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name));
     if (!joined) return c.json({ error: "invite_invalid" }, 409);
     return c.json<JoinGameResponse>(joined, 201);
   });
 
   app.post("/games/:id/moves", async (c) => {
     const id = c.req.param("id");
-    const game = store.get(id);
+    const game = await store.get(id);
     if (!game) return c.json({ error: "not_found" }, 404);
-    const seat = store.seatOf(id, bearer(c));
+    const seat = await store.seatOf(id, bearer(c));
     if (seat === null) return c.json({ error: "not_participant" }, 401);
     if (game.players.length < 2) return c.json({ error: "waiting_opponent" }, 409);
 
@@ -101,19 +101,19 @@ export function createApp(store: GameStore) {
       if (e instanceof IllegalMoveError) return c.json({ error: e.code }, 422);
       throw e;
     }
-    if (!store.recordMove(id, game.version, seat, move, next)) return c.json({ error: "version_conflict" }, 409);
-    return c.json(toView(store.get(id)!, seat));
+    if (!(await store.recordMove(id, game.version, seat, move, next))) return c.json({ error: "version_conflict" }, 409);
+    return c.json(toView((await store.get(id))!, seat));
   });
 
-  app.get("/games/:id/moves", (c) => {
+  app.get("/games/:id/moves", async (c) => {
     const id = c.req.param("id");
-    const game = store.get(id);
+    const game = await store.get(id);
     if (!game) return c.json({ error: "not_found" }, 404);
     const def = getGame(game.gameType)!;
     const viewMove = def.viewMove;
-    if (!viewMove || def.status(game.state).kind === "finished") return c.json(store.moves(id));
-    const viewer = store.seatOf(id, bearer(c));
-    return c.json(store.moves(id).map((m) => ({ ...m, move: viewMove(m.move, m.seat, viewer) })));
+    if (!viewMove || def.status(game.state).kind === "finished") return c.json(await store.moves(id));
+    const viewer = await store.seatOf(id, bearer(c));
+    return c.json((await store.moves(id)).map((m) => ({ ...m, move: viewMove(m.move, m.seat, viewer) })));
   });
 
   return app;
