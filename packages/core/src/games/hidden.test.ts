@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { IllegalMoveError } from "../types.ts";
 import { hitblow, judge, type HitBlowState, type HitBlowView } from "./hitblow.ts";
-import { auction, type AuctionState, type AuctionView } from "./auction.ts";
+import { auction, CARDS, type AuctionState, type AuctionView } from "./auction.ts";
 
 describe("hitblow", () => {
   const setup = (): HitBlowState => {
@@ -84,6 +84,14 @@ describe("auction", () => {
     expect(view1).not.toHaveProperty("deck");
     expect((auction.viewState!(s, 0, false) as AuctionView).bids).toEqual([7, false]);
     expect(auction.viewMove!({ card: 7 }, 0, 1)).toEqual({ card: null });
+  });
+
+  it("相手の手札から今の入札が分からない（出したカードは結果が出るまで手札に見せる）", () => {
+    let s: AuctionState = auction.initialState(fixed);
+    s = auction.applyMove(s, { card: 7 }, 0);
+    expect((auction.viewState!(s, 1, false) as AuctionView).hands[0]).toEqual(CARDS);
+    expect((auction.viewState!(s, 0, false) as AuctionView).hands[0]).not.toContain(7);
+    expect((auction.viewState!(s, 1, true) as AuctionView).hands[0]).not.toContain(7);
   });
 
   it("持っていないカードは出せない。9 ラウンドで終局", () => {

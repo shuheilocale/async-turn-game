@@ -117,9 +117,15 @@ export const auction: GameDefinition<AuctionState, AuctionMove> = {
   },
 
   viewState(state, viewer, revealAll): AuctionView {
-    const hide = (seat: Seat) => (revealAll || seat === viewer ? state.bids[seat] : state.bids[seat] !== null);
+    const visible = (seat: Seat) => revealAll || seat === viewer;
+    const hide = (seat: Seat) => (visible(seat) ? state.bids[seat] : state.bids[seat] !== null);
+    // 相手の手札から今の入札を引き算で当てられないよう、結果が出るまで出したカードも手札に見せる
+    const hand = (seat: Seat) => {
+      const bid = state.bids[seat];
+      return visible(seat) || bid === null ? state.hands[seat] : [...state.hands[seat], bid].sort((a, b) => a - b);
+    };
     return {
-      hands: state.hands,
+      hands: [hand(0), hand(1)],
       current: state.deck[0] ?? null,
       remaining: [...state.deck.slice(1)].sort((a, b) => a - b),
       carried: state.carried,
