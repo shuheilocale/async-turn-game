@@ -1,7 +1,11 @@
 import type { TicTacToe } from "@atg/core";
+import type { Seat } from "@atg/core";
+import { OMark, XMark } from "../icons.tsx";
 import type { BoardProps } from "./index.ts";
 
 const MARKS = ["○", "×"] as const;
+const Mark = ({ seat, ghost = false }: { seat: Seat; ghost?: boolean }) =>
+  seat === 0 ? <OMark className={ghost ? "ghost" : ""} /> : <XMark className={ghost ? "ghost" : ""} />;
 
 export function TicTacToeBoard({ state, interactive, selected, onSelect }: BoardProps) {
   const s = state as TicTacToe.TicTacToeState;
@@ -18,15 +22,15 @@ export function TicTacToeBoard({ state, interactive, selected, onSelect }: Board
             key={i}
             type="button"
             role="gridcell"
-            className={["cell", isSelected && "selected", s.lastMove === i && "last", win.has(i) && "win"]
+            className={["cell", isSelected && "selected", s.lastMove === i && "last", win.has(i) && `win win${cell}`]
               .filter(Boolean)
               .join(" ")}
             disabled={!canPlace}
             onClick={() => onSelect({ index: i })}
             aria-label={`${i + 1}${cell === null ? "" : ` ${MARKS[cell]}`}`}
           >
-            {cell !== null && <span className={`mark seat${cell}`}>{MARKS[cell]}</span>}
-            {isSelected && <span className={`mark ghost seat${s.turn}`}>{MARKS[s.turn]}</span>}
+            {cell !== null && <Mark seat={cell} />}
+            {isSelected && <Mark seat={s.turn} ghost />}
           </button>
         );
       })}

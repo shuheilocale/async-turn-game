@@ -18,7 +18,7 @@ export function Connect4Board({ state, interactive, selected, onSelect }: BoardP
             key={i}
             type="button"
             role="gridcell"
-            className={["cell", sel?.col === col && "selected-col", s.lastMove === i && "last", win.has(i) && "win"]
+            className={["cell", sel?.col === col && "selected-col", s.lastMove === i && "last", win.has(i) && `win win${cell}`]
               .filter(Boolean)
               .join(" ")}
             disabled={!canDrop}

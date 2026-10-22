@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { usePath } from "./router.ts";
 import { LANGS, useI18n, type Lang } from "./i18n/index.tsx";
+import { Logo } from "./icons.tsx";
+import { navigate } from "./router.ts";
 import { Home } from "./pages/Home.tsx";
 import { Join } from "./pages/Join.tsx";
 import { Play } from "./pages/Play.tsx";
@@ -18,7 +20,9 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <a href="/" className="logo">{t("app.name")}</a>
+        <a href="/" className="logo" aria-label={t("nav.home")} onClick={(e) => (e.preventDefault(), navigate("/"))}>
+          <Logo />
+        </a>
         <select
           className="lang"
           aria-label={t("lang.label")}

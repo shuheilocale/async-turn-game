@@ -1,4 +1,4 @@
-# ゆっくり対局（async-turn-game）
+# async-turn-game
 
 離れた 2 人が、時間をそろえずに一手ずつ遊べる Web のターン制ボードゲーム集。
 スマホでも PC でもブラウザだけで遊べる。画面は日本語・英語・タイ語に対応。
@@ -6,6 +6,8 @@
 | ゲーム | ID | 種類 |
 | --- | --- | --- |
 | マルバツ | `tictactoe` | 盤面が全部見えるゲーム |
+| かぶせマルバツ | `gobble` | 盤面が全部見えるゲーム |
+| ニム | `nim` | 盤面が全部見えるゲーム |
 | 四目並べ | `connect4` | 盤面が全部見えるゲーム |
 | オセロ | `othello` | 盤面が全部見えるゲーム |
 | ヒット＆ブロー | `hitblow` | 相手に隠す情報があるゲーム |
@@ -107,7 +109,7 @@ docs/企画書.md
 
 1. `packages/core/src/games/<名前>.ts` に `GameDefinition` を実装し、`packages/core/src/index.ts` の `games` に登録する
    - 相手に隠す情報があるなら `viewState` と `viewMove` も実装する（`hitblow.ts` / `auction.ts` が例）
-2. `apps/web/src/boards/<名前>Board.tsx` に盤の見た目を作り、`apps/web/src/boards/index.ts` の `boards` に登録する（長さの目安・アイコンもここ）
+2. `apps/web/src/boards/<名前>Board.tsx` に盤の見た目を作り、`apps/web/src/boards/index.ts` の `boards` に登録する（長さの目安もここ）。アイコンは `apps/web/src/icons.tsx` の `glyphs` に SVG で描く
 3. `apps/web/src/i18n/ja.ts` に `game.<ID>.name / desc / rules / seat0 / seat1` などを足し、`en.ts` と `th.ts` にも同じキーを足す（足りないと型チェックで止まる）
 4. ルールのテストを `*.test.ts` に書く
 

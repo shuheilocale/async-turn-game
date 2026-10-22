@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GameStatus, GameView, Seat } from "@atg/core";
 import { api } from "../api.ts";
 import { boards } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
+import { GameGlyph } from "../icons.tsx";
 import { navigate } from "../router.ts";
 import { savedGames, savedName } from "../storage.ts";
 
@@ -10,61 +11,94 @@ type SeatChoice = Seat | "random";
 
 export function Home() {
   const { t } = useI18n();
+  const [gameType, setGameType] = useState<string | null>(null);
+
+  return (
+    <div className="home">
+      <MyGames />
+      <section className="pick">
+        <h2 className="section-title">{t("home.chooseGame")}</h2>
+        <div className="game-tiles">
+          {Object.entries(boards).map(([id, ui]) => (
+            <button key={id} type="button" className="game-tile" onClick={() => setGameType(id)}>
+              <GameGlyph id={id} />
+              <span className="tile-name">{t(`game.${id}.name`)}</span>
+              <span className="tile-meta">
+                <span className={`len len-${ui.length}`}>{t(`tag.${ui.length}`)}</span>
+                {ui.hidden && <span className="len hidden">{t("tag.hidden")}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+      <CreateSheet gameType={gameType} onClose={() => setGameType(null)} />
+    </div>
+  );
+}
+
+/** ゲームを選ぶと開く作成画面。スマホでは下から出るシート、PC では中央の小窓 */
+function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose(): void }) {
+  const { t } = useI18n();
+  const dialog = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(savedName.get());
-  const [gameType, setGameType] = useState(Object.keys(boards)[0]!);
   const [seat, setSeat] = useState<SeatChoice>("random");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const d = dialog.current;
+    if (!d) return;
+    if (gameType && !d.open) {
+      setError(null);
+      setSeat("random");
+      d.showModal();
+    }
+    if (!gameType && d.open) d.close();
+  }, [gameType]);
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    if (!gameType) return;
     setBusy(true);
     setError(null);
     try {
       savedName.set(name);
       const res = await api.createGame({ gameType, name, seat });
       savedGames.save(res.id, { token: res.token, seat: res.seat });
+      onClose();
       navigate(`/g/${res.id}`);
     } catch (err) {
       setError(errorText(t, err));
+    } finally {
       setBusy(false);
     }
   }
 
+  const seatName = (s: Seat) => {
+    const general = t(s === 0 ? "home.seat.first" : "home.seat.second");
+    const mark = gameType ? t(`game.${gameType}.seat${s}`) : general;
+    return mark === general ? general : t("home.seat.with", { seat: general, mark });
+  };
+
   return (
-    <div className="stack">
-      <p className="tagline">{t("app.tagline")}</p>
-      <MyGames />
+    <dialog
+      ref={dialog}
+      className="sheet"
+      onClose={onClose}
+      onClick={(e) => e.target === dialog.current && dialog.current.close()}
+    >
+      {gameType && (
+        <form onSubmit={create} className="sheet-body">
+          <div className="sheet-head">
+            <GameGlyph id={gameType} className="large" />
+            <div>
+              <h1>{t(`game.${gameType}.name`)}</h1>
+              <p className="muted">{t(`game.${gameType}.desc`)}</p>
+            </div>
+          </div>
 
-      <section>
-        <h2>{t("home.chooseGame")}</h2>
-        <div className="game-cards">
-          {Object.entries(boards).map(([id, ui]) => (
-            <button
-              key={id}
-              type="button"
-              className={`game-card ${id === gameType ? "active" : ""}`}
-              aria-pressed={id === gameType}
-              onClick={() => setGameType(id)}
-            >
-              <span className="icon" aria-hidden>{ui.icon}</span>
-              <strong>{t(`game.${id}.name`)}</strong>
-              <span className="desc">{t(`game.${id}.desc`)}</span>
-              <span className="tags">
-                <span className="tag">{t(`tag.${ui.length}`)}</span>
-                {ui.hidden && <span className="tag hidden">{t("tag.hidden")}</span>}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
-        <h1>{t("home.create.title", { game: t(`game.${gameType}.name`) })}</h1>
-        <p className="muted">{t("home.create.lead")}</p>
-        <form onSubmit={create} className="form">
-          <label>
-            {t("home.name")}
+          <label className="field">
+            <span>{t("home.name")}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -72,22 +106,30 @@ export function Home() {
               placeholder={t("home.namePlaceholder")}
             />
           </label>
-          <label>
-            {t("home.seat")}
-            <select
-              value={String(seat)}
-              onChange={(e) => setSeat(e.target.value === "random" ? "random" : (Number(e.target.value) as Seat))}
-            >
-              <option value="random">{t("home.seat.random")}</option>
-              <option value="0">{t("home.seat.first")}</option>
-              <option value="1">{t("home.seat.second")}</option>
-            </select>
-          </label>
-          <button className="primary" disabled={busy}>{t("home.create")}</button>
+
+          <fieldset className="field">
+            <legend>{t("home.seat")}</legend>
+            <div className="segmented">
+              {(["random", 0, 1] as SeatChoice[]).map((v) => (
+                <label key={String(v)} className={seat === v ? "on" : ""}>
+                  <input type="radio" name="seat" checked={seat === v} onChange={() => setSeat(v)} />
+                  {v === "random" ? t("home.seat.random") : seatName(v)}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           {error && <p className="error">{error}</p>}
+          <div className="sheet-actions">
+            <button type="button" className="ghost-button" onClick={onClose}>
+              {t("home.close")}
+            </button>
+            <button className="primary" disabled={busy}>{t("home.create")}</button>
+          </div>
+          <p className="muted small">{t("home.create.lead")}</p>
         </form>
-      </section>
-    </div>
+      )}
+    </dialog>
   );
 }
 
@@ -115,8 +157,8 @@ function MyGames() {
   if (views === null || views.length === 0) return null;
 
   return (
-    <section className="card">
-      <h2>{t("home.myGames")}</h2>
+    <section className="my-games">
+      <h2 className="section-title">{t("home.myGames")}</h2>
       <ul className="game-list">
         {views.map((v) => {
           const opponent = v.players.find((p) => p.seat !== v.you);
@@ -124,9 +166,10 @@ function MyGames() {
           return (
             <li key={v.id}>
               <a href={`/g/${v.id}`} onClick={(e) => (e.preventDefault(), navigate(`/g/${v.id}`))}>
-                <span>
-                  {boards[v.gameType]?.icon} {t(`game.${v.gameType}.name`)}
-                  <span className="muted"> {t("home.vs", { name: opponent?.name ?? t("home.notJoined") })}</span>
+                <GameGlyph id={v.gameType} className="small" />
+                <span className="row-text">
+                  <strong>{t(`game.${v.gameType}.name`)}</strong>
+                  <span className="muted">{t("home.vs", { name: opponent?.name ?? t("home.notJoined") })}</span>
                 </span>
                 <span className={`badge ${b.hot ? "hot" : ""}`}>{b.label}</span>
               </a>

@@ -1,77 +1,111 @@
+/*
+ * 色は 2 人のプレイヤーの色（--p0 先手 = 青、--p1 後手 = オレンジ）が主役。
+ * それ以外は白黒で静かにまとめる。ダークモードは変数を差し替えるだけ。
+ */
 :root {
-  --bg: #f4f1ea;
+  --bg: #e8ebf1;
   --surface: #ffffff;
-  --text: #22251f;
-  --muted: #6b6f66;
-  --line: #ddd8cc;
-  --accent: #1f5f3f;
-  --accent-text: #ffffff;
-  --hot: #c2410c;
-  --board: #2e7d4f;
-  --board-line: #1d5535;
-  --hint: rgba(255, 255, 255, 0.28);
-  --radius: 14px;
+  --surface-2: #f2f4f8;
+  --ink: #171c28;
+  --ink-soft: #3a4254;
+  --muted: #5d6577;
+  --line: #d3d8e2;
+  --glyph-line: #b7bfcd;
+  --p0: #2b59f0;
+  --p1: #f27a12;
+  --p0-text: #2347c9;
+  --p1-text: #b4540a;
+  --danger: #cf3434;
+  --rack: #263047;
+  --hole: #e8ebf1;
+  --felt: #2f7a5c;
+  --felt-line: #225a44;
+  --shadow: 0 12px 32px rgb(20 28 48 / 0.16);
+  --font: "Zen Kaku Gothic New", "IBM Plex Sans Thai", system-ui, -apple-system, "Hiragino Sans", sans-serif;
+  --font-num: "Unbounded", "Zen Kaku Gothic New", system-ui, sans-serif;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #171a16;
-    --surface: #22261f;
-    --text: #ecebe6;
-    --muted: #a3a69c;
-    --line: #363a32;
-    --accent: #4caf7a;
-    --accent-text: #0e1a12;
-    --hot: #fb923c;
-    --board: #2a6b45;
-    --board-line: #173f28;
+    --bg: #0f121a;
+    --surface: #181c27;
+    --surface-2: #212634;
+    --ink: #edf0f6;
+    --ink-soft: #c5ccd9;
+    --muted: #949db0;
+    --line: #2c3344;
+    --glyph-line: #475066;
+    --p0: #6d8cff;
+    --p1: #ff9b3d;
+    --p0-text: #93aaff;
+    --p1-text: #ffb46b;
+    --danger: #ff7272;
+    --rack: #2b3554;
+    --hole: #0f121a;
+    --felt: #286a50;
+    --felt-line: #1a4a37;
+    --shadow: 0 12px 32px rgb(0 0 0 / 0.45);
     color-scheme: dark;
   }
+}
+
+.seat0 {
+  --seat-color: var(--p0);
+  --seat-text: var(--p0-text);
+}
+
+.seat1 {
+  --seat-color: var(--p1);
+  --seat-text: var(--p1-text);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Noto Sans Thai", "Thonburi",
-    "Leelawadee UI", sans-serif;
-  line-height: 1.6;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.65;
   -webkit-tap-highlight-color: transparent;
 }
 
-.app {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 0 16px calc(32px + env(safe-area-inset-bottom));
+h1,
+h2,
+h3 {
+  font-feature-settings: "palt";
+  letter-spacing: 0.01em;
+  line-height: 1.35;
 }
 
-.app-header {
-  padding: 14px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.app-header .lang {
-  min-height: 36px;
-  padding: 4px 8px;
-  font-size: 0.9rem;
-}
-
-.tagline {
+h1 {
+  font-size: 1.3rem;
   margin: 0;
-  color: var(--muted);
 }
 
 h3 {
-  font-size: 0.95rem;
-  margin: 0 0 6px;
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 0;
+}
+
+.num {
+  font-family: var(--font-num);
+}
+
+.muted {
+  color: var(--muted);
 }
 
 .small {
@@ -83,31 +117,23 @@ h3 {
 }
 
 .notice {
-  color: var(--hot);
-  font-size: 0.88rem;
-  margin: 0;
+  color: var(--p1-text);
+  font-size: 0.9rem;
 }
 
 .good {
-  color: var(--accent);
+  color: var(--p0-text);
   font-weight: 700;
 }
 
-.logo {
-  font-weight: 700;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 1.1rem;
+.error {
+  color: var(--danger);
 }
 
-h1 {
-  font-size: 1.25rem;
-  margin: 0 0 8px;
-}
-
-h2 {
-  font-size: 1.05rem;
-  margin: 0 0 8px;
+.message {
+  text-align: center;
+  color: var(--muted);
+  word-break: break-all;
 }
 
 .stack {
@@ -116,78 +142,393 @@ h2 {
   gap: 14px;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 18px;
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
 }
 
-.card.small {
-  padding: 12px 16px;
-  font-size: 0.92rem;
-}
-
-.card.small summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-
-.muted {
-  color: var(--muted);
-}
-
-.error {
-  color: var(--hot);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.form label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
+/* ---------- 部品 ---------- */
 
 input,
 select,
 button {
   font: inherit;
-  min-height: 44px; /* 指で押しやすい大きさ */
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text);
-  padding: 8px 12px;
+  color: var(--ink);
 }
 
 button {
+  min-height: 44px; /* 指で押しやすい大きさ */
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-weight: 500;
   cursor: pointer;
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
   font-weight: 700;
+}
+
+button.ghost-button {
+  background: transparent;
+}
+
+input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+input:focus {
+  border-color: var(--ink-soft);
+  outline: none;
+  background: var(--surface);
+}
+
+.panel,
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field > span,
+.field > legend {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.field > legend {
+  margin-bottom: 6px;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.segmented label {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  text-align: center;
+  line-height: 1.3;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.segmented label.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgb(20 28 48 / 0.12);
+}
+
+.segmented label:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+details.fold summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+details.fold summary::-webkit-details-marker {
+  display: none;
+}
+
+details.fold summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.2s;
+}
+
+details.fold[open] summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+details.fold p {
+  margin-top: 10px;
+  font-size: 0.92rem;
+}
+
+details.fold button {
+  margin-top: 12px;
+}
+
+.panel.fold {
+  padding: 14px 18px;
+}
+
+/* ---------- 全体の枠 ---------- */
+
+.app {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 16px calc(40px + env(safe-area-inset-bottom));
+}
+
+.app-header {
+  height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.logo-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.app-header .lang {
+  appearance: none;
+  min-height: 36px;
+  padding: 0 32px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%238891a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 12px center / 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* ---------- アイコン（SVG） ---------- */
+
+.glyph {
+  display: block;
+}
+
+.glyph *,
+.logo-svg * {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.g-line {
+  stroke: var(--glyph-line);
+}
+.g-p0 {
+  fill: var(--p0);
+}
+.g-p1 {
+  fill: var(--p1);
+}
+.g-p0-stroke {
+  stroke: var(--p0);
+}
+.g-p1-stroke {
+  stroke: var(--p1);
+}
+.g-ink {
+  fill: var(--ink);
+}
+.g-ink-stroke {
+  stroke: var(--ink);
+}
+/* オセロの石は画面の明暗に関係なく黒と白 */
+.g-stone-black {
+  fill: #171c28;
+}
+.g-stone-white {
+  fill: #ffffff;
+  stroke: #171c28;
+}
+.g-rim {
+  fill: rgb(255 255 255 / 0.3);
+}
+.g-cut {
+  stroke: var(--surface-2);
+}
+.g-rack {
+  fill: var(--rack);
+}
+.g-hole {
+  fill: var(--hole);
+}
+.g-frame {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+.g-frame-stroke {
+  stroke: var(--ink);
+}
+.g-card-back {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+.g-card {
+  fill: var(--ink);
+}
+.g-num {
+  fill: var(--ink);
+  font-family: var(--font-num);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.g-num.big {
+  fill: var(--surface);
+  font-size: 17px;
+}
+
+.glyph.small {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.glyph.large {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+/* ---------- トップ ---------- */
+
+.home {
+  display: grid;
+  gap: 28px;
+  padding-top: 4px;
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.game-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.game-tile {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px 10px 14px;
+  border-radius: 20px;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.game-tile .glyph {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 11;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  margin-bottom: 6px;
+}
+
+.game-tile:hover {
+  border-color: var(--ink-soft);
+}
+
+.game-tile:active {
+  transform: scale(0.98);
+}
+
+.tile-name {
+  padding: 0 4px;
+  font-weight: 700;
+  font-feature-settings: "palt";
+  line-height: 1.35;
+}
+
+.tile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.len.hidden {
+  color: var(--p1-text);
 }
 
 .game-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 4px 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
 }
 
 .game-list li + li {
@@ -196,146 +537,394 @@ button.primary {
 
 .game-list a {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 12px;
+  padding: 10px 14px;
   color: inherit;
   text-decoration: none;
 }
 
-.badge {
-  font-size: 0.8rem;
-  padding: 2px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.badge.hot {
-  border-color: var(--hot);
-  color: var(--hot);
-  font-weight: 700;
-}
-
-/* 対局画面 */
-
-.banner {
-  text-align: center;
-  font-weight: 700;
-  padding: 10px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--line);
-}
-
-.banner.hot {
-  border-color: var(--hot);
-  color: var(--hot);
-}
-
-.banner.done {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.invite {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.invite p {
-  margin: 0;
-}
-
-.players {
+.row-text {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.player {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background: var(--surface);
   min-width: 0;
+  flex: 1;
+  line-height: 1.4;
 }
 
-.player.turn {
-  border-color: var(--accent);
-}
-
-.player .seat {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.player .name {
+.row-text > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.player .you {
-  margin-left: auto;
-  font-size: 0.72rem;
-  color: var(--accent);
+.row-text .muted {
+  font-size: 0.85rem;
 }
 
-.summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
+.badge {
+  flex: none;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.summary .count {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.badge.hot {
+  background: var(--ink);
+  color: var(--surface);
   font-weight: 700;
 }
 
-.summary .notice {
+/* ゲームを選ぶと出る作成画面 */
+dialog.sheet {
   width: 100%;
-  font-size: 0.88rem;
-  color: var(--hot);
+  max-width: 100%;
+  max-height: 92dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
 }
 
-/* マス目の盤：画面の幅と高さの小さい方に合わせる */
+dialog.sheet[open] {
+  animation: sheet-in 0.22s ease-out;
+}
+
+dialog.sheet::backdrop {
+  background: rgb(10 14 24 / 0.5);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+
+.sheet-body {
+  display: grid;
+  gap: 18px;
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.sheet-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.sheet-head p {
+  font-size: 0.9rem;
+  margin-top: 4px;
+  line-height: 1.55;
+}
+
+.sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+}
+
+/* 参加画面 */
+.join {
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+  margin: 12px auto 0;
+}
+
+.join .muted {
+  font-size: 0.9rem;
+}
+
+/* ---------- 対局画面 ---------- */
+
+.play {
+  --chrome: 340px; /* 盤の上下にある表示のだいたいの高さ。盤を画面に収めるのに使う */
+  display: grid;
+  gap: 14px;
+}
+
+.play-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.play-head h1 {
+  font-size: 1.15rem;
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: -8px;
+  border-radius: 12px;
+  color: var(--ink);
+}
+
+.back svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.back:hover {
+  background: var(--surface);
+}
+
+.play-status,
+.play-extra {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.play-main {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  min-width: 0;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-feature-settings: "palt";
+  line-height: 1.35;
+}
+
+.banner.hot::before {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--seat-color);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--seat-color) 22%, transparent);
+}
+
+.banner.won {
+  color: var(--seat-text);
+}
+
+.versus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.player.turn {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1px var(--seat-color);
+}
+
+.player.winner {
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  border-color: transparent;
+}
+
+.player .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.player .you {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.token {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.token.dot {
+  border-radius: 50%;
+  background: var(--seat-color);
+}
+
+.invite {
+  display: grid;
+  gap: 12px;
+}
+
+/* 選んだ手の確定。スマホでは画面の下に固定する */
+.confirm {
+  display: none;
+  position: sticky;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 5;
+  width: min(100%, 440px);
+  gap: 8px;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.confirm.show {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  animation: confirm-in 0.18s ease-out;
+}
+
+@keyframes confirm-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.board-note {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  text-align: center;
+  font-size: 0.9rem;
+  min-height: 1.6em;
+}
+
+.board-note .muted {
+  font-size: 0.82rem;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* PC など横に広い画面：左に盤、右に状態と説明 */
+@media (min-width: 960px) {
+  .app-header {
+    height: 76px;
+  }
+
+  .game-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  /* 対局があるときは、左にゲーム、右に対局の一覧 */
+  .home:has(> .my-games) {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-areas: "pick mine";
+    align-items: start;
+    column-gap: 40px;
+  }
+  .home > .my-games {
+    grid-area: mine;
+  }
+  .home > .pick {
+    grid-area: pick;
+  }
+  .home:has(> .my-games) .game-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .play {
+    --chrome: 190px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "head head"
+      "main status"
+      "main extra";
+    grid-template-rows: auto auto 1fr;
+    column-gap: 40px;
+    row-gap: 18px;
+  }
+
+  .play-head {
+    grid-area: head;
+  }
+  .play-status {
+    grid-area: status;
+  }
+  .play-main {
+    grid-area: main;
+    align-content: start;
+  }
+  .play-extra {
+    grid-area: extra;
+  }
+
+  .confirm {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 640px) {
+  dialog.sheet {
+    max-width: 460px;
+    margin: auto;
+    border-radius: 24px;
+  }
+}
+
+/* ---------- 盤（マス目）---------- */
+
 .grid-board {
   --cols: 8;
   --rows: 8;
+  --board-w: 560px;
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   grid-template-rows: repeat(var(--rows), 1fr);
-  /* 盤の上の表示（約 340px）を差し引いた高さに収める */
-  width: min(100%, calc(max(280px, 100dvh - 340px) * var(--cols) / var(--rows)));
+  width: min(100%, var(--board-w), calc(max(260px, 100dvh - var(--chrome, 340px)) * var(--cols) / var(--rows)));
   aspect-ratio: var(--cols) / var(--rows);
   margin: 0 auto;
-  background: var(--board-line);
-  gap: 2px;
-  padding: 2px;
-  border-radius: 8px;
 }
 
 .grid-board .cell {
   position: relative;
+  display: grid;
+  place-items: center;
   min-width: 0;
   min-height: 0;
   padding: 0;
   border: 0;
-  border-radius: 2px;
-  background: var(--board);
-  display: grid;
-  place-items: center;
-  opacity: 1;
+  border-radius: 0;
+}
+
+.grid-board .cell > * {
+  grid-area: 1 / 1;
 }
 
 .grid-board .cell:disabled {
@@ -343,189 +932,419 @@ button.primary {
   cursor: default;
 }
 
-.grid-board .cell.last {
-  box-shadow: inset 0 0 0 2px #f5d76e;
+@keyframes place {
+  from {
+    transform: scale(0.55);
+    opacity: 0;
+  }
 }
 
-.othello .cell.can-place::after {
-  content: "";
-  width: 22%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--hint);
-}
-
-.othello .cell.selected::after {
-  display: none;
-}
-
-.stone {
-  display: block;
-  width: 80%;
-  height: 80%;
-  border-radius: 50%;
-  transition: background 0.25s;
-}
-
-.stone.black {
-  background: radial-gradient(circle at 35% 30%, #555, #111 70%);
-}
-
-.stone.white {
-  background: radial-gradient(circle at 35% 30%, #fff, #d8d8d8 70%);
-}
-
-.stone.mini {
-  width: 18px;
-  height: 18px;
+/* マルバツ・かぶせマルバツ */
+.tictactoe,
+.gobble-grid {
+  --cols: 3;
+  --rows: 3;
+  --board-w: 420px;
+  gap: 3px;
+  background: var(--line);
+  border-radius: 22px;
+  overflow: hidden;
   border: 1px solid var(--line);
 }
 
-.stone.ghost {
-  position: absolute;
-  opacity: 0.6;
-}
-
-.othello .cell.will-flip .stone {
-  outline: 3px dashed rgba(255, 215, 90, 0.85);
-  outline-offset: -3px;
-}
-
-.confirm {
-  display: none;
-  gap: 10px;
-}
-
-.confirm.show {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-}
-
-.message {
-  text-align: center;
-  color: var(--muted);
-  margin: 0;
-  word-break: break-all;
-}
-
-/* PC など横に広い画面では少しゆったり */
-@media (min-width: 720px) {
-  .app-header {
-    padding: 24px 0;
-  }
-  .card {
-    padding: 24px;
-  }
-}
-
-/* マルバツ */
-.tictactoe {
-  --cols: 3;
-  --rows: 3;
-  width: min(100%, 360px);
-  background: var(--line);
-  gap: 4px;
-  padding: 0;
-}
-
-.tictactoe .cell {
+.tictactoe .cell,
+.gobble-grid .cell {
   background: var(--surface);
 }
 
-.tictactoe .cell:not(:disabled):hover {
-  background: var(--bg);
+.tictactoe .cell:not(:disabled):hover,
+.gobble-grid .cell:not(:disabled):hover {
+  background: var(--surface-2);
 }
 
-.mark {
-  font-size: clamp(2.5rem, 14vw, 4.5rem);
-  line-height: 1;
-  font-weight: 700;
+.cell.win0 {
+  background: color-mix(in srgb, var(--p0) 14%, var(--surface)) !important;
 }
 
-.mark.seat0 {
-  color: #2563eb;
+.cell.win1 {
+  background: color-mix(in srgb, var(--p1) 16%, var(--surface)) !important;
 }
 
-.mark.seat1 {
-  color: #dc2626;
+/* 最後に指された場所の印 */
+.tictactoe .cell.last::after,
+.gobble-grid .cell.last::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
 }
 
-.mark.ghost {
+.piece-svg {
+  width: 64%;
+  height: 64%;
+  fill: none;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+}
+
+.o-mark {
+  stroke: var(--p0);
+}
+
+.x-mark {
+  stroke: var(--p1);
+}
+
+.piece-svg.ghost {
   opacity: 0.35;
 }
 
-.grid-board .cell.win {
-  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+.piece-svg.token {
+  width: 18px;
+  height: 18px;
+  stroke-width: 6.5;
+}
+
+.cell.last .piece-svg:not(.ghost) {
+  animation: place 0.25s ease-out;
+}
+
+/* かぶせマルバツのコマ：上から見たカップ */
+.gobble-piece {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgb(255 255 255 / 0.3) 0 40%, transparent 41%),
+    var(--seat-color);
+  place-self: center;
+}
+
+.gobble-piece.size0 {
+  width: 36%;
+}
+.gobble-piece.size1 {
+  width: 56%;
+}
+.gobble-piece.size2 {
+  width: 78%;
+}
+
+.gobble-piece.ghost {
+  opacity: 0.4;
+}
+
+.gobble-piece.empty {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+
+.cell.last .gobble-piece:not(.ghost) {
+  animation: place 0.25s ease-out;
+}
+
+/* 下に隠れているコマの数 */
+.gobble-grid .cell .under {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.gobble-grid .cell.target::before {
+  content: "";
+  grid-area: 1 / 1;
+  z-index: 1;
+  width: 16%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: 0.22;
+}
+
+.gobble-grid .cell.selected::before {
+  display: none;
+}
+
+.gobble-grid .cell.picked {
+  background: var(--surface-2);
+}
+
+.gobble {
+  width: min(100%, 420px);
+}
+
+.gobble-hand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.hand-label {
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hand-pieces {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.hand-slot {
+  position: relative;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 14px;
+}
+
+.hand-slot > .gobble-piece {
+  grid-area: 1 / 1;
+}
+
+.hand-slot:disabled {
+  opacity: 1;
+}
+
+.hand-slot.picked {
+  border: 2px solid var(--ink);
+  background: var(--surface-2);
+}
+
+.hand-slot .count {
+  position: absolute;
+  right: 5px;
+  bottom: 2px;
+  font-size: 0.62rem;
+  color: var(--muted);
 }
 
 /* 四目並べ */
 .connect4 {
   --cols: 7;
   --rows: 6;
-  background: #1e40af;
-  border-radius: 12px;
-  padding: 4px;
-  gap: 4px;
+  gap: 3px;
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--rack);
 }
 
 .connect4 .cell {
-  background: #1e40af;
+  background: transparent;
+  border-radius: 10px;
 }
 
 .connect4 .cell.selected-col {
-  background: #2b50c4;
+  background: rgb(255 255 255 / 0.09);
 }
 
 .connect4 .cell::before {
   content: "";
-  position: absolute;
-  inset: 8%;
+  grid-area: 1 / 1;
+  width: 82%;
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--bg);
-}
-
-.connect4 .cell.win::before {
-  box-shadow: 0 0 0 3px #fde047;
-}
-
-.connect4 .cell.last {
-  box-shadow: none;
-}
-
-.connect4 .cell.last .disc {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6);
+  background: var(--hole);
 }
 
 .disc {
-  position: absolute;
-  inset: 8%;
+  width: 82%;
+  aspect-ratio: 1;
   border-radius: 50%;
-}
-
-.disc.seat0 {
-  background: #ef4444;
-}
-
-.disc.seat1 {
-  background: #facc15;
+  background: var(--seat-color);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.16);
 }
 
 .disc.ghost {
   opacity: 0.45;
 }
 
+.connect4 .cell.last .disc {
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.6);
+  animation: place 0.25s ease-out;
+}
+
+.connect4 .cell.win .disc {
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+/* オセロ */
+.othello {
+  --cols: 8;
+  --rows: 8;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 14px;
+  background: var(--felt-line);
+}
+
+.othello .cell {
+  background: var(--felt);
+  border-radius: 2px;
+}
+
+.othello .cell.can-place::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.3);
+}
+
+.othello .cell.selected::after {
+  display: none;
+}
+
+.othello .cell.last {
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.55);
+}
+
+.stone {
+  display: block;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transition: background 0.25s;
+}
+
+.stone.black {
+  background: radial-gradient(circle at 35% 30%, #4a5060, #0d0f14 70%);
+}
+
+.stone.white {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #d5d9e0 70%);
+}
+
+.stone.ghost {
+  opacity: 0.6;
+}
+
+.stone.mini,
+.stone.token {
+  width: 18px;
+  height: 18px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.othello .cell.will-flip .stone {
+  outline: 3px dashed rgb(255 214 102 / 0.9);
+  outline-offset: -3px;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 22px;
+  align-items: center;
+}
+
+.summary .count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-num);
+  font-weight: 700;
+}
+
+.summary .notice {
+  width: 100%;
+  text-align: center;
+}
+
+/* ニム */
+.nim {
+  width: min(100%, 460px);
+}
+
+.nim-rows {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  padding: 26px 16px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.nim-row {
+  display: flex;
+  justify-content: center;
+  gap: clamp(10px, 3.4vw, 18px);
+}
+
+.stick {
+  position: relative;
+  width: 12px;
+  height: 60px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  transition: transform 0.15s, background 0.15s;
+}
+
+/* 細い棒でも指で押しやすいよう、見えない当たり判定を広げる */
+.stick::before {
+  content: "";
+  position: absolute;
+  inset: -8px -7px;
+}
+
+.stick:disabled {
+  opacity: 1;
+}
+
+.stick:not(:disabled):hover {
+  background: var(--ink-soft);
+}
+
+.stick.gone {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+
+.stick.recent {
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+.stick.taking {
+  background: var(--seat-color);
+  transform: translateY(-6px);
+}
+
 /* ヒット＆ブロー */
 .digits {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 1.15rem;
-  letter-spacing: 0.15em;
+  font-family: var(--font-num);
   font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .secrets {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .secret {
@@ -534,20 +1353,21 @@ button.primary {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--surface);
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--glyph-line);
+  font-size: 0.88rem;
 }
 
 .prompt {
-  margin: 0 0 10px;
+  margin-bottom: 14px;
   font-weight: 700;
 }
 
 .numpad {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -557,15 +1377,15 @@ button.primary {
 }
 
 .numpad .slot {
-  width: 52px;
-  height: 60px;
-  border-radius: 10px;
-  border: 2px solid var(--accent);
   display: grid;
   place-items: center;
-  font-size: 1.8rem;
+  width: 56px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-family: var(--font-num);
+  font-size: 1.6rem;
   font-weight: 700;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 .numpad .keys {
@@ -576,27 +1396,29 @@ button.primary {
 }
 
 .numpad .keys button {
-  font-size: 1.2rem;
+  font-family: var(--font-num);
+  font-size: 1.1rem;
   font-weight: 700;
 }
 
 .numpad .keys .clear {
   grid-column: span 2;
+  font-family: var(--font);
   font-size: 0.95rem;
 }
 
 .guess-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .guess-list {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px;
-  min-width: 0;
 }
 
 .guess-list table {
@@ -607,47 +1429,52 @@ button.primary {
 }
 
 .guess-list th {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--muted);
   font-weight: 400;
 }
 
 .guess-list td {
-  padding: 2px 0;
+  padding: 3px 0;
 }
 
 .guess-list tr.solved td {
-  color: var(--accent);
+  color: var(--p0-text);
   font-weight: 700;
 }
 
 /* 数字のせり */
+.auction {
+  width: min(100%, 520px);
+}
+
 .scores {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .score {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 8px 14px;
-  background: var(--surface);
-  border-radius: 10px;
   min-width: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 
 .score strong {
+  font-family: var(--font-num);
   font-size: 1.4rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .prize-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .bid-status {
@@ -661,40 +1488,42 @@ button.primary {
 .card-face {
   display: inline-grid;
   place-items: center;
-  width: 48px;
-  height: 68px;
+  width: 46px;
+  height: 66px;
   min-height: 0;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: 1.4rem;
+  font-family: var(--font-num);
+  font-size: 1.3rem;
   font-weight: 700;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s;
 }
 
 .card-face.prize {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fcd34d;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
 }
 
 .card-face.prize:not(.mini) {
-  width: 84px;
-  height: 116px;
+  width: 88px;
+  height: 122px;
   font-size: 2.6rem;
+  border-radius: 14px;
 }
 
 .card-face.mini {
   width: 28px;
   height: 38px;
-  font-size: 0.9rem;
-  border-radius: 5px;
+  font-size: 0.8rem;
+  border-radius: 6px;
 }
 
 button.card-face.selected {
-  border: 3px solid var(--accent);
-  transform: translateY(-6px);
+  border: 2px solid var(--ink);
+  transform: translateY(-8px);
 }
 
 button.card-face:disabled {
@@ -724,72 +1553,15 @@ button.card-face:disabled {
   align-items: center;
 }
 
-/* トップ画面のゲーム一覧 */
-.game-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 10px;
-}
-
-.game-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  text-align: left;
-  padding: 14px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  height: 100%;
-}
-
-.game-card.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-.game-card .icon {
-  font-size: 1.6rem;
-}
-
-.game-card .desc {
-  font-size: 0.82rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.game-card .tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.tag {
-  font-size: 0.72rem;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--muted);
-}
-
-.tag.hidden {
-  background: color-mix(in srgb, var(--hot) 15%, transparent);
-  color: var(--hot);
-}
-
-.game-title {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-@media (max-width: 400px) {
-  .game-cards {
-    grid-template-columns: 1fr 1fr;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
   }
-  .game-card .desc {
-    display: none;
-  }
+}
+
+.play-main > .stack {
+  width: min(100%, 560px);
 }

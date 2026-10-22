@@ -4,7 +4,8 @@
 
 ## 今の状態（2026-10-22 更新）
 
-- MVP は完成。ゲーム 5 本、日本語・英語・タイ語に対応。テスト 31 件・型チェックはすべて通る
+- MVP は完成。ゲーム 7 本、日本語・英語・タイ語に対応。テスト 45 件・型チェックはすべて通る
+- 画面を刷新した（2026-10-22）。キャッチコピーやアプリ名の表示はなし（ユーザーの希望：身内で遊ぶものなので要らない）。絵文字はやめ、アイコン・駒は SVG（[icons.tsx](../apps/web/src/icons.tsx)）
 - GitHub: https://github.com/shuheilocale/async-turn-game （公開、`main`）
 - **Cloudflare Workers + D1 で公開済み**: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev
   - D1 のデータベース名は `async-turn-game`（置き場所はアジア太平洋）。設定は [apps/server/wrangler.jsonc](../apps/server/wrangler.jsonc)

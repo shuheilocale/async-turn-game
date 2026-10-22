@@ -4,6 +4,7 @@ import { api, ApiRequestError } from "../api.ts";
 import { boards } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
+import { GameGlyph, SeatToken } from "../icons.tsx";
 import { shareLink } from "../share.ts";
 import { savedGames } from "../storage.ts";
 
@@ -61,11 +62,12 @@ export function Play({ id }: { id: string }) {
 
   // タブのタイトルで手番を知らせる（PC で別タブを見ていても気づける）
   useEffect(() => {
-    document.title = myTurn ? `${t("title.yourTurn")} | ${t("app.name")}` : t("app.name");
+    const title = view ? t(`game.${view.gameType}.name`) : t("app.name");
+    document.title = myTurn ? `${t("title.yourTurn")} | ${title}` : title;
     return () => {
       document.title = t("app.name");
     };
-  }, [myTurn, t]);
+  }, [myTurn, t, view?.gameType]);
 
   async function submit() {
     if (!view || !token || selected === null) return;
@@ -88,10 +90,10 @@ export function Play({ id }: { id: string }) {
     if (result === "failed") setMessage(t("play.copyFailed", { url }));
   }
 
-  if (!view) return <section className="card">{message ?? t("play.loading")}</section>;
+  if (!view) return <p className="message">{message ?? t("play.loading")}</p>;
 
   const ui = boards[view.gameType];
-  if (!ui) return <section className="card">{t("play.noBoard")}</section>;
+  if (!ui) return <p className="message">{t("play.noBoard")}</p>;
 
   const gameName = t(`game.${view.gameType}.name`);
   const seatLabel = (seat: Seat) => t(`game.${view.gameType}.seat${seat}`);
@@ -99,72 +101,92 @@ export function Play({ id }: { id: string }) {
   for (const p of view.players) names[p.seat] = p.name;
 
   return (
-    <div className="stack play">
-      <h1 className="game-title">
-        {ui.icon} {gameName}
-      </h1>
-      <StatusBanner t={t} view={view} names={names} seatLabel={seatLabel} />
-
-      {view.waitingForOpponent && view.inviteCode && (
-        <section className="card invite">
-          <p>{t("play.invite.lead")}</p>
-          <button
-            className="primary"
-            onClick={() =>
-              share(`${location.origin}/join/${id}?code=${view.inviteCode}`, t("play.invite.shareText", { game: gameName }))
-            }
-          >
-            {t("play.invite.button")}
-          </button>
-        </section>
-      )}
-
-      <div className="players">
-        {([0, 1] as Seat[]).map((seat) => (
-          <div
-            key={seat}
-            className={`player ${view.status.kind === "playing" && view.status.turn === seat ? "turn" : ""}`}
-          >
-            <span className="seat">{seatLabel(seat)}</span>
-            <span className="name">{names[seat] || t("play.waitingName")}</span>
-            {view.you === seat && <span className="you">{t("play.you")}</span>}
-          </div>
-        ))}
+    <div className="play">
+      <div className="play-head">
+        <a href="/" className="back" aria-label={t("nav.home")} onClick={(e) => (e.preventDefault(), navigate("/"))}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </a>
+        <GameGlyph id={view.gameType} className="small" />
+        <h1>{gameName}</h1>
       </div>
 
-      <ui.Board
-        state={view.state}
-        status={view.status}
-        you={view.you}
-        names={names}
-        interactive={myTurn && !busy}
-        selected={selected}
-        onSelect={(m) => setSelected(m)}
-      />
+      <div className="play-status">
+        <StatusBanner t={t} view={view} names={names} seatLabel={seatLabel} />
 
-      <div className={`confirm ${selected !== null ? "show" : ""}`}>
-        <button onClick={() => setSelected(null)} disabled={busy}>{t("play.cancel")}</button>
-        <button className="primary" onClick={submit} disabled={busy}>{t("play.confirm")}</button>
+        <div className="versus">
+          {([0, 1] as Seat[]).map((seat) => (
+            <div
+              key={seat}
+              className={[
+                "player",
+                `seat${seat}`,
+                view.status.kind === "playing" && view.status.turn === seat && !view.waitingForOpponent && "turn",
+                view.status.kind === "finished" && view.status.winner === seat && "winner",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <SeatToken gameType={view.gameType} seat={seat} />
+              <span className="name">{names[seat] || t("play.waitingName")}</span>
+              {view.you === seat && <span className="you">{t("play.you")}</span>}
+            </div>
+          ))}
+        </div>
+
+        {view.waitingForOpponent && view.inviteCode && (
+          <section className="panel invite">
+            <p>{t("play.invite.lead")}</p>
+            <button
+              className="primary"
+              onClick={() =>
+                share(`${location.origin}/join/${id}?code=${view.inviteCode}`, t("play.invite.shareText", { game: gameName }))
+              }
+            >
+              {t("play.invite.button")}
+            </button>
+          </section>
+        )}
+
       </div>
 
-      {message && <p className="message">{message}</p>}
+      <div className="play-main">
+        <ui.Board
+          state={view.state}
+          status={view.status}
+          you={view.you}
+          names={names}
+          interactive={myTurn && !busy}
+          selected={selected}
+          onSelect={(m) => setSelected(m)}
+        />
+        <div className={`confirm ${selected !== null ? "show" : ""}`}>
+          <button className="ghost-button" onClick={() => setSelected(null)} disabled={busy}>{t("play.cancel")}</button>
+          <button className="primary" onClick={submit} disabled={busy}>{t("play.confirm")}</button>
+        </div>
+      </div>
 
-      <details className="card small">
-        <summary>{t("play.rules")}</summary>
-        <p>{t(`game.${view.gameType}.rules`)}</p>
-      </details>
+      <div className="play-extra">
+        {message && <p className="message">{message}</p>}
 
-      {token && (
-        <details className="card small">
-          <summary>{t("play.otherDevice")}</summary>
-          <p className="muted">
-            {t("play.otherDevice.lead")} <strong>{t("play.otherDevice.warn")}</strong>
-          </p>
-          <button onClick={() => share(`${location.origin}/g/${id}?t=${token}`, t("play.ownLinkText"))}>
-            {t("play.otherDevice.button")}
-          </button>
+        <details className="panel fold">
+          <summary>{t("play.rules")}</summary>
+          <p>{t(`game.${view.gameType}.rules`)}</p>
         </details>
-      )}
+
+        {token && (
+          <details className="panel fold">
+            <summary>{t("play.otherDevice")}</summary>
+            <p className="muted">
+              {t("play.otherDevice.lead")} <strong>{t("play.otherDevice.warn")}</strong>
+            </p>
+            <button onClick={() => share(`${location.origin}/g/${id}?t=${token}`, t("play.ownLinkText"))}>
+              {t("play.otherDevice.button")}
+            </button>
+          </details>
+        )}
+      </div>
     </div>
   );
 }
@@ -182,6 +204,7 @@ function StatusBanner({
 }) {
   let text: string;
   let tone = "";
+  const yours = view.you === null ? "" : ` seat${view.you}`;
   if (view.status.kind === "finished") {
     const w = view.status.winner;
     text =
@@ -190,7 +213,7 @@ function StatusBanner({
         : w === view.you
           ? t("status.youWin")
           : t("status.winner", { name: names[w], seat: seatLabel(w) });
-    tone = "done";
+    tone = w !== null && w === view.you ? `done won${yours}` : "done";
   } else if (view.waitingForOpponent) {
     text = t("status.waiting");
   } else if (view.you === null) {
@@ -198,9 +221,13 @@ function StatusBanner({
     text = t("status.spectating", { name: names[turn], seat: seatLabel(turn) });
   } else if (view.status.turn === view.you) {
     text = t("status.yourTurn");
-    tone = "hot";
+    tone = `hot${yours}`;
   } else {
     text = t("status.theirTurn", { name: names[view.status.turn] });
   }
-  return <div className={`banner ${tone}`}>{text}</div>;
+  return (
+    <div className={`banner ${tone}`} role="status">
+      {text}
+    </div>
+  );
 }

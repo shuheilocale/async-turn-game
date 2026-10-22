@@ -5,6 +5,8 @@ import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
 import { HitBlowBoard } from "./HitBlowBoard.tsx";
 import { AuctionBoard } from "./AuctionBoard.tsx";
+import { GobbleBoard } from "./GobbleBoard.tsx";
+import { NimBoard } from "./NimBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -24,8 +26,6 @@ export interface BoardProps {
 export interface GameMeta {
   length: "short" | "medium" | "long";
   hidden?: boolean;
-  /** 一覧のカードに出す絵（絵文字） */
-  icon: string;
 }
 
 /** ゲームごとの画面部品。ルールは @atg/core、見た目と文言はここと i18n */
@@ -33,10 +33,13 @@ export interface BoardUI extends GameMeta {
   Board: FC<BoardProps>;
 }
 
+/** アイコンは icons.tsx の GameGlyph に、ゲームの ID ごとに描いてある */
 export const boards: Record<string, BoardUI> = {
-  tictactoe: { Board: TicTacToeBoard, length: "short", icon: "⭕" },
-  connect4: { Board: Connect4Board, length: "medium", icon: "🔴" },
-  othello: { Board: OthelloBoard, length: "long", icon: "⚫" },
-  hitblow: { Board: HitBlowBoard, length: "medium", hidden: true, icon: "🔢" },
-  auction: { Board: AuctionBoard, length: "medium", hidden: true, icon: "🃏" },
+  tictactoe: { Board: TicTacToeBoard, length: "short" },
+  gobble: { Board: GobbleBoard, length: "short" },
+  nim: { Board: NimBoard, length: "short" },
+  connect4: { Board: Connect4Board, length: "medium" },
+  othello: { Board: OthelloBoard, length: "long" },
+  hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
+  auction: { Board: AuctionBoard, length: "medium", hidden: true },
 };

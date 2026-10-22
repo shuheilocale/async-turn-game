@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { GameView } from "@atg/core";
 import { api } from "../api.ts";
 import { errorText, useI18n } from "../i18n/index.tsx";
+import { GameGlyph } from "../icons.tsx";
 import { navigate } from "../router.ts";
 import { savedGames, savedName } from "../storage.ts";
 
@@ -42,16 +43,16 @@ export function Join({ id }: { id: string }) {
   const game = view ? t(`game.${view.gameType}.name`) : "";
 
   return (
-    <section className="card">
-      <h1>{t("join.title")}</h1>
-      {view && <p>{t("join.from", { host, game })}</p>}
-      {view && <p className="muted small">{t(`game.${view.gameType}.rules`)}</p>}
+    <section className="panel join">
+      {view && <GameGlyph id={view.gameType} className="large" />}
+      <h1>{view ? t("join.from", { host, game }) : t("join.title")}</h1>
+      {view && <p className="muted">{t(`game.${view.gameType}.rules`)}</p>}
       {view && !view.waitingForOpponent ? (
         <p className="error">{t("join.alreadyFull")}</p>
       ) : (
         <form onSubmit={join} className="form">
-          <label>
-            {t("home.name")}
+          <label className="field">
+            <span>{t("home.name")}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
