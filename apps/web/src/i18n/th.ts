@@ -55,6 +55,7 @@ export const th: Messages = {
   "play.invite.copy": "คัดลอกลิงก์",
   "play.notify.line": "แจ้งทาง LINE",
   "play.notified": "ส่งทาง LINE แล้ว",
+  "play.lineFailed": "เปิดหน้าเลือกผู้รับไม่ได้ คัดลอกลิงก์แล้ว วางในแชทได้เลย",
   "line.invite.alt": "{name} ชวนคุณเล่น {game}",
   "line.invite.title": "คำเชิญจาก {name}",
   "line.invite.body": "เข้าร่วมเพื่อเริ่มเกม",

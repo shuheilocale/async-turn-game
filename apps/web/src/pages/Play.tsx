@@ -112,6 +112,20 @@ export function Play({ id }: { id: string }) {
     }
   }
 
+  /**
+   * 送り先を選んで LINE で送る。送り先を選ぶ画面が使えなければ、理由を出したうえで
+   * カードのリンクをコピーする（トークに貼れば同じように開ける）
+   */
+  async function sendByPicker(card: Card, fallbackToLink: boolean): Promise<boolean> {
+    const result = await pickAndSend(card);
+    if (result.kind === "sent") setMessage(t("play.notified"));
+    if (result.kind !== "failed") return result.kind === "sent";
+    console.warn("shareTargetPicker failed", result.reason);
+    if (fallbackToLink) await share(card.url, card.alt);
+    setMessage(`${t("play.lineFailed")}（${result.reason}）`);
+    return false;
+  }
+
   async function share(url: string, text: string) {
     const result = await shareLink(url, text);
     if (result === "copied") setMessage(t("play.copied"));
@@ -171,7 +185,7 @@ export function Play({ id }: { id: string }) {
                 className="primary"
                 onClick={async () => {
                   const card = inviteCard(t, view.gameType, id, view.inviteCode!, names[view.you!]);
-                  if (await pickAndSend(card)) setMessage(t("play.notified"));
+                  await sendByPicker(card, true);
                 }}
               >
                 {t("play.invite.line")}
@@ -193,10 +207,7 @@ export function Play({ id }: { id: string }) {
             <button
               className="primary"
               onClick={async () => {
-                if (await pickAndSend(notice)) {
-                  setNotice(null);
-                  setMessage(t("play.notified"));
-                }
+                if (await sendByPicker(notice, false)) setNotice(null);
               }}
             >
               {t("play.notify.line")}
@@ -204,6 +215,7 @@ export function Play({ id }: { id: string }) {
           </section>
         )}
 
+        {message && <p className="message">{message}</p>}
       </div>
 
       <div className="play-main">
@@ -223,7 +235,6 @@ export function Play({ id }: { id: string }) {
       </div>
 
       <div className="play-extra">
-        {message && <p className="message">{message}</p>}
 
         <details className="panel fold">
           <summary>{t("play.rules")}</summary>

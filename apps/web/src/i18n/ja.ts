@@ -54,6 +54,7 @@ export const ja = {
   "play.invite.copy": "リンクをコピー",
   "play.notify.line": "LINE で知らせる",
   "play.notified": "LINE に送りました",
+  "play.lineFailed": "送り先を選ぶ画面を開けませんでした。リンクをコピーしたので、トークに貼ってください",
   "line.invite.alt": "{name}さんから「{game}」の招待です",
   "line.invite.title": "{name}さんからの招待",
   "line.invite.body": "参加すると対局がはじまります",

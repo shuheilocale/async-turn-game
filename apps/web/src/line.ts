@@ -115,13 +115,17 @@ export async function postToChat(gameId: string, card: Card): Promise<boolean> {
   }
 }
 
-/** 送り先（友だち・グループ）を選んで送る。送ったら true、やめたら false */
-export async function pickAndSend(card: Card): Promise<boolean> {
-  if (!session || !session.liff.isApiAvailable("shareTargetPicker")) return false;
+export type PickResult = { kind: "sent" } | { kind: "cancelled" } | { kind: "failed"; reason: string };
+
+/** 送り先（友だち・グループ）を選んで送る。使えないときやエラーのときは理由を返す */
+export async function pickAndSend(card: Card): Promise<PickResult> {
+  if (!session) return { kind: "failed", reason: "not_in_line" };
+  if (!session.liff.isApiAvailable("shareTargetPicker")) return { kind: "failed", reason: "share_target_picker_unavailable" };
   try {
-    return !!(await session.liff.shareTargetPicker(flex(card), { isMultiple: false }));
+    const res = await session.liff.shareTargetPicker(flex(card), { isMultiple: false });
+    return res ? { kind: "sent" } : { kind: "cancelled" };
   } catch (e) {
-    console.warn("送り先を選ぶ画面を開けませんでした", e);
-    return false;
+    const err = e as { code?: string; message?: string };
+    return { kind: "failed", reason: [err.code, err.message].filter(Boolean).join(": ") || String(e) };
   }
 }

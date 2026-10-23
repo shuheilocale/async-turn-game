@@ -55,6 +55,7 @@ export const en: Messages = {
   "play.invite.copy": "Copy link",
   "play.notify.line": "Let them know on LINE",
   "play.notified": "Sent on LINE",
+  "play.lineFailed": "Couldn't open the LINE share screen. The link was copied, so paste it into the chat",
   "line.invite.alt": "{name} invited you to play {game}",
   "line.invite.title": "Invitation from {name}",
   "line.invite.body": "Join to start the game",
