@@ -14,6 +14,7 @@ import { bluff } from "./games/bluff.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
+export { botMove } from "./bot.ts";
 export * as Othello from "./games/othello.ts";
 export * as TicTacToe from "./games/tictactoe.ts";
 export * as Connect4 from "./games/connect4.ts";

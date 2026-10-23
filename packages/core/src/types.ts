@@ -32,6 +32,16 @@ export interface GameDefinition<S = unknown, M = unknown> {
   viewState?(state: S, viewer: Seat | null, revealAll: boolean): unknown;
   /** 隠す情報があるゲームだけ実装する。手の記録を viewer が見てよい形にする（終局後は呼ばれない） */
   viewMove?(move: M, mover: Seat, viewer: Seat | null): unknown;
+  /**
+   * お試し（ひとりで遊ぶ）のコンピュータ用。seat が今指せる手をすべて返す。
+   * 盤面が全部見えるゲームで実装する（bot.ts が 1 手先まで読んで選ぶ）
+   */
+  legalMoves?(state: S, seat: Seat): M[];
+  /**
+   * お試しのコンピュータ用。隠す情報があるゲームで実装する。view は viewState(state, seat, false) の結果で、
+   * 相手の秘密は見えない（のぞき見しない）。指せる手がなければ null
+   */
+  botMove?(view: unknown, seat: Seat, rng: Rng): M | null;
 }
 
 /** code は画面側で各言語の文に置き換える（例: "not_your_turn"） */
