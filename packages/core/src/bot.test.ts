@@ -26,6 +26,25 @@ describe("お試しのコンピュータ", () => {
     expect(botMove(ttt, play([0, 4, 1]), 1, Math.random)).toEqual({ index: 2 });
   });
 
+  it("指した瞬間に相手の勝ちが決まる手は選ばない（誰が塗っても色の持ち主が勝つゲームなど）", () => {
+    // "give" を指すと、その場で指した人の相手の勝ちが決まる。"ok" は何も起きない
+    type S = { winner: Seat | null; turn: Seat };
+    const giveAway = {
+      id: "give-away",
+      initialState: (): S => ({ winner: null, turn: 0 }),
+      status: (s: S) => (s.winner !== null ? { kind: "finished", winner: s.winner } : { kind: "playing", turn: s.turn }),
+      applyMove: (s: S, m: string, seat: Seat): S => ({
+        winner: m === "give" ? ((1 - seat) as Seat) : null,
+        turn: (1 - s.turn) as Seat,
+      }),
+      parseMove: (raw: unknown) => raw,
+      legalMoves: () => ["give", "ok"],
+    } as unknown as GameDefinition<any, any>;
+    for (let i = 0; i < 20; i++) {
+      expect(botMove(giveAway, giveAway.initialState(Math.random), 0, Math.random)).toBe("ok");
+    }
+  });
+
   it("legalMoves も botMove もないゲームでは null（ひとりで両方を動かす）", () => {
     const { legalMoves: _, ...noBot } = ttt;
     expect(botMove(noBot as GameDefinition<any, any>, play([]), 0, Math.random)).toBeNull();

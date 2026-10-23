@@ -62,6 +62,7 @@ const everyMove: Record<string, unknown[]> = {
   connect4: range(7).map((col) => ({ col })),
   boxes: range(24).map((edge) => ({ edge })),
   othello: range(64).map((i) => ({ row: Math.floor(i / 8), col: i % 8 })),
+  korokoro: range(16).map((to) => ({ to })),
 };
 const fullInfo = Object.keys(everyMove);
 const hidden = ["hitblow", "auction", "bluff", "pour", "balloon"];
@@ -112,6 +113,7 @@ describe("盤面が全部見えるゲームの手の一覧（legalMoves）", () 
       ["connect4", 7],
       ["boxes", 24],
       ["othello", 4],
+      ["korokoro", 6],
     ]);
   });
 

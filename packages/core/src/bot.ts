@@ -41,7 +41,9 @@ export function botMove<S, M>(def: GameDefinition<S, M>, state: S, seat: Seat, r
     const next = after(state, m, seat);
     if (!next) return false;
     const st = def.status(next);
-    if (st.kind !== "playing" || st.turn !== opp) return true;
+    // 指した瞬間に相手の勝ちが決まる手（相手の色をそろえてしまう など）は避ける
+    if (st.kind === "finished") return st.winner !== opp;
+    if (st.turn !== opp) return true;
     const replies = def.legalMoves!(next, opp);
     if (replies.length * moves.length > LOOKAHEAD_LIMIT) return true;
     return !replies.some((r) => winsFor(after(next, r, opp), opp));
