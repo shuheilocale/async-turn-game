@@ -48,3 +48,9 @@ export const savedName = {
   get: () => read<string>(NAME_KEY, ""),
   set: (name: string) => write(NAME_KEY, name),
 };
+
+/** トップの「終わった対局」を開いているか */
+export const savedFinishedOpen = {
+  get: () => read<boolean>("atg:finishedOpen", false),
+  set: (open: boolean) => write("atg:finishedOpen", open),
+};

@@ -25,6 +25,11 @@ export interface BoardProps {
   /** 仮に選んでいる手（確定前）。確定は画面下の「これで決定」で行う */
   selected: unknown | null;
   onSelect(move: unknown | null): void;
+  /**
+   * 確定を待たずにすぐ送る。結果を見てから取り消せると困るゲーム（石を落として崩れるか見る など）で使う。
+   * 送れたら true
+   */
+  onSubmit(move: unknown): Promise<boolean>;
 }
 
 /** ゲームの一覧画面で出す情報 */

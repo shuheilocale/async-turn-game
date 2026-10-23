@@ -1634,3 +1634,35 @@ button.card-face:disabled {
   padding: 10px;
   margin-bottom: 2px;
 }
+
+/* トップの対局一覧：もっと見る・終わった対局 */
+.game-list .more {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.finished-games {
+  margin-top: 12px;
+}
+
+.finished-games summary {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.game-list.flat {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.game-list.flat a {
+  padding: 10px 0;
+}

@@ -17,6 +17,8 @@ export const th: Messages = {
   "home.create": "สร้างเกม",
   "home.close": "ปิด",
   "home.myGames": "เกมของคุณ",
+  "home.showMore": "แสดงอีก {n} รายการ",
+  "home.finished": "เกมที่จบแล้ว ({n})",
   "home.vs": "กับ {name}",
   "home.notJoined": "(ยังไม่เข้าร่วม)",
   "tag.short": "จบไว",

@@ -90,12 +90,13 @@ export function Play({ id }: { id: string }) {
     };
   }, [myTurn, t, view?.gameType]);
 
-  async function submit() {
-    if (!view || !token || selected === null) return;
+  /** 手を送る。送れたら true */
+  async function submit(move: unknown = selected): Promise<boolean> {
+    if (!view || !token || move === null) return false;
     setBusy(true);
     setMessage(null);
     try {
-      const next = await api.move(id, token, view.version, selected);
+      const next = await api.move(id, token, view.version, move);
       setView(next);
       setSelected(null);
       // 手番が相手に移ったとき・終局したときだけ知らせる（同じ人が続けて指すゲームでは知らせない）
@@ -107,9 +108,11 @@ export function Play({ id }: { id: string }) {
         if (await postToChat(id, card)) setMessage(t("play.notified"));
         else setNotice(card);
       }
+      return true;
     } catch (e) {
       setMessage(errorText(t, e));
       if (e instanceof ApiRequestError && e.status === 409) await refresh();
+      return false;
     } finally {
       setBusy(false);
     }
@@ -255,6 +258,7 @@ export function Play({ id }: { id: string }) {
           interactive={myTurn && !busy}
           selected={selected}
           onSelect={(m) => setSelected(m)}
+          onSubmit={(m) => submit(m)}
         />
         {view.status.kind === "finished" && view.you !== null && (
           <div className="after-game">
@@ -281,7 +285,7 @@ export function Play({ id }: { id: string }) {
 
         <div className={`confirm ${selected !== null ? "show" : ""}`}>
           <button className="ghost-button" onClick={() => setSelected(null)} disabled={busy}>{t("play.cancel")}</button>
-          <button className="primary" onClick={submit} disabled={busy}>{t("play.confirm")}</button>
+          <button className="primary" onClick={() => submit()} disabled={busy}>{t("play.confirm")}</button>
         </div>
       </div>
 

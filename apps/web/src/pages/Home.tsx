@@ -6,7 +6,7 @@ import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
 import { lineIdToken, lineSession } from "../line.ts";
 import { navigate } from "../router.ts";
-import { savedGames, savedName } from "../storage.ts";
+import { savedFinishedOpen, savedGames, savedName } from "../storage.ts";
 
 type SeatChoice = Seat | "random";
 
@@ -172,43 +172,80 @@ function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boo
   return isMyTurn(v) ? { label: t("badge.yourTurn"), hot: true } : { label: t("badge.theirTurn"), hot: false };
 }
 
+/** 相手の番・参加待ちの対局を、はじめに何件まで出すか（あなたの番の対局は全部出す） */
+const WAITING_LIMIT = 5;
+
 function MyGames() {
   const { t } = useI18n();
   const [views, setViews] = useState<GameView[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [finishedOpen, setFinishedOpen] = useState(savedFinishedOpen.get);
 
   useEffect(() => {
     loadSaved()
       .then((saved) => Promise.all(Object.entries(saved).map(([id, g]) => api.getGame(id, g.token).catch(() => null))))
       .then((list) => {
         const ok = list.filter((v): v is GameView => v !== null);
-        ok.sort((a, b) => Number(isMyTurn(b)) - Number(isMyTurn(a)) || b.updatedAt.localeCompare(a.updatedAt));
+        ok.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         setViews(ok);
       });
   }, []);
 
   if (views === null || views.length === 0) return null;
 
+  // あなたの番 → 相手の番・参加待ち → 終わった対局（折りたたみ）の順に分ける
+  const mine = views.filter(isMyTurn);
+  const waiting = views.filter((v) => !isMyTurn(v) && v.status.kind !== "finished");
+  const finished = views.filter((v) => v.status.kind === "finished");
+  const hidden = showAll ? 0 : Math.max(0, waiting.length - WAITING_LIMIT);
+
+  const row = (v: GameView) => {
+    const opponent = v.players.find((p) => p.seat !== v.you);
+    const b = badge(t, v, v.status);
+    return (
+      <li key={v.id}>
+        <a href={`/g/${v.id}`} onClick={(e) => (e.preventDefault(), navigate(`/g/${v.id}`))}>
+          <GameGlyph id={v.gameType} className="small" />
+          <span className="row-text">
+            <strong>{t(`game.${v.gameType}.name`)}</strong>
+            <span className="muted">{t("home.vs", { name: opponent?.name ?? t("home.notJoined") })}</span>
+          </span>
+          <span className={`badge ${b.hot ? "hot" : ""}`}>{b.label}</span>
+        </a>
+      </li>
+    );
+  };
+
   return (
     <section className="my-games">
       <h2 className="section-title">{t("home.myGames")}</h2>
-      <ul className="game-list">
-        {views.map((v) => {
-          const opponent = v.players.find((p) => p.seat !== v.you);
-          const b = badge(t, v, v.status);
-          return (
-            <li key={v.id}>
-              <a href={`/g/${v.id}`} onClick={(e) => (e.preventDefault(), navigate(`/g/${v.id}`))}>
-                <GameGlyph id={v.gameType} className="small" />
-                <span className="row-text">
-                  <strong>{t(`game.${v.gameType}.name`)}</strong>
-                  <span className="muted">{t("home.vs", { name: opponent?.name ?? t("home.notJoined") })}</span>
-                </span>
-                <span className={`badge ${b.hot ? "hot" : ""}`}>{b.label}</span>
-              </a>
+      {mine.length + waiting.length > 0 && (
+        <ul className="game-list">
+          {mine.map(row)}
+          {waiting.slice(0, waiting.length - hidden).map(row)}
+          {hidden > 0 && (
+            <li>
+              <button type="button" className="more" onClick={() => setShowAll(true)}>
+                {t("home.showMore", { n: hidden })}
+              </button>
             </li>
-          );
-        })}
-      </ul>
+          )}
+        </ul>
+      )}
+      {finished.length > 0 && (
+        <details
+          className="panel fold finished-games"
+          open={finishedOpen}
+          onToggle={(e) => {
+            const open = (e.currentTarget as HTMLDetailsElement).open;
+            setFinishedOpen(open);
+            savedFinishedOpen.set(open);
+          }}
+        >
+          <summary>{t("home.finished", { n: finished.length })}</summary>
+          <ul className="game-list flat">{finished.map(row)}</ul>
+        </details>
+      )}
     </section>
   );
 }

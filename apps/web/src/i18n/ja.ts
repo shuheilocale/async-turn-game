@@ -16,6 +16,8 @@ export const ja = {
   "home.create": "対局を作る",
   "home.close": "閉じる",
   "home.myGames": "あなたの対局",
+  "home.showMore": "ほか {n} 件を表示",
+  "home.finished": "終わった対局（{n}）",
   "home.vs": "vs {name}",
   "home.notJoined": "（未参加）",
   "tag.short": "すぐ終わる",

@@ -17,6 +17,8 @@ export const en: Messages = {
   "home.create": "Create game",
   "home.close": "Close",
   "home.myGames": "Your games",
+  "home.showMore": "Show {n} more",
+  "home.finished": "Finished games ({n})",
   "home.vs": "vs {name}",
   "home.notJoined": "(not joined yet)",
   "tag.short": "Quick",
