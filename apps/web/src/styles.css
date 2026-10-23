@@ -1670,3 +1670,97 @@ button.card-face:disabled {
 .len.coop {
   color: var(--p0-text);
 }
+
+/* ---------- ルールを学ぶ（お試し） ---------- */
+
+.learn-label {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.learn-link {
+  min-height: 40px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 案内：光らせる枠と吹き出し。画面は暗くせず、盤はそのまま触れる */
+.tour-ring {
+  position: fixed;
+  z-index: 20;
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 3px var(--p0),
+    0 0 0 8px color-mix(in srgb, var(--p0) 25%, transparent);
+  pointer-events: none;
+  transition: all 0.2s ease-out;
+}
+
+.tour-card {
+  position: fixed;
+  z-index: 21;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 32px), 400px);
+  display: grid;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow);
+  animation: tour-in 0.2s ease-out;
+}
+
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.tour-card p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-count {
+  margin-right: auto;
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.tour-card .ghost-button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-color: color-mix(in srgb, var(--surface) 30%, transparent);
+  color: var(--surface);
+}
+
+.tour-card .primary {
+  min-height: 36px;
+  padding: 6px 16px;
+  background: var(--surface);
+  border-color: var(--surface);
+  color: var(--ink);
+}
+
+.tour-hint {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}

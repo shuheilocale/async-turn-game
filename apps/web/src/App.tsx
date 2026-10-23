@@ -4,6 +4,7 @@ import { Logo } from "./icons.tsx";
 import { navigate, usePath } from "./router.ts";
 import { Home } from "./pages/Home.tsx";
 import { Join } from "./pages/Join.tsx";
+import { Learn } from "./pages/Learn.tsx";
 import { Play } from "./pages/Play.tsx";
 import { Privacy } from "./pages/Privacy.tsx";
 
@@ -12,6 +13,7 @@ export function App() {
   const { lang, setLang, t } = useI18n();
   const join = path.match(/^\/join\/([\w-]+)$/);
   const play = path.match(/^\/g\/([\w-]+)$/);
+  const learn = path.match(/^\/learn\/([\w-]+)$/);
 
   useEffect(() => {
     document.title = t("app.name");
@@ -39,6 +41,8 @@ export function App() {
           <Join id={join[1]!} />
         ) : play ? (
           <Play key={play[1]} id={play[1]!} />
+        ) : learn ? (
+          <Learn key={learn[1]} gameType={learn[1]!} />
         ) : path === "/privacy" ? (
           <Privacy />
         ) : (

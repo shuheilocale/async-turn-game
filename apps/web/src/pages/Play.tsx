@@ -296,6 +296,7 @@ export function Play({ id }: { id: string }) {
         <details className="panel fold">
           <summary>{t("play.rules")}</summary>
           <p>{t(`game.${view.gameType}.rules`)}</p>
+          <button onClick={() => navigate(`/learn/${view.gameType}`)}>{t("learn.button")}</button>
         </details>
 
         {token && (

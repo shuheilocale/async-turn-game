@@ -12,7 +12,14 @@ type SeatChoice = Seat | "random";
 
 export function Home() {
   const { t } = useI18n();
-  const [gameType, setGameType] = useState<string | null>(null);
+  // 「ルールを学ぶ」の「このゲームで対局を作る」から来たら（/?create=<ID>）、作成画面を開く
+  const [gameType, setGameType] = useState<string | null>(() => {
+    const id = new URLSearchParams(location.search).get("create");
+    return id && boards[id] ? id : null;
+  });
+  useEffect(() => {
+    if (location.search) history.replaceState(null, "", "/");
+  }, []);
 
   return (
     <div className="home">
@@ -134,6 +141,16 @@ function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose()
             <button className="primary" disabled={busy}>{t("home.create")}</button>
           </div>
           <p className="muted small">{t("home.create.lead")}</p>
+          <button
+            type="button"
+            className="learn-link"
+            onClick={() => {
+              onClose();
+              navigate(`/learn/${gameType}`);
+            }}
+          >
+            {t("learn.button")}
+          </button>
         </form>
       )}
     </dialog>
