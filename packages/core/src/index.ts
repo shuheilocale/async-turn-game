@@ -8,6 +8,7 @@ import { gobble } from "./games/gobble.ts";
 import { nim } from "./games/nim.ts";
 import { tateyoko } from "./games/tateyoko.ts";
 import { fading } from "./games/fading.ts";
+import { boxes } from "./games/boxes.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -20,6 +21,7 @@ export * as Gobble from "./games/gobble.ts";
 export * as Nim from "./games/nim.ts";
 export * as Tateyoko from "./games/tateyoko.ts";
 export * as Fading from "./games/fading.ts";
+export * as Boxes from "./games/boxes.ts";
 
 /** 遊べるゲームの一覧（トップ画面にこの順で並ぶ）。ゲームを追加したらここに登録する */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -27,6 +29,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [gobble.id]: gobble,
   [nim.id]: nim,
   [connect4.id]: connect4,
+  [boxes.id]: boxes,
   [othello.id]: othello,
   [hitblow.id]: hitblow,
   [auction.id]: auction,
