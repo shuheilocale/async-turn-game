@@ -1,0 +1,188 @@
+/*
+ * ころころ。数値の太さは SVG の座標（1 マスが約 100、盤の幅が約 450）での値。
+ * このファイルは styles.css より先に読み込まれるので、.stack-sm の既定値に負けないよう、クラスを 2 つ重ねて指定する
+ */
+.korokoro.stack-sm {
+  width: min(100%, 420px);
+  gap: 10px;
+}
+
+/* 盤が画面の高さに収まるよう、.grid-board と同じ考え方で幅を決める */
+.korokoro-board {
+  display: block;
+  width: min(100%, 420px, calc(max(260px, 100dvh - var(--chrome, 340px)) * var(--ratio, 1)));
+  height: auto;
+  margin: 0 auto;
+  /* 奥の列で転がるキューブは、盤の上の余白にはみ出して描く */
+  overflow: visible;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 自分の番は、盤の上のスワイプで止まるマスを選ぶ */
+.korokoro-board.picking {
+  touch-action: none;
+}
+
+/* 盤の板：手前に厚みが見える */
+.korokoro-slab {
+  fill: color-mix(in srgb, var(--line) 70%, #000);
+}
+
+.korokoro-top {
+  fill: var(--line);
+}
+
+.korokoro-tile {
+  fill: var(--surface);
+  outline: none;
+  transition: fill 0.15s;
+}
+
+.korokoro-tile.paint {
+  fill: var(--seat-color);
+}
+
+.korokoro-tile.can {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .korokoro-tile.can:hover {
+    fill: color-mix(in srgb, var(--ink) 6%, var(--surface));
+  }
+}
+
+.korokoro-tile:focus-visible {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+/* 選んだマス：塗られる色の影 */
+.korokoro-tile.chosen,
+.korokoro-tile.chosen:hover {
+  fill: color-mix(in srgb, var(--seat-color) 60%, var(--surface));
+}
+
+/* 塗ったばかりのマスは、白から色がにじむように */
+.korokoro-tile.fresh {
+  animation: korokoro-paint 0.4s ease-out;
+}
+
+@keyframes korokoro-paint {
+  from {
+    fill: var(--surface);
+  }
+}
+
+/* 勝った並びのマスに縁どり */
+.korokoro-tile.win {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.korokoro-winline {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* そこに止まったときに塗られる色の点。白い縁で、塗ったマスとは見分ける */
+.korokoro-dot {
+  fill: var(--seat-color);
+  stroke: var(--surface);
+  stroke-width: 3;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: place 0.2s ease-out;
+}
+
+/* 直前の転がしの道：転がり始めたマスに輪、止まったマスまで点線 */
+.korokoro-trail {
+  pointer-events: none;
+}
+
+.korokoro-trail polyline {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.45;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 11;
+}
+
+.korokoro-from {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.45;
+  stroke-width: 3;
+}
+
+/* キューブの面。面の明るさに応じて、色に --tone（白か黒）を混ぜる。--mix は色を残す割合 */
+.korokoro-face {
+  fill: color-mix(in srgb, var(--seat-color) var(--mix, 100%), var(--tone, #000));
+  stroke: color-mix(in srgb, var(--seat-color) 58%, #000);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+/*
+ * キューブは指の操作を通す。すぐ奥のマスはキューブに半分隠れるので、キューブの上の面をタップしても選べるように
+ * （選ぶだけで、転がすのは「これで決定」）
+ */
+.korokoro-cube {
+  pointer-events: none;
+}
+
+.korokoro-shadow {
+  fill: #000;
+  opacity: 0.12;
+}
+
+@media (prefers-color-scheme: dark) {
+  .korokoro-shadow {
+    opacity: 0.3;
+  }
+}
+
+/*
+ * 選んだマスに出す、止まったときのキューブの影。面はうすく、辺は点線にして、
+ * 下の「塗られる色の影」のマスが透けて見えるようにする
+ */
+.korokoro-cube.ghost .korokoro-face {
+  fill-opacity: 0.22;
+  stroke: var(--ink);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+}
+
+.korokoro-cube.ghost .korokoro-shadow {
+  display: none;
+}
+
+/* 盤の下の案内は 2 行分の高さを取っておく（手が進んでも下の表示がずれないように） */
+.korokoro .board-note {
+  min-height: 2.9rem;
+  align-content: start;
+}
+
+/* 盤の下の案内で、塗る色の文字 */
+.korokoro .paint-text {
+  color: var(--seat-text);
+  font-weight: 700;
+}
+
+.korokoro-replay.ghost-button {
+  min-height: 34px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
