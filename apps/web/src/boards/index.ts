@@ -13,6 +13,7 @@ import { BoxesBoard } from "./BoxesBoard.tsx";
 import { BridgeBoard } from "./BridgeBoard.tsx";
 import { BluffBoard } from "./BluffBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
+import { TreasureBoard } from "./TreasureBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -61,4 +62,5 @@ export const boards: Record<string, BoardUI> = {
   auction: { Board: AuctionBoard, length: "medium", hidden: true },
   bluff: { Board: BluffBoard, length: "medium", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
+  treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
 };

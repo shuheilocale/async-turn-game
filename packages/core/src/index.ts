@@ -12,6 +12,7 @@ import { boxes } from "./games/boxes.ts";
 import { bridge } from "./games/bridge.ts";
 import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
+import { treasure } from "./games/treasure.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -29,6 +30,7 @@ export * as Boxes from "./games/boxes.ts";
 export * as Bridge from "./games/bridge.ts";
 export * as Bluff from "./games/bluff.ts";
 export * as Sotto from "./games/sotto.ts";
+export * as Treasure from "./games/treasure.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -45,6 +47,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [auction.id]: auction,
   [bluff.id]: bluff,
   [sotto.id]: sotto,
+  [treasure.id]: treasure,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {
