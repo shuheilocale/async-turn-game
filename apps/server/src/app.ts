@@ -5,6 +5,7 @@ import {
   type CreateGameResponse,
   type GameView,
   type JoinGameResponse,
+  type NextGameResponse,
   type Seat,
 } from "@atg/core";
 import type { VerifyLine } from "./line.ts";
@@ -44,6 +45,7 @@ function toView(game: GameRecord, you: Seat | null): GameView {
     you,
     waitingForOpponent: game.players.length < 2,
     inviteCode: you === null ? null : game.inviteCode,
+    nextGameId: game.nextGameId,
     updatedAt: game.updatedAt,
   };
 }
@@ -100,6 +102,22 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name), lineUser);
     if (!joined) return c.json({ error: "invite_invalid" }, 409);
     return c.json<JoinGameResponse>(joined, 201);
+  });
+
+  // 終わった対局から、同じ 2 人で次の対局を作る。gameType を省くと同じゲーム（もう一局）
+  app.post("/games/:id/next", async (c) => {
+    const id = c.req.param("id");
+    const game = await store.get(id);
+    if (!game) return c.json({ error: "not_found" }, 404);
+    const seat = await store.seatOf(id, bearer(c));
+    if (seat === null) return c.json({ error: "not_participant" }, 401);
+    if (getGame(game.gameType)!.status(game.state).kind !== "finished") return c.json({ error: "not_finished" }, 409);
+    const body = await jsonBody(c);
+    const def = getGame(typeof body.gameType === "string" ? body.gameType : game.gameType);
+    if (!def) return c.json({ error: "unknown_game" }, 400);
+    const nextId = await store.startNext(id, def.id, def.initialState(Math.random));
+    if (!nextId) return c.json({ error: "not_found" }, 404);
+    return c.json<NextGameResponse>({ id: nextId, seat: seat === 0 ? 1 : 0 }, 201);
   });
 
   // LINE アカウントで本人と確かめられたら、この端末用の合言葉を発行する（端末を替えたとき・保存が消えたとき）

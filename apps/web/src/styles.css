@@ -1609,3 +1609,28 @@ button.card-face:disabled {
 .prose p + p {
   margin-top: 8px;
 }
+
+/* 終局後の「もう一局」「ほかのゲームで遊ぶ」 */
+.after-game {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 420px);
+  text-align: center;
+}
+
+.game-tiles.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-tiles.compact .game-tile {
+  padding: 8px 8px 10px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+}
+
+.game-tiles.compact .glyph {
+  aspect-ratio: 1;
+  padding: 10px;
+  margin-bottom: 2px;
+}

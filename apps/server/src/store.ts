@@ -14,6 +14,8 @@ export interface GameRecord {
   /** 2 人目が参加すると null になる */
   inviteCode: string | null;
   players: PlayerRecord[];
+  /** 終局後に作られた次の対局。なければ null */
+  nextGameId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,7 +52,15 @@ export class GameStore {
     const inviteCode = newToken(9);
     const t = now();
     await this.db.batch([
-      q("INSERT INTO games VALUES (?, ?, ?, 0, ?, ?, ?)", id, gameType, JSON.stringify(state), inviteCode, t, t),
+      q(
+        "INSERT INTO games (id, game_type, state_json, version, invite_code, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?, ?)",
+        id,
+        gameType,
+        JSON.stringify(state),
+        inviteCode,
+        t,
+        t,
+      ),
       q(
         "INSERT INTO players (game_id, seat, name, token_hash, line_user_id) VALUES (?, ?, ?, ?, ?)",
         id,
@@ -75,6 +85,7 @@ export class GameStore {
       version: row.version,
       inviteCode: row.invite_code,
       players,
+      nextGameId: row.next_game_id ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -117,6 +128,47 @@ export class GameStore {
        WHERE p.line_user_id = ? ORDER BY g.updated_at DESC LIMIT 50`,
       lineUserId,
     );
+  }
+
+  /**
+   * 終わった対局から、同じ 2 人で次の対局を作る（先手と後手は入れ替える）。合言葉と LINE の結びつきも引き継ぐ。
+   * すでに作られていれば（相手が先に押していれば）それを返す
+   */
+  async startNext(id: string, gameType: string, state: unknown): Promise<string | null> {
+    const game = await this.get(id);
+    if (!game) return null;
+    if (game.nextGameId) return game.nextGameId;
+    const nextId = newToken(9);
+    const t = now();
+    // どの文も「まだ次の対局がない」ときだけ効く。同時に押されても片方の分しか作られない
+    const notYet = "EXISTS (SELECT 1 FROM games WHERE id = ? AND next_game_id IS NULL)";
+    await this.db.batch([
+      q(
+        `INSERT INTO games (id, game_type, state_json, version, invite_code, created_at, updated_at)
+         SELECT ?, ?, ?, 0, NULL, ?, ? WHERE ${notYet}`,
+        nextId,
+        gameType,
+        JSON.stringify(state),
+        t,
+        t,
+        id,
+      ),
+      q(
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id)
+         SELECT ?, 1 - seat, name, token_hash, line_user_id FROM players WHERE game_id = ? AND ${notYet}`,
+        nextId,
+        id,
+        id,
+      ),
+      q(
+        `INSERT INTO tokens (token_hash, game_id, seat) SELECT token_hash, ?, 1 - seat FROM tokens WHERE game_id = ? AND ${notYet}`,
+        nextId,
+        id,
+        id,
+      ),
+      q("UPDATE games SET next_game_id = ?, updated_at = ? WHERE id = ? AND next_game_id IS NULL", nextId, t, id),
+    ]);
+    return (await this.get(id))?.nextGameId ?? null;
   }
 
   /** 招待コードで参加する。成功したら参加者のトークンを返す。lineUserId は LINE から参加したときだけ */

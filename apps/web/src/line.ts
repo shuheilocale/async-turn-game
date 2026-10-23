@@ -103,6 +103,11 @@ function flex(card: Card): Messages {
   ] as Messages;
 }
 
+/** トークから開いた対局の次の対局へ移るときに呼ぶ。次の対局でも同じトークへ自動で知らせられる */
+export function followGame(fromId: string, toId: string) {
+  if (session?.entryGameId === fromId) session.entryGameId = toId;
+}
+
 /** 開いていたトークに自動で送る。送れない状況（トーク以外から開いた・別の対局）なら false */
 export async function postToChat(gameId: string, card: Card): Promise<boolean> {
   if (!session?.inChat || session.entryGameId !== gameId) return false;

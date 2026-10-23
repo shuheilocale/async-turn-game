@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameView, Seat } from "@atg/core";
 import { api, ApiRequestError } from "../api.ts";
 import { boards } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
-import { lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
+import { followGame, lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
 import { inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
 import { savedGames } from "../storage.ts";
@@ -20,6 +20,7 @@ export function Play({ id }: { id: string }) {
   const [selected, setSelected] = useState<unknown | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
   /** トークに自動で送れなかったときに、送り先を選んで送るためのカード */
   const [notice, setNotice] = useState<Card | null>(null);
 
@@ -126,6 +127,31 @@ export function Play({ id }: { id: string }) {
     return false;
   }
 
+  /** 同じ 2 人で次の対局を作る（gameType を省くともう一局）。相手には LINE で知らせる */
+  async function startNext(gameType?: string) {
+    if (!view || !token || view.you === null) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const next = await api.next(id, token, gameType);
+      await goNext(next.id);
+      const nextView = await api.getGame(next.id, token).catch(() => null);
+      const me = view.players.find((p) => p.seat === view.you)?.name ?? "";
+      if (nextView) await postToChat(next.id, progressCard(t, nextView, t("line.nextGame", { name: me })));
+      navigate(`/g/${next.id}`);
+    } catch (e) {
+      setMessage(errorText(t, e));
+      setBusy(false);
+    }
+  }
+
+  /** 次の対局でも同じ合言葉で指せるので、席を入れ替えて保存しておく */
+  async function goNext(nextId: string, andOpen = false) {
+    if (token && view?.you != null) savedGames.save(nextId, { token, seat: view.you === 0 ? 1 : 0 });
+    followGame(id, nextId);
+    if (andOpen) navigate(`/g/${nextId}`);
+  }
+
   async function share(url: string, text: string) {
     const result = await shareLink(url, text);
     if (result === "copied") setMessage(t("play.copied"));
@@ -228,6 +254,29 @@ export function Play({ id }: { id: string }) {
           selected={selected}
           onSelect={(m) => setSelected(m)}
         />
+        {view.status.kind === "finished" && view.you !== null && (
+          <div className="after-game">
+            {view.nextGameId ? (
+              <>
+                <p>{t("play.nextReady")}</p>
+                <button className="primary" onClick={() => goNext(view.nextGameId!, true)}>
+                  {t("play.toNext")}
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="primary" disabled={busy} onClick={() => startNext()}>
+                  {t("play.rematch")}
+                </button>
+                <button disabled={busy} onClick={() => setPicking(true)}>
+                  {t("play.otherGame")}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        <GamePicker open={picking} onClose={() => setPicking(false)} onPick={(g) => (setPicking(false), startNext(g))} />
+
         <div className={`confirm ${selected !== null ? "show" : ""}`}>
           <button className="ghost-button" onClick={() => setSelected(null)} disabled={busy}>{t("play.cancel")}</button>
           <button className="primary" onClick={submit} disabled={busy}>{t("play.confirm")}</button>
@@ -254,6 +303,37 @@ export function Play({ id }: { id: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** ほかのゲームで遊ぶときに、ゲームを選ぶシート */
+function GamePicker({ open, onClose, onPick }: { open: boolean; onClose(): void; onPick(gameType: string): void }) {
+  const { t } = useI18n();
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const d = dialog.current;
+    if (open && d && !d.open) d.showModal();
+    if (!open && d?.open) d.close();
+  }, [open]);
+
+  return (
+    <dialog ref={dialog} className="sheet" onClose={onClose} onClick={(e) => e.target === dialog.current && onClose()}>
+      <div className="sheet-body">
+        <h1>{t("home.chooseGame")}</h1>
+        <div className="game-tiles compact">
+          {Object.keys(boards).map((gameType) => (
+            <button key={gameType} type="button" className="game-tile" onClick={() => onPick(gameType)}>
+              <GameGlyph id={gameType} />
+              <span className="tile-name">{t(`game.${gameType}.name`)}</span>
+            </button>
+          ))}
+        </div>
+        <button className="ghost-button" onClick={onClose}>
+          {t("home.close")}
+        </button>
+      </div>
+    </dialog>
   );
 }
 

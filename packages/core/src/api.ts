@@ -22,6 +22,8 @@ export interface GameView {
   waitingForOpponent: boolean;
   /** 参加者にだけ見える招待コード（相手が参加すると null） */
   inviteCode: string | null;
+  /** 終局後に作られた次の対局（もう一局・ほかのゲーム）。なければ null */
+  nextGameId: string | null;
   updatedAt: string;
 }
 
@@ -48,6 +50,12 @@ export interface JoinGameRequest {
 
 export interface JoinGameResponse {
   token: string;
+  seat: Seat;
+}
+
+/** 次の対局を作った結果。seat は次の対局での自分の席（前の対局と入れ替わる） */
+export interface NextGameResponse {
+  id: string;
   seat: Seat;
 }
 
