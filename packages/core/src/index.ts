@@ -10,6 +10,7 @@ import { tateyoko } from "./games/tateyoko.ts";
 import { fading } from "./games/fading.ts";
 import { boxes } from "./games/boxes.ts";
 import { bridge } from "./games/bridge.ts";
+import { bluff } from "./games/bluff.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -24,6 +25,7 @@ export * as Tateyoko from "./games/tateyoko.ts";
 export * as Fading from "./games/fading.ts";
 export * as Boxes from "./games/boxes.ts";
 export * as Bridge from "./games/bridge.ts";
+export * as Bluff from "./games/bluff.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -38,6 +40,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [othello.id]: othello,
   [hitblow.id]: hitblow,
   [auction.id]: auction,
+  [bluff.id]: bluff,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

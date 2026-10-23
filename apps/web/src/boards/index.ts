@@ -11,6 +11,7 @@ import { TateyokoBoard } from "./TateyokoBoard.tsx";
 import { FadingBoard } from "./FadingBoard.tsx";
 import { BoxesBoard } from "./BoxesBoard.tsx";
 import { BridgeBoard } from "./BridgeBoard.tsx";
+import { BluffBoard } from "./BluffBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -50,4 +51,5 @@ export const boards: Record<string, BoardUI> = {
   othello: { Board: OthelloBoard, length: "long" },
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
   auction: { Board: AuctionBoard, length: "medium", hidden: true },
+  bluff: { Board: BluffBoard, length: "medium", hidden: true },
 };
