@@ -33,7 +33,7 @@ export function Home() {
               <span className="tile-name">{t(`game.${id}.name`)}</span>
               <span className="tile-meta">
                 <span className={`len len-${ui.length}`}>{t(`tag.${ui.length}`)}</span>
-                {ui.hidden && <span className="len hidden">{t("tag.hidden")}</span>}
+                {ui.hidden && !ui.coop && <span className="len hidden">{t("tag.hidden")}</span>}
                 {ui.coop && <span className="len coop">{t("tag.coop")}</span>}
               </span>
             </button>
