@@ -47,6 +47,8 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [tateyoko.id]: tateyoko,
   [bridge.id]: bridge,
   [stack.id]: stack,
+  [pour.id]: pour,
+  [balloon.id]: balloon,
   [connect4.id]: connect4,
   [boxes.id]: boxes,
   [othello.id]: othello,
@@ -55,8 +57,6 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [bluff.id]: bluff,
   [sotto.id]: sotto,
   [treasure.id]: treasure,
-  [pour.id]: pour,
-  [balloon.id]: balloon,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

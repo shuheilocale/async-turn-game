@@ -26,6 +26,7 @@ export const th: Messages = {
   "tag.long": "ใช้เวลา",
   "tag.hidden": "เกมจิตวิทยา",
   "tag.coop": "ร่วมมือ",
+  "tag.timing": "จังหวะ",
 
   "badge.finished": "จบแล้ว",
   "badge.cleared": "สำเร็จ",

@@ -43,6 +43,8 @@ export interface GameMeta {
   hidden?: boolean;
   /** 2 人で一緒に目標を目指す協力ゲーム */
   coop?: boolean;
+  /** 長押しやタップの回数など、タイミングで遊ぶゲーム */
+  timing?: boolean;
 }
 
 /** ゲームごとの画面部品。ルールは @atg/core、見た目と文言はここと i18n */
@@ -59,6 +61,8 @@ export const boards: Record<string, BoardUI> = {
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
   stack: { Board: StackBoard, length: "short" },
+  pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
+  balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },
@@ -67,6 +71,4 @@ export const boards: Record<string, BoardUI> = {
   bluff: { Board: BluffBoard, length: "medium", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
-  pour: { Board: PourBoard, length: "short", hidden: true },
-  balloon: { Board: BalloonBoard, length: "short", hidden: true },
 };

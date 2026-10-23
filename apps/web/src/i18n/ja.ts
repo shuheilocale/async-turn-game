@@ -25,6 +25,7 @@ export const ja = {
   "tag.long": "じっくり",
   "tag.hidden": "かけひき",
   "tag.coop": "協力",
+  "tag.timing": "タイミング",
 
   "badge.finished": "終局",
   "badge.cleared": "クリア",
