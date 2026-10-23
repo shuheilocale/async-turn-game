@@ -3,6 +3,8 @@ import type { GameView } from "@atg/core";
 import { api } from "../api.ts";
 import { errorText, useI18n } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
+import { lineIdToken, lineSession, postToChat } from "../line.ts";
+import { progressCard } from "../notify.ts";
 import { navigate } from "../router.ts";
 import { savedGames, savedName } from "../storage.ts";
 
@@ -10,7 +12,7 @@ export function Join({ id }: { id: string }) {
   const { t } = useI18n();
   const code = new URLSearchParams(location.search).get("code") ?? "";
   const [view, setView] = useState<GameView | null>(null);
-  const [name, setName] = useState(savedName.get());
+  const [name, setName] = useState(() => savedName.get() || lineSession()?.displayName || "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,7 +22,14 @@ export function Join({ id }: { id: string }) {
       navigate(`/g/${id}`, true);
       return;
     }
-    api.getGame(id).then(setView, (e) => setError(errorText(t, e)));
+    // LINE から開いていて、すでにこの対局の参加者（作った本人が別の端末で開いた など）なら対局画面へ
+    const idToken = lineIdToken();
+    (idToken ? api.claim(id, idToken) : Promise.reject())
+      .then((claimed) => {
+        savedGames.save(id, claimed);
+        navigate(`/g/${id}`, true);
+      })
+      .catch(() => api.getGame(id).then(setView, (e) => setError(errorText(t, e))));
     // t は言語切り替えで変わるが、読み込み直す必要はない
   }, [id]);
 
@@ -30,8 +39,11 @@ export function Join({ id }: { id: string }) {
     setError(null);
     try {
       savedName.set(name);
-      const res = await api.joinGame(id, { inviteCode: code, name });
+      const res = await api.joinGame(id, { inviteCode: code, name, idToken: lineIdToken() });
       savedGames.save(id, { token: res.token, seat: res.seat });
+      // 招待カードを開いたトークに「参加しました」と知らせる（作った人に通知が届く）
+      const joined = await api.getGame(id, res.token).catch(() => null);
+      if (joined) await postToChat(id, progressCard(t, joined, t("line.joined", { name: name.trim() || t("home.namePlaceholder") })));
       navigate(`/g/${id}`, true);
     } catch (err) {
       setError(errorText(t, err));

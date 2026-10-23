@@ -4,6 +4,7 @@ import { api } from "../api.ts";
 import { boards } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
+import { lineIdToken, lineSession } from "../line.ts";
 import { navigate } from "../router.ts";
 import { savedGames, savedName } from "../storage.ts";
 
@@ -32,6 +33,11 @@ export function Home() {
         </div>
       </section>
       <CreateSheet gameType={gameType} onClose={() => setGameType(null)} />
+      <footer className="home-footer">
+        <a href="/privacy" onClick={(e) => (e.preventDefault(), navigate("/privacy"))}>
+          {t("privacy.link")}
+        </a>
+      </footer>
     </div>
   );
 }
@@ -40,7 +46,7 @@ export function Home() {
 function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose(): void }) {
   const { t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [name, setName] = useState(savedName.get());
+  const [name, setName] = useState(() => savedName.get() || lineSession()?.displayName || "");
   const [seat, setSeat] = useState<SeatChoice>("random");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +69,7 @@ function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose()
     setError(null);
     try {
       savedName.set(name);
-      const res = await api.createGame({ gameType, name, seat });
+      const res = await api.createGame({ gameType, name, seat, idToken: lineIdToken() });
       savedGames.save(res.id, { token: res.token, seat: res.seat });
       onClose();
       navigate(`/g/${res.id}`);
@@ -133,6 +139,31 @@ function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose()
   );
 }
 
+/**
+ * この端末に保存した対局に加えて、LINE から使っているときは LINE アカウントで参加している対局も集める
+ * （別の端末で作った・参加した対局も一覧に出る）
+ */
+async function loadSaved() {
+  const idToken = lineIdToken();
+  if (idToken) {
+    try {
+      const known = savedGames.all();
+      const mine = await api.myGames(idToken);
+      await Promise.all(
+        mine
+          .filter((g) => !known[g.id])
+          .map(async (g) => {
+            const claimed = await api.claim(g.id, idToken);
+            savedGames.save(g.id, claimed);
+          }),
+      );
+    } catch {
+      // LINE の確認に失敗しても、この端末に保存した対局は出す
+    }
+  }
+  return savedGames.all();
+}
+
 const isMyTurn = (v: GameView) => v.status.kind === "playing" && v.status.turn === v.you && !v.waitingForOpponent;
 
 function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boolean } {
@@ -146,12 +177,13 @@ function MyGames() {
   const [views, setViews] = useState<GameView[] | null>(null);
 
   useEffect(() => {
-    const saved = savedGames.all();
-    Promise.all(Object.entries(saved).map(([id, g]) => api.getGame(id, g.token).catch(() => null))).then((list) => {
-      const ok = list.filter((v): v is GameView => v !== null);
-      ok.sort((a, b) => Number(isMyTurn(b)) - Number(isMyTurn(a)) || b.updatedAt.localeCompare(a.updatedAt));
-      setViews(ok);
-    });
+    loadSaved()
+      .then((saved) => Promise.all(Object.entries(saved).map(([id, g]) => api.getGame(id, g.token).catch(() => null))))
+      .then((list) => {
+        const ok = list.filter((v): v is GameView => v !== null);
+        ok.sort((a, b) => Number(isMyTurn(b)) - Number(isMyTurn(a)) || b.updatedAt.localeCompare(a.updatedAt));
+        setViews(ok);
+      });
   }, []);
 
   if (views === null || views.length === 0) return null;

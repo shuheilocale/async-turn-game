@@ -1565,3 +1565,47 @@ button.card-face:disabled {
 .play-main > .stack {
   width: min(100%, 560px);
 }
+
+/* トップの下の小さなリンク */
+.home-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  font-size: 0.8rem;
+}
+
+.home-footer a,
+.prose a {
+  color: var(--muted);
+}
+
+@media (min-width: 960px) {
+  .home > .home-footer {
+    grid-column: 1 / -1;
+  }
+}
+
+/* プライバシーポリシーなどの文章 */
+.prose {
+  max-width: 680px;
+  margin: 8px auto 0;
+  padding: 24px;
+}
+
+.prose h1 {
+  margin-bottom: 12px;
+}
+
+.prose h2 {
+  font-size: 1rem;
+  margin: 22px 0 6px;
+}
+
+.prose ul {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.prose p + p {
+  margin-top: 8px;
+}

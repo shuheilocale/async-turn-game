@@ -37,15 +37,29 @@ const now = () => new Date().toISOString();
 export class GameStore {
   constructor(private db: Sql) {}
 
-  /** 対局を作り、作成者のトークンを返す */
-  async create(gameType: string, state: unknown, creator: PlayerRecord): Promise<{ id: string; token: string; inviteCode: string }> {
+  /** 対局を作り、作成者のトークンを返す。lineUserId は LINE から作ったときだけ */
+  async create(
+    gameType: string,
+    state: unknown,
+    creator: PlayerRecord,
+    lineUserId: string | null = null,
+  ): Promise<{ id: string; token: string; inviteCode: string }> {
     const id = newToken(9);
     const token = newToken();
+    const tokenHash = await hash(token);
     const inviteCode = newToken(9);
     const t = now();
     await this.db.batch([
       q("INSERT INTO games VALUES (?, ?, ?, 0, ?, ?, ?)", id, gameType, JSON.stringify(state), inviteCode, t, t),
-      q("INSERT INTO players VALUES (?, ?, ?, ?)", id, creator.seat, creator.name, await hash(token)),
+      q(
+        "INSERT INTO players (game_id, seat, name, token_hash, line_user_id) VALUES (?, ?, ?, ?, ?)",
+        id,
+        creator.seat,
+        creator.name,
+        tokenHash,
+        lineUserId,
+      ),
+      q("INSERT INTO tokens (token_hash, game_id, seat) VALUES (?, ?, ?)", tokenHash, id, creator.seat),
     ]);
     return { id, token, inviteCode };
   }
@@ -70,31 +84,68 @@ export class GameStore {
   async seatOf(id: string, token: string | undefined): Promise<Seat | null> {
     if (!token) return null;
     const [row] = await this.db.all<{ seat: Seat }>(
-      "SELECT seat FROM players WHERE game_id = ? AND token_hash = ?",
+      "SELECT seat FROM tokens WHERE game_id = ? AND token_hash = ?",
       id,
       await hash(token),
     );
     return row ? row.seat : null;
   }
 
-  /** 招待コードで参加する。成功したら参加者のトークンを返す */
-  async join(id: string, inviteCode: string, name: string): Promise<{ token: string; seat: Seat } | null> {
+  /** LINE アカウントからその対局での席を調べる。該当しなければ null */
+  async seatOfLineUser(id: string, lineUserId: string): Promise<Seat | null> {
+    const [row] = await this.db.all<{ seat: Seat }>(
+      "SELECT seat FROM players WHERE game_id = ? AND line_user_id = ?",
+      id,
+      lineUserId,
+    );
+    return row ? row.seat : null;
+  }
+
+  /** LINE アカウントで本人と確かめられたら、この端末用の合言葉を新しく発行する */
+  async claim(id: string, lineUserId: string): Promise<{ token: string; seat: Seat } | null> {
+    const seat = await this.seatOfLineUser(id, lineUserId);
+    if (seat === null) return null;
+    const token = newToken();
+    await this.db.batch([q("INSERT INTO tokens (token_hash, game_id, seat) VALUES (?, ?, ?)", await hash(token), id, seat)]);
+    return { token, seat };
+  }
+
+  /** LINE アカウントで参加している対局（新しく動いた順） */
+  async gamesOfLineUser(lineUserId: string): Promise<{ id: string; seat: Seat }[]> {
+    return this.db.all<{ id: string; seat: Seat }>(
+      `SELECT g.id AS id, p.seat AS seat FROM players p JOIN games g ON g.id = p.game_id
+       WHERE p.line_user_id = ? ORDER BY g.updated_at DESC LIMIT 50`,
+      lineUserId,
+    );
+  }
+
+  /** 招待コードで参加する。成功したら参加者のトークンを返す。lineUserId は LINE から参加したときだけ */
+  async join(
+    id: string,
+    inviteCode: string,
+    name: string,
+    lineUserId: string | null = null,
+  ): Promise<{ token: string; seat: Seat } | null> {
     const game = await this.get(id);
     if (!game || game.inviteCode === null || game.inviteCode !== inviteCode) return null;
     const taken = game.players[0]?.seat;
     const seat: Seat = taken === 0 ? 1 : 0;
     const token = newToken();
+    const tokenHash = await hash(token);
+    const stillOpen = "WHERE EXISTS (SELECT 1 FROM games WHERE id = ? AND invite_code = ?)";
     // 招待コードがまだ残っているときだけ参加者を足し、同時にコードを消す
     const [inserted] = await this.db.batch([
       q(
-        "INSERT INTO players SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM games WHERE id = ? AND invite_code = ?)",
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id) SELECT ?, ?, ?, ?, ? ${stillOpen}`,
         id,
         seat,
         name,
-        await hash(token),
+        tokenHash,
+        lineUserId,
         id,
         inviteCode,
       ),
+      q(`INSERT INTO tokens (token_hash, game_id, seat) SELECT ?, ?, ? ${stillOpen}`, tokenHash, id, seat, id, inviteCode),
       q("UPDATE games SET invite_code = NULL, updated_at = ? WHERE id = ? AND invite_code = ?", now(), id, inviteCode),
     ]);
     return inserted ? { token, seat } : null;

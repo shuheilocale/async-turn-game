@@ -4,6 +4,7 @@ import type {
   GameView,
   JoinGameRequest,
   JoinGameResponse,
+  MyGame,
 } from "@atg/core";
 
 /** code はサーバが返すエラーの種類（例: "not_your_turn"）。表示用の文は i18n の errorText で作る */
@@ -32,6 +33,10 @@ export const api = {
   getGame: (id: string, token?: string) => request<GameView>(`/games/${id}`, {}, token),
   joinGame: (id: string, req: JoinGameRequest) =>
     request<JoinGameResponse>(`/games/${id}/join`, { method: "POST", body: JSON.stringify(req) }),
+  /** LINE アカウントで本人と確かめて、この端末用の合言葉をもらう */
+  claim: (id: string, idToken: string) =>
+    request<JoinGameResponse>(`/games/${id}/claim`, { method: "POST", body: JSON.stringify({ idToken }) }),
+  myGames: (idToken: string) => request<MyGame[]>("/me/games", { method: "POST", body: JSON.stringify({ idToken }) }),
   move: (id: string, token: string, version: number, move: unknown) =>
     request<GameView>(`/games/${id}/moves`, { method: "POST", body: JSON.stringify({ version, move }) }, token),
 };

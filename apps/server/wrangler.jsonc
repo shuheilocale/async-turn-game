@@ -9,6 +9,10 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  "vars": {
+    // LINE ミニアプリのチャネル ID（開発用・審査用・本番用）。LINE の ID トークンの発行先として受け付ける
+    "LINE_CHANNEL_IDS": "2012180394,2012180395,2012180396"
+  },
   "d1_databases": [
     {
       "binding": "DB",

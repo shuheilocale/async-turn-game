@@ -1,9 +1,12 @@
 import { createApp } from "./app.ts";
 import { d1Db, type D1Database } from "./d1.ts";
+import { lineVerifier, parseChannelIds } from "./line.ts";
 import { GameStore } from "./store.ts";
 
 interface Env {
   DB: D1Database;
+  /** LINE ミニアプリのチャネル ID（開発用・審査用・本番用）をカンマ区切りで */
+  LINE_CHANNEL_IDS?: string;
 }
 
 let cached: { db: D1Database; app: ReturnType<typeof createApp> } | undefined;
@@ -14,7 +17,10 @@ let cached: { db: D1Database; app: ReturnType<typeof createApp> } | undefined;
  */
 export default {
   fetch(request: Request, env: Env) {
-    if (cached?.db !== env.DB) cached = { db: env.DB, app: createApp(new GameStore(d1Db(env.DB))) };
+    if (cached?.db !== env.DB) cached = {
+        db: env.DB,
+        app: createApp(new GameStore(d1Db(env.DB)), { verifyLine: lineVerifier(parseChannelIds(env.LINE_CHANNEL_IDS)) }),
+      };
     return cached.app.fetch(request, env);
   },
 };

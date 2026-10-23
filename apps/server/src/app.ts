@@ -7,6 +7,7 @@ import {
   type JoinGameResponse,
   type Seat,
 } from "@atg/core";
+import type { VerifyLine } from "./line.ts";
 import type { GameRecord, GameStore } from "./store.ts";
 
 const MAX_NAME = 20;
@@ -47,8 +48,22 @@ function toView(game: GameRecord, you: Seat | null): GameView {
   };
 }
 
-export function createApp(store: GameStore) {
+export interface AppOptions {
+  /** LINE の ID トークンを確かめる関数。なければ LINE での本人確認は使わない（手元の開発用） */
+  verifyLine?: VerifyLine;
+}
+
+export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
   const app = new Hono().basePath("/api");
+
+  /**
+   * 本文に idToken があれば LINE のユーザー ID にする。なければ null（LINE の外から使っている）。
+   * idToken があるのに確かめられなければ "invalid"
+   */
+  async function lineUserOf(body: Record<string, unknown>): Promise<string | null | "invalid"> {
+    if (typeof body.idToken !== "string" || !verifyLine) return null;
+    return (await verifyLine(body.idToken))?.userId ?? "invalid";
+  }
 
   app.get("/health", (c) => c.json({ ok: true }));
 
@@ -56,12 +71,16 @@ export function createApp(store: GameStore) {
     const body = await jsonBody(c);
     const def = getGame(String(body.gameType ?? ""));
     if (!def) return c.json({ error: "unknown_game" }, 400);
+    const lineUser = await lineUserOf(body);
+    if (lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
     const seat: Seat =
       body.seat === 0 || body.seat === 1 ? body.seat : Math.random() < 0.5 ? 0 : 1;
-    const { id, token, inviteCode } = await store.create(def.id, def.initialState(Math.random), {
-      seat,
-      name: cleanName(body.name),
-    });
+    const { id, token, inviteCode } = await store.create(
+      def.id,
+      def.initialState(Math.random),
+      { seat, name: cleanName(body.name) },
+      lineUser,
+    );
     return c.json<CreateGameResponse>({ id, token, seat, inviteCode }, 201);
   });
 
@@ -75,9 +94,28 @@ export function createApp(store: GameStore) {
   app.post("/games/:id/join", async (c) => {
     const id = c.req.param("id");
     const body = await jsonBody(c);
-    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name));
+    const lineUser = await lineUserOf(body);
+    if (lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
+    if (lineUser && (await store.seatOfLineUser(id, lineUser)) !== null) return c.json({ error: "own_game" }, 409);
+    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name), lineUser);
     if (!joined) return c.json({ error: "invite_invalid" }, 409);
     return c.json<JoinGameResponse>(joined, 201);
+  });
+
+  // LINE アカウントで本人と確かめられたら、この端末用の合言葉を発行する（端末を替えたとき・保存が消えたとき）
+  app.post("/games/:id/claim", async (c) => {
+    const lineUser = await lineUserOf(await jsonBody(c));
+    if (!lineUser || lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
+    const claimed = await store.claim(c.req.param("id"), lineUser);
+    if (!claimed) return c.json({ error: "not_participant" }, 404);
+    return c.json<JoinGameResponse>(claimed);
+  });
+
+  // LINE アカウントで参加している対局の一覧（ID トークンを本文で送るので POST）
+  app.post("/me/games", async (c) => {
+    const lineUser = await lineUserOf(await jsonBody(c));
+    if (!lineUser || lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
+    return c.json(await store.gamesOfLineUser(lineUser));
   });
 
   app.post("/games/:id/moves", async (c) => {

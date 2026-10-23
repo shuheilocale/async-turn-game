@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { usePath } from "./router.ts";
 import { LANGS, useI18n, type Lang } from "./i18n/index.tsx";
 import { Logo } from "./icons.tsx";
-import { navigate } from "./router.ts";
+import { navigate, usePath } from "./router.ts";
 import { Home } from "./pages/Home.tsx";
 import { Join } from "./pages/Join.tsx";
 import { Play } from "./pages/Play.tsx";
+import { Privacy } from "./pages/Privacy.tsx";
 
 export function App() {
   const path = usePath();
@@ -35,7 +35,15 @@ export function App() {
         </select>
       </header>
       <main>
-        {join ? <Join id={join[1]!} /> : play ? <Play key={play[1]} id={play[1]!} /> : <Home />}
+        {join ? (
+          <Join id={join[1]!} />
+        ) : play ? (
+          <Play key={play[1]} id={play[1]!} />
+        ) : path === "/privacy" ? (
+          <Privacy />
+        ) : (
+          <Home />
+        )}
       </main>
     </div>
   );

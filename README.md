@@ -105,6 +105,22 @@ docs/企画書.md
 | POST | `/api/games/:id/moves` | 手を指す `{ version, move }` |
 | GET | `/api/games/:id/moves` | 手の記録 |
 
+## LINE ミニアプリとして使う
+
+LINE Developers に「LINE ミニアプリ」のチャネルを作ってある（未認証のまま公開）。LINE の中で開くと次の機能が使える。LINE の外ではこれまでどおり。
+
+| 機能 | しくみ |
+| --- | --- |
+| LINE アカウントで本人確認 | 画面が `liff.getIDToken()` の ID トークンを送り、サーバが LINE に問い合わせて確かめる（[apps/server/src/line.ts](apps/server/src/line.ts)）。席と LINE ユーザー ID を結びつけ、別の端末でも合言葉を発行し直せる（`POST /api/games/:id/claim`、`POST /api/me/games`） |
+| 招待を LINE で送る | `liff.shareTargetPicker()` で送り先を選んで招待カードを送る |
+| 指したら相手に知らせる | トークのカードから開いた対局なら、`liff.sendMessages()` でそのトークに「〇〇さんが指しました」を自動で送る。送れないときは「LINE で知らせる」ボタンを出す |
+
+- 画面側の LINE の処理は [apps/web/src/line.ts](apps/web/src/line.ts) と [apps/web/src/notify.ts](apps/web/src/notify.ts)。LIFF SDK は LINE の中で開いたときだけ読み込む
+- LIFF ID は既定で本番用（Published）。変えるときはビルド時に `VITE_LIFF_ID` を指定する
+- 受け付ける LINE のチャネル ID は [wrangler.jsonc](apps/server/wrangler.jsonc) の `LINE_CHANNEL_IDS`（手元の Node.js では同名の環境変数。なければ LINE の確認は使わない）
+- トークに送るカードの URL は `https://miniapp.line.me/<LIFF ID>/g/<対局ID>` の形
+- プライバシーポリシーは `/privacy`（チャネルの設定に載せる）
+
 ## ゲームを追加するには
 
 1. `packages/core/src/games/<名前>.ts` に `GameDefinition` を実装し、`packages/core/src/index.ts` の `games` に登録する

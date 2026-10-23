@@ -12,6 +12,13 @@
   - 公開後、本番の URL で 2 人分のマルバツを最後まで指して確かめた
   - 公開のしかたは [README.md](../README.md) の「公開（Cloudflare）」
 
+### LINE ミニアプリ（2026-10-23）
+
+- ユーザーは LINE で遊んでいる。LINE の中で開くと、招待を LINE で送れ、指したら相手のトークに自動で知らせる（README の「LINE ミニアプリとして使う」）
+- チャネル ID：開発用 2012180394 / 審査用 2012180395 / 本番用 2012180396。LIFF ID：開発用 2012180394-dhmjTHJU / 本番用 2012180396-nO920f3r
+- サービス提供地域は Japan。タイの LINE ユーザーが開けるかは公式資料に記載がなく、実際に試して確かめる。開けなければ LINE ログインチャネルの LIFF に切り替える案
+- LINE Notify は 2025 年 3 月に終了済み。公式アカウントのプッシュは無料で月 200 通までなので使わず、ユーザー本人の発言として送る `sendMessages` / `shareTargetPicker` を使う
+
 ### Cloudflare 移行で決めたこと
 
 - 保存処理 [store.ts](../apps/server/src/store.ts) は 1 つにまとめ、SQL の実行口（[sql.ts](../apps/server/src/sql.ts)）だけを差し替える。手元とテストは [sqlite.ts](../apps/server/src/sqlite.ts)、本番は [d1.ts](../apps/server/src/d1.ts)

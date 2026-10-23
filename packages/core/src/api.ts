@@ -29,6 +29,8 @@ export interface CreateGameRequest {
   gameType: string;
   name: string;
   seat: Seat | "random";
+  /** LINE から使っているときの ID トークン。サーバが LINE アカウントを確かめて席と結びつける */
+  idToken?: string;
 }
 
 export interface CreateGameResponse {
@@ -41,10 +43,17 @@ export interface CreateGameResponse {
 export interface JoinGameRequest {
   inviteCode: string;
   name: string;
+  idToken?: string;
 }
 
 export interface JoinGameResponse {
   token: string;
+  seat: Seat;
+}
+
+/** LINE アカウントで参加している対局 */
+export interface MyGame {
+  id: string;
   seat: Seat;
 }
 

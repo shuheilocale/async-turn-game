@@ -5,6 +5,8 @@ import { boards } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
+import { lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
+import { inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
 import { savedGames } from "../storage.ts";
 
@@ -18,6 +20,8 @@ export function Play({ id }: { id: string }) {
   const [selected, setSelected] = useState<unknown | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** トークに自動で送れなかったときに、送り先を選んで送るためのカード */
+  const [notice, setNotice] = useState<Card | null>(null);
 
   // 「自分用リンク」(?t=...) で開かれたら、この端末に合言葉を保存して URL から消す
   useEffect(() => {
@@ -31,6 +35,19 @@ export function Play({ id }: { id: string }) {
       navigate(`/g/${id}`, true);
     });
   }, [id]);
+
+  // LINE から開いていて、この端末に合言葉がなければ、LINE アカウントで本人と確かめて発行してもらう
+  useEffect(() => {
+    const idToken = lineIdToken();
+    if (token || !idToken) return;
+    api.claim(id, idToken).then(
+      (claimed) => {
+        savedGames.save(id, claimed);
+        setToken(claimed.token);
+      },
+      () => {}, // 参加者でなければ観戦のまま
+    );
+  }, [id, token]);
 
   const refresh = useCallback(async () => {
     try {
@@ -55,7 +72,10 @@ export function Play({ id }: { id: string }) {
   }, [refresh]);
 
   // 盤面が進んだら、選びかけの手は取り消す
-  useEffect(() => setSelected(null), [view?.version]);
+  useEffect(() => {
+    setSelected(null);
+    setNotice(null);
+  }, [view?.version]);
 
   const myTurn =
     !!view && view.status.kind === "playing" && view.status.turn === view.you && !view.waitingForOpponent;
@@ -74,8 +94,16 @@ export function Play({ id }: { id: string }) {
     setBusy(true);
     setMessage(null);
     try {
-      setView(await api.move(id, token, view.version, selected));
+      const next = await api.move(id, token, view.version, selected);
+      setView(next);
       setSelected(null);
+      if (lineSession()) {
+        // 指したことを相手に LINE で知らせる。トークから開いていれば自動、そうでなければボタンで
+        const me = next.players.find((p) => p.seat === next.you)?.name ?? "";
+        const card = progressCard(t, next, t("line.moved", { name: me }));
+        if (await postToChat(id, card)) setMessage(t("play.notified"));
+        else setNotice(card);
+      }
     } catch (e) {
       setMessage(errorText(t, e));
       if (e instanceof ApiRequestError && e.status === 409) await refresh();
@@ -138,13 +166,40 @@ export function Play({ id }: { id: string }) {
         {view.waitingForOpponent && view.inviteCode && (
           <section className="panel invite">
             <p>{t("play.invite.lead")}</p>
+            {lineSession() && view.you !== null && (
+              <button
+                className="primary"
+                onClick={async () => {
+                  const card = inviteCard(t, view.gameType, id, view.inviteCode!, names[view.you!]);
+                  if (await pickAndSend(card)) setMessage(t("play.notified"));
+                }}
+              >
+                {t("play.invite.line")}
+              </button>
+            )}
             <button
-              className="primary"
+              className={lineSession() ? "" : "primary"}
               onClick={() =>
                 share(`${location.origin}/join/${id}?code=${view.inviteCode}`, t("play.invite.shareText", { game: gameName }))
               }
             >
-              {t("play.invite.button")}
+              {t(lineSession() ? "play.invite.copy" : "play.invite.button")}
+            </button>
+          </section>
+        )}
+
+        {notice && (
+          <section className="panel invite">
+            <button
+              className="primary"
+              onClick={async () => {
+                if (await pickAndSend(notice)) {
+                  setNotice(null);
+                  setMessage(t("play.notified"));
+                }
+              }}
+            >
+              {t("play.notify.line")}
             </button>
           </section>
         )}
