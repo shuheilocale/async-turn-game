@@ -29,8 +29,12 @@ export function progressCard(t: T, v: GameView, what: string): Card {
   const url = miniAppUrl(`/g/${v.id}`);
   if (v.status.kind === "finished") {
     const w = v.status.winner;
-    const result =
-      w === null ? t("status.draw") : t("status.winner", { name: names[w], seat: t(`game.${v.gameType}.seat${w}`) });
+    const coop = v.status.coop;
+    const result = coop
+      ? t(coop === "cleared" ? "status.cleared" : "status.failed")
+      : w === null
+        ? t("status.draw")
+        : t("status.winner", { name: names[w], seat: t(`game.${v.gameType}.seat${w}`) });
     return { alt: `${game}: ${result}`, label: game, title: result, body: what, button: t("line.result"), url };
   }
   const next = t("status.theirTurn", { name: names[v.status.turn] });

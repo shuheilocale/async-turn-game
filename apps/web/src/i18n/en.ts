@@ -25,8 +25,11 @@ export const en: Messages = {
   "tag.medium": "Medium",
   "tag.long": "Long",
   "tag.hidden": "Bluffing",
+  "tag.coop": "Co-op",
 
   "badge.finished": "Finished",
+  "badge.cleared": "Cleared",
+  "badge.failed": "Failed",
   "badge.waiting": "Waiting for opponent",
   "badge.yourTurn": "Your turn",
   "badge.theirTurn": "Their turn",
@@ -73,6 +76,8 @@ export const en: Messages = {
   "privacy.link": "Privacy policy",
 
   "status.draw": "It's a draw",
+  "status.cleared": "You made it together!",
+  "status.failed": "You didn't make it",
   "status.youWin": "You win!",
   "status.winner": "{name} ({seat}) wins",
   "status.waiting": "Waiting for your opponent to join",

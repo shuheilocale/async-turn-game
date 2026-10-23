@@ -36,6 +36,8 @@ export interface BoardProps {
 export interface GameMeta {
   length: "short" | "medium" | "long";
   hidden?: boolean;
+  /** 2 人で一緒に目標を目指す協力ゲーム */
+  coop?: boolean;
 }
 
 /** ゲームごとの画面部品。ルールは @atg/core、見た目と文言はここと i18n */

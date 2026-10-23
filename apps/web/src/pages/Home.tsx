@@ -27,6 +27,7 @@ export function Home() {
               <span className="tile-meta">
                 <span className={`len len-${ui.length}`}>{t(`tag.${ui.length}`)}</span>
                 {ui.hidden && <span className="len hidden">{t("tag.hidden")}</span>}
+                {ui.coop && <span className="len coop">{t("tag.coop")}</span>}
               </span>
             </button>
           ))}
@@ -167,7 +168,10 @@ async function loadSaved() {
 const isMyTurn = (v: GameView) => v.status.kind === "playing" && v.status.turn === v.you && !v.waitingForOpponent;
 
 function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boolean } {
-  if (status.kind === "finished") return { label: t("badge.finished"), hot: false };
+  if (status.kind === "finished") {
+    const label = status.coop ? t(status.coop === "cleared" ? "badge.cleared" : "badge.failed") : t("badge.finished");
+    return { label, hot: false };
+  }
   if (v.waitingForOpponent) return { label: t("badge.waiting"), hot: false };
   return isMyTurn(v) ? { label: t("badge.yourTurn"), hot: true } : { label: t("badge.theirTurn"), hot: false };
 }

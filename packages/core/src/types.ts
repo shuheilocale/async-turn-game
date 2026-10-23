@@ -3,7 +3,12 @@ export type Seat = 0 | 1;
 
 export type GameStatus =
   | { kind: "playing"; turn: Seat }
-  | { kind: "finished"; winner: Seat | null };
+  | {
+      kind: "finished";
+      winner: Seat | null;
+      /** 協力ゲームだけ：2 人で達成したか（cleared）、できなかったか（failed）。対戦ゲームでは省く */
+      coop?: "cleared" | "failed";
+    };
 
 /** 0 以上 1 未満の乱数を返す関数。テストでは固定の値を返すものを渡す */
 export type Rng = () => number;

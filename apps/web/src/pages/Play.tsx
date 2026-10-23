@@ -196,7 +196,9 @@ export function Play({ id }: { id: string }) {
                 "player",
                 `seat${seat}`,
                 view.status.kind === "playing" && view.status.turn === seat && !view.waitingForOpponent && "turn",
-                view.status.kind === "finished" && view.status.winner === seat && "winner",
+                view.status.kind === "finished" &&
+                  (view.status.winner === seat || view.status.coop === "cleared") &&
+                  "winner",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -359,13 +361,16 @@ function StatusBanner({
   const yours = view.you === null ? "" : ` seat${view.you}`;
   if (view.status.kind === "finished") {
     const w = view.status.winner;
-    text =
+    const coop = view.status.coop;
+    text = coop
+      ? t(coop === "cleared" ? "status.cleared" : "status.failed")
+      :
       w === null
         ? t("status.draw")
         : w === view.you
           ? t("status.youWin")
           : t("status.winner", { name: names[w], seat: seatLabel(w) });
-    tone = w !== null && w === view.you ? `done won${yours}` : "done";
+    tone = (w !== null && w === view.you) || coop === "cleared" ? `done won${yours}` : "done";
   } else if (view.waitingForOpponent) {
     text = t("status.waiting");
   } else if (view.you === null) {

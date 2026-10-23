@@ -1666,3 +1666,7 @@ button.card-face:disabled {
 .game-list.flat a {
   padding: 10px 0;
 }
+
+.len.coop {
+  color: var(--p0-text);
+}

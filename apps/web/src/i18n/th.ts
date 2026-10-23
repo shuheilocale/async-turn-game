@@ -25,8 +25,11 @@ export const th: Messages = {
   "tag.medium": "ปานกลาง",
   "tag.long": "ใช้เวลา",
   "tag.hidden": "เกมจิตวิทยา",
+  "tag.coop": "ร่วมมือ",
 
   "badge.finished": "จบแล้ว",
+  "badge.cleared": "สำเร็จ",
+  "badge.failed": "ไม่สำเร็จ",
   "badge.waiting": "รออีกฝ่ายเข้าร่วม",
   "badge.yourTurn": "ตาของคุณ",
   "badge.theirTurn": "ตาของอีกฝ่าย",
@@ -73,6 +76,8 @@ export const th: Messages = {
   "privacy.link": "นโยบายความเป็นส่วนตัว",
 
   "status.draw": "เสมอ",
+  "status.cleared": "ทำสำเร็จด้วยกันแล้ว!",
+  "status.failed": "ไม่สำเร็จ",
   "status.youWin": "คุณชนะ!",
   "status.winner": "{name} ({seat}) ชนะ",
   "status.waiting": "กำลังรออีกฝ่ายเข้าร่วม",

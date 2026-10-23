@@ -24,8 +24,11 @@ export const ja = {
   "tag.medium": "ふつう",
   "tag.long": "じっくり",
   "tag.hidden": "かけひき",
+  "tag.coop": "協力",
 
   "badge.finished": "終局",
+  "badge.cleared": "クリア",
+  "badge.failed": "失敗",
   "badge.waiting": "相手の参加待ち",
   "badge.yourTurn": "あなたの番",
   "badge.theirTurn": "相手の番",
@@ -72,6 +75,8 @@ export const ja = {
   "privacy.link": "プライバシーポリシー",
 
   "status.draw": "引き分けです",
+  "status.cleared": "2 人でクリアしました！",
+  "status.failed": "失敗しました",
   "status.youWin": "あなたの勝ちです！",
   "status.winner": "{name}さん（{seat}）の勝ちです",
   "status.waiting": "相手の参加を待っています",
