@@ -1,0 +1,384 @@
+/*
+ * ふうせん。styles.css より先に読み込まれるので、共通の部品（.score や .history）を
+ * 変えるときは .balloon を頭に付けて優先させる
+ */
+.balloon {
+  --rubber: #e8475a;
+  --rubber-edge: #b92c3f;
+  --string: #8e97a8;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .balloon {
+    --rubber: #f2596b;
+    --rubber-edge: #c43a4d;
+    --string: #6f7a90;
+  }
+}
+
+/* ---------- 2 人が入れた空気 ---------- */
+
+.balloon-scores {
+  width: 100%;
+}
+
+.balloon .score {
+  gap: 8px;
+}
+
+.balloon .score > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.balloon .score strong {
+  flex: none;
+  white-space: nowrap;
+}
+
+.balloon .score strong small {
+  margin-left: 2px;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.balloon .score .token {
+  width: 10px;
+  height: 10px;
+}
+
+.balloon .score.turn {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1px var(--seat-color);
+}
+
+.balloon-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.balloon-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 14px;
+  margin-top: -6px;
+}
+
+/* ---------- 風船 ---------- */
+
+.balloon .balloon-stage {
+  position: relative;
+  display: block;
+  width: min(100%, 280px);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 手番でなくても、薄くせずにそのまま見せる */
+.balloon .balloon-stage:disabled {
+  opacity: 1;
+}
+
+/* 自分の番は、タップできる場所を点線で囲む */
+.balloon .balloon-stage.can {
+  cursor: pointer;
+  background: color-mix(in srgb, var(--seat-color) 6%, transparent);
+  outline: 2px dashed color-mix(in srgb, var(--seat-color) 40%, transparent);
+  outline-offset: -2px;
+}
+
+.balloon .balloon-stage.can:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--seat-color) 60%, transparent);
+}
+
+.balloon-hint {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  translate: -50% 0;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--seat-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.balloon-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.balloon-string {
+  fill: none;
+  stroke: var(--string);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.balloon-rubber {
+  fill: var(--rubber);
+  stroke: var(--rubber-edge);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.balloon-shine {
+  fill: rgba(255, 255, 255, 0.35);
+}
+
+/* 大きさは空気の量だけで決まる。結び目を中心にふくらむ */
+.balloon-body,
+.balloon-before,
+.balloon-gone {
+  transform-origin: 120px 212px;
+}
+
+.balloon-body {
+  transition: transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.balloon-before {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.45;
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  vector-effect: non-scaling-stroke;
+}
+
+/* タップするたびに、ぷくっとふくらむ */
+.balloon-bump {
+  transform-origin: 120px 212px;
+  animation: balloon-bump 0.28s ease-out;
+}
+
+@keyframes balloon-bump {
+  40% {
+    transform: scale(1.05, 0.97);
+  }
+}
+
+/* 5 回入れたあとにタップしたら、首を振る */
+.balloon-nope {
+  transform-origin: 120px 212px;
+  animation: balloon-nope 0.35s ease-out;
+}
+
+@keyframes balloon-nope {
+  25% {
+    transform: rotate(-4deg);
+  }
+  60% {
+    transform: rotate(3deg);
+  }
+}
+
+.balloon-adding {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--seat-color);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* ---------- 割れたとき ---------- */
+
+/* ふくらんだ形が一瞬で消えて、かけらが飛び散る */
+.balloon-gone {
+  animation: balloon-gone 0.16s 0.35s ease-in forwards;
+}
+
+@keyframes balloon-gone {
+  to {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+.balloon-shard {
+  fill: var(--rubber);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: balloon-shard 0.75s 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes balloon-shard {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(var(--turn));
+  }
+}
+
+.balloon-scrap {
+  opacity: 0;
+  animation: balloon-scrap 0.2s 0.45s forwards;
+}
+
+@keyframes balloon-scrap {
+  to {
+    opacity: 1;
+  }
+}
+
+.balloon-pop {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  translate: -50% -50%;
+  color: var(--rubber-edge);
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0;
+  animation: balloon-pop 1s 0.38s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes balloon-pop {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  25% {
+    opacity: 1;
+    scale: 1.15;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* ---------- タップした回数 ---------- */
+
+.balloon-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 8px 8px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.balloon-taps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.balloon-taps strong {
+  font-size: 1.05rem;
+  color: var(--seat-text);
+}
+
+.balloon-pips {
+  display: flex;
+  gap: 5px;
+}
+
+.balloon-pips span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--seat-color);
+}
+
+.balloon-pips span.on {
+  background: var(--seat-color);
+}
+
+.balloon-controls .ghost-button {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+}
+
+.balloon-result {
+  color: var(--rubber-edge);
+}
+
+/* ---------- 記録 ---------- */
+
+.balloon-history {
+  width: 100%;
+}
+
+.balloon .history li {
+  grid-template-columns: 1.6em minmax(0, 1fr) auto auto;
+}
+
+.balloon-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.balloon-who > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.balloon-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.balloon .history strong {
+  color: var(--seat-text);
+}
+
+.balloon-after {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 4.5em;
+}
+
+.balloon-popped-tag {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--rubber) 18%, transparent);
+  color: var(--rubber-edge);
+  font-size: 0.75rem;
+}

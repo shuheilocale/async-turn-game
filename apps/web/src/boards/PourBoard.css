@@ -1,0 +1,321 @@
+/*
+ * みずそそぎ。styles.css より先に読み込まれるので、共通の部品（.history など）を
+ * 変えるときは .pour を頭に付けて優先させる
+ */
+.pour {
+  --water: #3ba6e0;
+  --water-top: #8fd3f5;
+  --glass-back: #eef6fb;
+  --glass: #8d9ab0;
+  --metal: #b7c0cf;
+  --metal-line: #8590a3;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pour {
+    --water: #2f8fcb;
+    --water-top: #6cc0ec;
+    --glass-back: #1d2636;
+    --glass: #7d8aa3;
+    --metal: #4a5468;
+    --metal-line: #6b768c;
+  }
+}
+
+/* ---------- 今の水の量 ---------- */
+
+.pour-readout {
+  display: grid;
+  justify-items: center;
+  line-height: 1.3;
+}
+
+.pour-readout strong {
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pour-over {
+  color: var(--p1-text);
+  font-weight: 700;
+}
+
+.pour-spilled-text {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* ---------- コップ ---------- */
+
+.pour-cup {
+  width: min(100%, 260px);
+}
+
+.pour-cup svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.pour-cup.spilled svg {
+  animation: pour-shake 0.5s ease-out;
+}
+
+@keyframes pour-shake {
+  20% {
+    transform: translateX(-3px);
+  }
+  45% {
+    transform: translateX(3px);
+  }
+  70% {
+    transform: translateX(-1.5px);
+  }
+}
+
+.pour-faucet rect {
+  fill: var(--metal);
+  stroke: var(--metal-line);
+  stroke-width: 1.5;
+}
+
+/* 流れる水。点線を動かして、上から下へ流れて見えるようにする */
+.pour-stream {
+  stroke: var(--water);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 20 3;
+  animation: pour-flow 0.3s linear infinite;
+}
+
+@keyframes pour-flow {
+  to {
+    stroke-dashoffset: -23;
+  }
+}
+
+.pour-glass-back {
+  fill: var(--glass-back);
+}
+
+.pour-water {
+  fill: var(--water);
+}
+
+.pour-surface {
+  fill: none;
+  stroke: var(--water-top);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.pour-glass {
+  fill: none;
+  stroke: var(--glass);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pour-glass-base {
+  stroke: var(--glass);
+  stroke-width: 1.5;
+}
+
+.pour-rim-label,
+.pour-band text,
+.pour-limit text {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+
+.pour-band text,
+.pour-limit text {
+  text-anchor: end;
+}
+
+.pour-tick {
+  stroke: var(--seat-color);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* 1 回で届く範囲。点線が最低、線が最大 */
+.pour-line {
+  stroke: var(--seat-color);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.pour-line.min {
+  stroke-dasharray: 4 4;
+}
+
+.pour-band text {
+  fill: var(--seat-text);
+}
+
+.pour-limit line {
+  stroke: var(--danger);
+  stroke-width: 1.8;
+  stroke-dasharray: 6 4;
+}
+
+.pour-limit text {
+  fill: var(--danger);
+}
+
+/* あふれた水がコップの外を伝って落ち、下にたまる */
+.pour-spill path {
+  fill: none;
+  stroke: var(--water);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: pour-run 0.9s ease-in forwards;
+}
+
+@keyframes pour-run {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pour-spill path.thin {
+  stroke-width: 3;
+  animation-delay: 0.15s;
+}
+
+.pour-puddle {
+  fill: var(--water);
+  opacity: 0.55;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pour-puddle 0.8s 0.7s ease-out both;
+}
+
+@keyframes pour-puddle {
+  from {
+    transform: scaleX(0.1);
+    opacity: 0;
+  }
+}
+
+/* ---------- 長押しのボタン ---------- */
+
+.pour .pour-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 0;
+  width: min(100%, 320px);
+  min-height: 84px;
+  padding: 12px 20px;
+  border: 2px solid var(--seat-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  line-height: 1.3;
+  /* 長押しで文字の選択やメニューが出たり、画面が動いたりしないようにする */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.1s, background 0.15s, color 0.15s;
+}
+
+.pour-button-label {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--seat-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.pour-button-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pour .pour-button.pressing {
+  transform: scale(0.97);
+  background: var(--seat-color);
+}
+
+.pour .pour-button.pressing .pour-button-label,
+.pour .pour-button.pressing .pour-button-hint {
+  color: #fff;
+}
+
+/* 押している間は、ボタンのまわりに波が広がる */
+.pour .pour-button.pressing::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 3px solid var(--seat-color);
+  animation: pour-ripple 0.9s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pour-ripple {
+  to {
+    inset: -14px;
+    opacity: 0;
+  }
+}
+
+/* ---------- 結果と記録 ---------- */
+
+.pour-result strong {
+  color: var(--danger);
+}
+
+.pour-history {
+  width: 100%;
+}
+
+.pour .history li {
+  grid-template-columns: 1.6em minmax(0, 1fr) auto auto;
+}
+
+.pour-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pour-who > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pour-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.pour .history strong {
+  color: var(--seat-text);
+}
+
+.pour-after {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 5.5em;
+}
+
+.pour-spilled-tag {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  color: var(--danger);
+  font-size: 0.75rem;
+}
