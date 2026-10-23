@@ -37,17 +37,17 @@ export interface BoardUI extends GameMeta {
   Board: FC<BoardProps>;
 }
 
-/** アイコンは icons.tsx の GameGlyph に、ゲームの ID ごとに描いてある */
+/** トップ画面にこの順で並ぶ（短いゲームから）。アイコンは icons.tsx と glyphs/ に描いてある */
 export const boards: Record<string, BoardUI> = {
   tictactoe: { Board: TicTacToeBoard, length: "short" },
+  fading: { Board: FadingBoard, length: "short" },
   gobble: { Board: GobbleBoard, length: "short" },
   nim: { Board: NimBoard, length: "short" },
+  tateyoko: { Board: TateyokoBoard, length: "short" },
+  bridge: { Board: BridgeBoard, length: "short" },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
   auction: { Board: AuctionBoard, length: "medium", hidden: true },
-  tateyoko: { Board: TateyokoBoard, length: "short" },
-  fading: { Board: FadingBoard, length: "short" },
-  bridge: { Board: BridgeBoard, length: "short" },
 };

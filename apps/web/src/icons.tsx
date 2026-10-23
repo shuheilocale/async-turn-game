@@ -24,7 +24,7 @@ export function XMark({ className = "" }: { className?: string }) {
 
 /** 対局者を表す小さな印。ゲームの駒に合わせる */
 export function SeatToken({ gameType, seat }: { gameType: string; seat: Seat }) {
-  if (gameType === "tictactoe") return seat === 0 ? <OMark className="token" /> : <XMark className="token" />;
+  if (gameType === "tictactoe" || gameType === "fading") return seat === 0 ? <OMark className="token" /> : <XMark className="token" />;
   if (gameType === "othello") return <span className={`token stone ${seat === 0 ? "black" : "white"}`} aria-hidden />;
   return <span className={`token dot seat${seat}`} aria-hidden />;
 }

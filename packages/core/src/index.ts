@@ -25,19 +25,19 @@ export * as Fading from "./games/fading.ts";
 export * as Boxes from "./games/boxes.ts";
 export * as Bridge from "./games/bridge.ts";
 
-/** 遊べるゲームの一覧（トップ画面にこの順で並ぶ）。ゲームを追加したらここに登録する */
+/** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
   [tictactoe.id]: tictactoe,
+  [fading.id]: fading,
   [gobble.id]: gobble,
   [nim.id]: nim,
+  [tateyoko.id]: tateyoko,
+  [bridge.id]: bridge,
   [connect4.id]: connect4,
   [boxes.id]: boxes,
   [othello.id]: othello,
   [hitblow.id]: hitblow,
   [auction.id]: auction,
-  [tateyoko.id]: tateyoko,
-  [fading.id]: fading,
-  [bridge.id]: bridge,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {
