@@ -10,6 +10,7 @@ import { tateyoko } from "./games/tateyoko.ts";
 import { fading } from "./games/fading.ts";
 import { boxes } from "./games/boxes.ts";
 import { bridge } from "./games/bridge.ts";
+import { korokoro } from "./games/korokoro.ts";
 import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
@@ -31,6 +32,7 @@ export * as Tateyoko from "./games/tateyoko.ts";
 export * as Fading from "./games/fading.ts";
 export * as Boxes from "./games/boxes.ts";
 export * as Bridge from "./games/bridge.ts";
+export * as Korokoro from "./games/korokoro.ts";
 export * as Bluff from "./games/bluff.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
@@ -46,6 +48,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [nim.id]: nim,
   [tateyoko.id]: tateyoko,
   [bridge.id]: bridge,
+  [korokoro.id]: korokoro,
   [stack.id]: stack,
   [pour.id]: pour,
   [balloon.id]: balloon,

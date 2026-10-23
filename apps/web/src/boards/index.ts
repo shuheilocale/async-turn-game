@@ -11,6 +11,7 @@ import { TateyokoBoard } from "./TateyokoBoard.tsx";
 import { FadingBoard } from "./FadingBoard.tsx";
 import { BoxesBoard } from "./BoxesBoard.tsx";
 import { BridgeBoard } from "./BridgeBoard.tsx";
+import { KorokoroBoard } from "./KorokoroBoard.tsx";
 import { BluffBoard } from "./BluffBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
@@ -60,6 +61,7 @@ export const boards: Record<string, BoardUI> = {
   nim: { Board: NimBoard, length: "short" },
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
+  korokoro: { Board: KorokoroBoard, length: "short" },
   stack: { Board: StackBoard, length: "short" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
