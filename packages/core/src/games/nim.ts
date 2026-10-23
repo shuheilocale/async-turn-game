@@ -52,4 +52,9 @@ export const nim: GameDefinition<NimState, NimMove> = {
     if (!Number.isInteger(count) || (count as number) < 1 || (count as number) > ROWS[row as number]!) return null;
     return { row: row as number, count: count as number };
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    return state.rows.flatMap((n, row) => Array.from({ length: n }, (_, i) => ({ row, count: i + 1 })));
+  },
 };

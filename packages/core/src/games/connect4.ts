@@ -56,4 +56,9 @@ export const connect4: GameDefinition<Connect4State, Connect4Move> = {
     const col = (raw as { col?: unknown } | null)?.col;
     return Number.isInteger(col) && (col as number) >= 0 && (col as number) < COLS ? { col: col as number } : null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    return Array.from({ length: COLS }, (_, col) => ({ col })).filter(({ col }) => landingIndex(state.board, col) !== null);
+  },
 };

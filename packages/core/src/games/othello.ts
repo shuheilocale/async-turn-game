@@ -67,7 +67,8 @@ export function countStones(board: Cell[]): [number, number] {
 }
 
 export const othello: GameDefinition<OthelloState, OthelloMove> & {
-  legalMoves(state: OthelloState): OthelloMove[];
+  /** seat を省くと手番の側の手を返す */
+  legalMoves(state: OthelloState, seat?: Seat): OthelloMove[];
 } = {
   id: "othello",
 
@@ -86,8 +87,9 @@ export const othello: GameDefinition<OthelloState, OthelloMove> & {
     return { kind: "finished", winner: black === white ? null : black > white ? 0 : 1 };
   },
 
-  legalMoves(state) {
-    return state.finished ? [] : movesFor(state.board, state.turn);
+  // パスは applyMove が自動で行う（置けない側の手番は来ない）ので、パスの手はない
+  legalMoves(state: OthelloState, seat: Seat = state.turn) {
+    return state.finished || seat !== state.turn ? [] : movesFor(state.board, seat);
   },
 
   applyMove(state, move, seat) {

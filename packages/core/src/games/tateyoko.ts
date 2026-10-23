@@ -81,4 +81,9 @@ export const tateyoko: GameDefinition<TateyokoState, TateyokoMove> = {
       ? { cell: cell as number }
       : null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    return placeable(state.board, seat).map((cell) => ({ cell }));
+  },
 };

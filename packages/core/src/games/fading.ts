@@ -82,4 +82,10 @@ export const fading: GameDefinition<FadingState, FadingMove> = {
     const index = (raw as { index?: unknown } | null)?.index;
     return Number.isInteger(index) && (index as number) >= 0 && (index as number) < 9 ? { index: index as number } : null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    // applyMove と同じく消える前の盤で空きを見る（次に消える自分の印のマスは含めない）
+    return boardOf(state.marks).flatMap((c, index) => (c === null ? [{ index }] : []));
+  },
 };
