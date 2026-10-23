@@ -1,0 +1,129 @@
+/*
+ * つなぎ橋。数値の太さは SVG の座標（盤の幅が約 258）での値。
+ * このファイルは styles.css より先に読み込まれるので、styles.css と同じ強さの指定は上書きされる
+ * （幅は .stack-sm の width: 100% に負けるため、max-width で絞る）
+ */
+.bridge {
+  max-width: 420px;
+}
+
+.bridge-board {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* どの辺をつなげばよいかを示す縁取り。内側の半分はマスに隠れて、外側だけが見える */
+.bridge-edge {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 12;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.bridge-hex {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  outline: none;
+  transition: fill 0.15s;
+}
+
+.bridge-hex.can {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .bridge-hex.can:hover {
+    fill: var(--surface-2);
+  }
+}
+
+.bridge-hex:focus-visible {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.bridge-hex.selected {
+  fill: color-mix(in srgb, var(--seat-color) 10%, var(--surface));
+}
+
+/* 勝った道のマス */
+.bridge-hex.won {
+  fill: color-mix(in srgb, var(--seat-color) 16%, var(--surface));
+}
+
+.bridge-marks {
+  pointer-events: none;
+}
+
+.bridge-stone {
+  fill: var(--seat-color);
+  transition: opacity 0.2s;
+}
+
+.bridge-stone.ghost {
+  opacity: 0.4;
+}
+
+/* 入れ替えで取りのぞかれる石 */
+.bridge-stone.leaving {
+  opacity: 0.2;
+}
+
+.bridge-stone.placed {
+  animation: place 0.25s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* 終局後は、勝った道の石だけをくっきり見せる */
+.bridge.finished .bridge-stone:not(.on-path) {
+  opacity: 0.45;
+}
+
+/* 最後に置かれた石の印 */
+.bridge-last {
+  fill: var(--surface);
+}
+
+/* 勝った道。辺から辺まで石をつなぐ線 */
+.bridge-path {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 入れ替えるときに折り返すななめの線 */
+.bridge-fold {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+/* 案内文の最後の 1〜2 文字だけが次の行に落ちないようにする */
+.bridge .board-note,
+.bridge-swap p {
+  text-wrap: pretty;
+}
+
+.bridge-swap {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.bridge-swap button.picked {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1px var(--seat-color);
+  color: var(--seat-text);
+  font-weight: 700;
+}

@@ -9,6 +9,7 @@ import { nim } from "./games/nim.ts";
 import { tateyoko } from "./games/tateyoko.ts";
 import { fading } from "./games/fading.ts";
 import { boxes } from "./games/boxes.ts";
+import { bridge } from "./games/bridge.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -22,6 +23,7 @@ export * as Nim from "./games/nim.ts";
 export * as Tateyoko from "./games/tateyoko.ts";
 export * as Fading from "./games/fading.ts";
 export * as Boxes from "./games/boxes.ts";
+export * as Bridge from "./games/bridge.ts";
 
 /** 遊べるゲームの一覧（トップ画面にこの順で並ぶ）。ゲームを追加したらここに登録する */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -35,6 +37,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [auction.id]: auction,
   [tateyoko.id]: tateyoko,
   [fading.id]: fading,
+  [bridge.id]: bridge,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {
