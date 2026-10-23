@@ -1,0 +1,54 @@
+/* きえるマルバツ。盤とマスはマルバツ（.tictactoe）と同じで、ここでは印の見せ方だけを足す */
+
+/* 次に消える印：薄く、とぎれとぎれに描く（選んだマスの影 .ghost と見分けられるように） */
+.fading-board .piece-svg.fade-next {
+  opacity: 0.5;
+  transition: opacity 0.2s ease-out;
+}
+
+/*
+ * ○ は円周（2π×13 ≒ 81.7）を 6 つに切る。× は線 1 本（≒ 31.1）の真ん中を切って 4 本の腕にする。
+ * × の模様は 1 周期を線 1 本の長さにそろえ、2 本目の線でも同じ切れ方になるようにする
+ */
+.fading-board .o-mark.fade-next {
+  stroke-dasharray: 4 9.61;
+}
+
+.fading-board .x-mark.fade-next {
+  stroke-dasharray: 10.31 10.5 10.31 0;
+}
+
+/* 置く場所を選んでいる間は、消える自分の印をほとんど見えなくする */
+.fading-board .piece-svg.fade-next.fade-leaving {
+  opacity: 0.14;
+}
+
+/* 直前に消えた印の跡：小さな灰色の点線 */
+.fading-board .piece-svg.fade-trace {
+  width: 34%;
+  height: 34%;
+  stroke: var(--muted);
+  stroke-width: 4;
+  opacity: 0.55;
+  animation: fade-away 0.7s ease-out;
+}
+
+/* 点の数：○ は 10 個、× は線 1 本に 5 個（両端と真ん中に点が来る） */
+.fading-board .o-mark.fade-trace {
+  stroke-dasharray: 0 8.168;
+  --fade-from: var(--p0);
+}
+
+.fading-board .x-mark.fade-trace {
+  stroke-dasharray: 0 7.777;
+  --fade-from: var(--p1);
+}
+
+/* 開いたときに、元の大きさと色から跡へ縮んで消えたことを見せる */
+@keyframes fade-away {
+  from {
+    transform: scale(1.9);
+    stroke: var(--fade-from);
+    opacity: 0.8;
+  }
+}
