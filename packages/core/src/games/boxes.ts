@@ -108,4 +108,9 @@ export const boxes: GameDefinition<BoxesState, BoxesMove> = {
     const edge = (raw as { edge?: unknown } | null)?.edge;
     return Number.isInteger(edge) && (edge as number) >= 0 && (edge as number) < EDGES ? { edge: edge as number } : null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    return state.edges.flatMap((e, edge) => (e === null ? [{ edge }] : []));
+  },
 };

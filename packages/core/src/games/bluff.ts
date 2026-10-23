@@ -80,6 +80,10 @@ function shuffle<T>(items: readonly T[], rng: Rng): T[] {
 /** 各回戦で先に動く人。公平になるよう交互にする */
 export const firstMover = (round: number): Seat => (round % 2 === 0 ? 0 : 1);
 
+/** コンピュータが 1 ではったりの上乗せをする割合と、2 で上乗せを受ける割合 */
+const BOT_BLUFF = 1 / 3;
+const BOT_CALL = 1 / 3;
+
 /** 今の回戦で選べる手。上乗せされていれば「受ける」か「おりる」、そうでなければ「上乗せ」か「パス」 */
 export function legalActions(acts: Act[]): BluffAction[] {
   return acts.at(-1)?.action === "bet" ? ["call", "fold"] : ["bet", "pass"];
@@ -170,5 +174,18 @@ export const bluff: GameDefinition<BluffState, BluffMove> = {
   viewMove(move) {
     // 上乗せ・パスなどの手は、相手にもそのまま見えている情報なので加工しない
     return move;
+  },
+
+  botMove(view, seat, rng) {
+    const v = view as BluffView;
+    const card = v.cards[seat];
+    if (v.round >= ROUNDS || v.turn !== seat || card === null) return null;
+    // 3 は上乗せ・受ける。1 はときどきはったりで上乗せし、上乗せされたらおりる。2 はパスし、上乗せされたらときどき受ける
+    if (legalActions(v.acts).includes("call")) {
+      const call = card === 3 || (card === 2 && rng() < BOT_CALL);
+      return { action: call ? "call" : "fold" };
+    }
+    const bet = card === 3 || (card === 1 && rng() < BOT_BLUFF);
+    return { action: bet ? "bet" : "pass" };
   },
 };

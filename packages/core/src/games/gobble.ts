@@ -128,4 +128,24 @@ export const gobble: GameDefinition<GobbleState, GobbleMove> = {
     if (m.from.kind === "board" && isCell(m.from.index)) return { from: { kind: "board", index: m.from.index }, to: m.to };
     return null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    const moves: GobbleMove[] = [];
+    const cells = state.board.map((_, i) => i);
+    // 手持ちから置く手（同じ大きさは 1 つ分だけ数える）
+    for (const size of [0, 1, 2] as const) {
+      if (state.hands[seat][size] === 0) continue;
+      for (const to of cells) if (canCover(state.board[to]!, size)) moves.push({ from: { kind: "hand", size }, to });
+    }
+    // 盤上で一番上にある自分のコマを、別のマスへ動かす手
+    state.board.forEach((stack, index) => {
+      const piece = top(stack);
+      if (piece?.seat !== seat) return;
+      for (const to of cells) {
+        if (to !== index && canCover(state.board[to]!, piece.size)) moves.push({ from: { kind: "board", index }, to });
+      }
+    });
+    return moves;
+  },
 };

@@ -1,4 +1,4 @@
-import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Seat } from "../types.ts";
+import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Rng, type Seat } from "../types.ts";
 
 /**
  * ヒット＆ブロー：お互いに秘密の 3 桁の数字（同じ数字は使わない）を決め、
@@ -47,6 +47,21 @@ export function judge(secret: string, guess: string): { hit: number; blow: numbe
 }
 
 const solved = (guesses: Guess[]) => guesses.some((g) => g.hit === DIGITS);
+
+/** 秘密の数字にできるものすべて（3 桁なら 720 通り） */
+export const ALL_NUMBERS = Array.from({ length: 10 ** DIGITS }, (_, n) => String(n).padStart(DIGITS, "0"))
+  .filter(isValidNumber);
+
+/** これまでの推測の結果と矛盾しない数字（相手の秘密の数字の候補） */
+export const candidatesFor = (guesses: Guess[]) =>
+  ALL_NUMBERS.filter((n) =>
+    guesses.every((g) => {
+      const r = judge(n, g.value);
+      return r.hit === g.hit && r.blow === g.blow;
+    }),
+  );
+
+const pick = <T>(list: T[], rng: Rng): T => list[Math.floor(rng() * list.length)]!;
 
 export const hitblow: GameDefinition<HitBlowState, HitBlowMove> = {
   id: "hitblow",
@@ -106,5 +121,13 @@ export const hitblow: GameDefinition<HitBlowState, HitBlowMove> = {
 
   viewMove(move, mover, viewer) {
     return move.kind === "secret" && mover !== viewer ? { kind: "secret", value: null } : move;
+  },
+
+  botMove(view, seat, rng) {
+    const v = view as HitBlowView;
+    if (v.phase === "done" || v.turn !== seat) return null;
+    if (v.phase === "setup") return { kind: "secret", value: pick(ALL_NUMBERS, rng) };
+    // 結果と矛盾しない候補からでたらめに 1 つ選ぶ。相手の数字は見ないが、相手の数字はかならず候補に残る
+    return { kind: "guess", value: pick(candidatesFor(v.guesses[seat]), rng) };
   },
 };

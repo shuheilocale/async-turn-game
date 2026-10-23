@@ -156,4 +156,11 @@ export const bridge: GameDefinition<BridgeState, BridgeMove> = {
     if (isCell(m.cell) && m.swap === undefined) return { cell: m.cell };
     return null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    const moves: BridgeMove[] = state.board.flatMap((c, cell) => (c === null ? [{ cell }] : []));
+    // 後手の最初の手番は、置く代わりに入れ替えも選べる
+    return canSwap(state) ? [...moves, { swap: true }] : moves;
+  },
 };

@@ -45,4 +45,9 @@ export const tictactoe: GameDefinition<TicTacToeState, TicTacToeMove> = {
     const index = (raw as { index?: unknown } | null)?.index;
     return Number.isInteger(index) && (index as number) >= 0 && (index as number) < 9 ? { index: index as number } : null;
   },
+
+  legalMoves(state, seat) {
+    if (state.finished || seat !== state.turn) return [];
+    return state.board.flatMap((c, index) => (c === null ? [{ index }] : []));
+  },
 };

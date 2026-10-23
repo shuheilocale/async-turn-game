@@ -59,6 +59,9 @@ function shuffle(cards: number[], rng: Rng): number[] {
 /** 各ラウンドで先に出す人。公平になるよう交互にする */
 const firstBidder = (round: number): Seat => (round % 2 === 0 ? 0 : 1);
 
+/** コンピュータが出すカードの位置のゆらぎ（手札の並びで前後どれだけずれるか） */
+const BOT_WOBBLE = 1.5;
+
 export const auction: GameDefinition<AuctionState, AuctionMove> = {
   id: "auction",
 
@@ -139,5 +142,17 @@ export const auction: GameDefinition<AuctionState, AuctionMove> = {
   viewMove(move, mover, viewer) {
     // 出したカードはラウンドの結果（history）で公開される。手の記録では相手の分は伏せる
     return mover === viewer ? move : { card: null };
+  },
+
+  botMove(view, seat, rng) {
+    const v = view as AuctionView;
+    if (v.current === null || v.turn !== seat) return null;
+    const hand = [...v.hands[seat]].sort((a, b) => a - b);
+    // 手札と残りの得点カードは同じ枚数。今の得点（持ち越し込み）が残りの得点カードの中で何番目かに合わせて、
+    // 手札の同じくらいの位置のカードを、前後に少しゆらして出す
+    const prize = v.current + v.carried.reduce((a, b) => a + b, 0);
+    const rank = [v.current, ...v.remaining].filter((p) => p < prize).length;
+    const at = Math.round(rank + (rng() * 2 - 1) * BOT_WOBBLE);
+    return { card: hand[Math.min(Math.max(at, 0), hand.length - 1)]! };
   },
 };
