@@ -74,48 +74,46 @@ export interface Card {
 
 /** トークに送るカード。画面と同じく白黒を基調にする */
 export function flex(card: Card): Messages {
-  const heading: object[] = [
-    { type: "text", text: card.label, size: "xs", color: "#5d6577" },
-    { type: "text", text: card.title, size: "lg", weight: "bold", wrap: true, color: "#171c28" },
+  // 左に今の局面（なければゲームのアイコン）、右に文字。カードの高さを抑えるため横に並べる
+  const texts: object[] = [
+    { type: "text", text: card.label, size: "xxs", color: "#5d6577" },
+    { type: "text", text: card.title, size: "md", weight: "bold", wrap: true, color: "#171c28" },
   ];
-  // アイコンがあれば左に置き、どのゲームの知らせかひと目で分かるようにする
-  const body: object[] = card.icon
-    ? [
-        {
+  if (card.body) texts.push({ type: "text", text: card.body, size: "xs", wrap: true, color: "#3a4254" });
+  const visual = card.board
+    ? card.board
+    : card.icon
+      ? {
           type: "box",
-          layout: "horizontal",
-          spacing: "md",
-          alignItems: "center",
-          contents: [
-            {
-              type: "box",
-              layout: "vertical",
-              width: "52px",
-              height: "52px",
-              cornerRadius: "12px",
-              backgroundColor: "#f2f4f8",
-              contents: [{ type: "image", url: card.icon, size: "full", aspectMode: "fit", aspectRatio: "1:1" }],
-            },
-            { type: "box", layout: "vertical", spacing: "xs", contents: heading },
-          ],
-        },
-      ]
-    : heading;
-  if (card.board) body.push(card.board);
-  if (card.body) body.push({ type: "text", text: card.body, size: "sm", wrap: true, color: "#3a4254" });
+          layout: "vertical",
+          width: "52px",
+          height: "52px",
+          flex: 0,
+          cornerRadius: "12px",
+          backgroundColor: "#f2f4f8",
+          contents: [{ type: "image", url: card.icon, size: "full", aspectMode: "fit", aspectRatio: "1:1" }],
+        }
+      : null;
+  const textBox = { type: "box", layout: "vertical", spacing: "xs", justifyContent: "center", contents: texts };
   return [
     {
       type: "flex",
       altText: card.alt,
       contents: {
         type: "bubble",
-        // 盤を載せるときは少し広いカードにする
-        size: card.board ? "mega" : "kilo",
-        body: { type: "box", layout: "vertical", spacing: "sm", paddingAll: "18px", contents: body },
+        size: "kilo",
+        body: {
+          type: "box",
+          layout: "horizontal",
+          spacing: "md",
+          alignItems: "center",
+          paddingAll: "14px",
+          contents: visual ? [visual, textBox] : [textBox],
+        },
         footer: {
           type: "box",
           layout: "vertical",
-          paddingAll: "14px",
+          paddingAll: "12px",
           paddingTop: "0px",
           contents: [
             {

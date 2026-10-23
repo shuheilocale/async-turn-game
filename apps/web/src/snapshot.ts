@@ -64,61 +64,90 @@ export function snapshotOf(gameType: string, state: unknown): Snapshot | null {
   return files[`./snapshots/${gameType}.ts`]?.default(state) ?? null;
 }
 
-const px = (n: number) => `${Math.round(n)}px`;
+/** 0 は 0 のまま、それ以外は 1px 以上に丸める */
+const round = (n: number) => (n <= 0 ? 0 : Math.max(1, Math.round(n)));
+const px = (n: number) => `${round(n)}px`;
 
-function cellBox(c: SnapCell): object {
+/** 盤の縦横の大きさ（縮める前） */
+function sizeOf(s: Snapshot) {
+  const pad = (s.padding ?? 0) * 2;
+  const rowWidth = (r: SnapRow) => (r.offset ?? 0) + r.cells.reduce((sum, c) => sum + c.w, 0) + s.gap * (r.cells.length - 1);
+  const rowHeight = (r: SnapRow) => Math.max(...r.cells.map((c) => c.h));
+  return {
+    width: Math.max(...s.rows.map(rowWidth)) + pad,
+    height: s.rows.reduce((sum, r) => sum + rowHeight(r), 0) + s.gap * (s.rows.length - 1) + pad,
+  };
+}
+
+function cellBox(c: SnapCell, k: number): object {
   const contents: object[] = [];
+  const line = k < 0.7 ? "1px" : "2px";
   if (c.dot) {
     contents.push({
       type: "box",
       layout: "vertical",
-      width: px(c.dot.size),
-      height: px(c.dot.size),
-      cornerRadius: px(c.dot.size / 2),
+      width: px(c.dot.size * k),
+      height: px(c.dot.size * k),
+      cornerRadius: px((c.dot.size * k) / 2),
       backgroundColor: c.dot.fill,
-      ...(c.dot.border ? { borderWidth: "2px", borderColor: c.dot.border } : {}),
+      ...(c.dot.border ? { borderWidth: line, borderColor: c.dot.border } : {}),
       contents: [{ type: "filler" }],
     });
   }
   if (c.mark) {
-    contents.push({ type: "text", text: c.mark.text, size: px(c.mark.size), weight: "bold", color: c.mark.color, align: "center" });
+    contents.push({
+      type: "text",
+      text: c.mark.text,
+      size: px(Math.max(9, c.mark.size * k)),
+      weight: "bold",
+      color: c.mark.color,
+      align: "center",
+    });
   }
   if (contents.length === 0) contents.push({ type: "filler" });
   return {
     type: "box",
     layout: "vertical",
-    width: px(c.w),
-    height: px(c.h),
+    width: px(c.w * k),
+    height: px(c.h * k),
     flex: 0,
     justifyContent: "center",
     alignItems: "center",
     ...(c.fill ? { backgroundColor: c.fill } : {}),
-    ...(c.radius ? { cornerRadius: px(c.radius) } : {}),
-    ...(c.border ? { borderWidth: "2px", borderColor: c.border } : {}),
+    ...(c.radius ? { cornerRadius: px(c.radius * k) } : {}),
+    ...(c.border ? { borderWidth: line, borderColor: c.border } : {}),
     contents,
   };
 }
 
-/** Snapshot を Flex Message の箱にする。盤はカードの中央に置く */
-export function snapshotToFlex(s: Snapshot): object {
-  const pad = s.padding ?? 0;
-  const rowWidth = (r: SnapRow) => (r.offset ?? 0) + r.cells.reduce((sum, c) => sum + c.w, 0) + s.gap * (r.cells.length - 1);
-  const width = Math.max(...s.rows.map(rowWidth)) + pad * 2;
-  const board = {
+/**
+ * Snapshot を Flex Message の箱にする。縦横の長い方が maxSize（px）に収まるよう全体を縮める。
+ * カードの左に小さく置く想定（文字は右に並べる）
+ */
+export function snapshotToFlex(s: Snapshot, maxSize = 112): object {
+  const { width, height } = sizeOf(s);
+  const k = Math.min(1, maxSize / Math.max(width, height));
+  // マスごとに丸めた大きさを足し合わせて盤の幅にする（丸める前の幅だと端の列がはみ出す）
+  const r = (n: number) => round(n * k);
+  const boardWidth =
+    Math.max(
+      ...s.rows.map((row) => (row.offset ? r(row.offset) : 0) + row.cells.reduce((sum, c) => sum + r(c.w), 0) + r(s.gap) * (row.cells.length - 1)),
+    ) + (s.padding ? r(s.padding) * 2 : 0);
+  return {
     type: "box",
     layout: "vertical",
-    width: px(width),
-    spacing: px(s.gap),
-    paddingAll: px(pad),
+    width: `${boardWidth}px`,
+    flex: 0,
+    spacing: px(s.gap * k),
+    paddingAll: px((s.padding ?? 0) * k),
     ...(s.background ? { backgroundColor: s.background } : {}),
-    ...(s.radius ? { cornerRadius: px(s.radius) } : {}),
+    ...(s.radius ? { cornerRadius: px(s.radius * k) } : {}),
     contents: s.rows.map((r) => ({
       type: "box",
       layout: "horizontal",
-      spacing: px(s.gap),
-      ...(r.offset ? { paddingStart: px(r.offset) } : {}),
-      contents: r.cells.map(cellBox),
+      spacing: px(s.gap * k),
+      ...(r.offset ? { paddingStart: px(r.offset * k) } : {}),
+      contents: r.cells.map((c) => cellBox(c, k)),
     })),
   };
-  return { type: "box", layout: "vertical", alignItems: "center", margin: "md", contents: [board] };
 }
