@@ -8,10 +8,15 @@
 | マルバツ | `tictactoe` | 盤面が全部見えるゲーム |
 | かぶせマルバツ | `gobble` | 盤面が全部見えるゲーム |
 | ニム | `nim` | 盤面が全部見えるゲーム |
+| きえるマルバツ | `fading` | 盤面が全部見えるゲーム |
+| タテヨコ置き | `tateyoko` | 盤面が全部見えるゲーム |
+| つなぎ橋 | `bridge` | 盤面が全部見えるゲーム |
+| 線とり陣取り | `boxes` | 盤面が全部見えるゲーム |
 | 四目並べ | `connect4` | 盤面が全部見えるゲーム |
 | オセロ | `othello` | 盤面が全部見えるゲーム |
 | ヒット＆ブロー | `hitblow` | 相手に隠す情報があるゲーム |
 | 数字のせり | `auction` | 相手に隠す情報があるゲーム |
+| はったり三枚 | `bluff` | 相手に隠す情報があるゲーム |
 
 公開中: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev （Cloudflare Workers + D1）
 
