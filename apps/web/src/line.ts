@@ -68,10 +68,12 @@ export interface Card {
   url: string;
   /** 左に出すゲームのアイコン（https の PNG）。なければ出さない */
   icon?: string;
+  /** 今の局面（snapshot.ts の snapshotToFlex で作った箱）。なければ出さない */
+  board?: object;
 }
 
 /** トークに送るカード。画面と同じく白黒を基調にする */
-function flex(card: Card): Messages {
+export function flex(card: Card): Messages {
   const heading: object[] = [
     { type: "text", text: card.label, size: "xs", color: "#5d6577" },
     { type: "text", text: card.title, size: "lg", weight: "bold", wrap: true, color: "#171c28" },
@@ -99,6 +101,7 @@ function flex(card: Card): Messages {
         },
       ]
     : heading;
+  if (card.board) body.push(card.board);
   if (card.body) body.push({ type: "text", text: card.body, size: "sm", wrap: true, color: "#3a4254" });
   return [
     {
@@ -106,7 +109,8 @@ function flex(card: Card): Messages {
       altText: card.alt,
       contents: {
         type: "bubble",
-        size: "kilo",
+        // 盤を載せるときは少し広いカードにする
+        size: card.board ? "mega" : "kilo",
         body: { type: "box", layout: "vertical", spacing: "sm", paddingAll: "18px", contents: body },
         footer: {
           type: "box",

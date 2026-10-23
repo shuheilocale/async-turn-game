@@ -1,6 +1,7 @@
 import type { GameView, Seat } from "@atg/core";
 import type { T } from "./i18n/index.tsx";
 import { miniAppUrl, type Card } from "./line.ts";
+import { snapshotOf, snapshotToFlex } from "./snapshot.ts";
 
 /** LINE のトークに送るカードの文面。送る人の言語で書く */
 
@@ -36,6 +37,9 @@ export function progressCard(t: T, v: GameView, what: string): Card {
   const game = t(`game.${v.gameType}.name`);
   const url = miniAppUrl(`/g/${v.id}`);
   const icon = iconOf(v.gameType);
+  // 盤面が全部見えるゲームだけ、今の局面を描いて載せる
+  const snap = snapshotOf(v.gameType, v.state);
+  const board = snap ? snapshotToFlex(snap) : undefined;
   if (v.status.kind === "finished") {
     const w = v.status.winner;
     const coop = v.status.coop;
@@ -44,8 +48,8 @@ export function progressCard(t: T, v: GameView, what: string): Card {
       : w === null
         ? t("status.draw")
         : t("status.winner", { name: names[w], seat: t(`game.${v.gameType}.seat${w}`) });
-    return { alt: `${game}: ${result}`, label: game, title: result, body: what, button: t("line.result"), url, icon };
+    return { alt: `${game}: ${result}`, label: game, title: result, body: what, button: t("line.result"), url, icon, board };
   }
   const next = t("status.theirTurn", { name: names[v.status.turn] });
-  return { alt: `${what} ${next}`, label: game, title: what, body: next, button: t("line.open"), url, icon };
+  return { alt: `${what} ${next}`, label: game, title: what, body: next, button: t("line.open"), url, icon, board };
 }
