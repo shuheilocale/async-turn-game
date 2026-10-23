@@ -52,7 +52,7 @@ export function Home() {
 
 /** ゲームを選ぶと開く作成画面。スマホでは下から出るシート、PC では中央の小窓 */
 function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose(): void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(() => savedName.get() || lineSession()?.displayName || "");
   const [seat, setSeat] = useState<SeatChoice>("random");
@@ -77,7 +77,7 @@ function CreateSheet({ gameType, onClose }: { gameType: string | null; onClose()
     setError(null);
     try {
       savedName.set(name);
-      const res = await api.createGame({ gameType, name, seat, idToken: lineIdToken() });
+      const res = await api.createGame({ gameType, name, seat, lang, idToken: lineIdToken() });
       savedGames.save(res.id, { token: res.token, seat: res.seat });
       onClose();
       navigate(`/g/${res.id}`);

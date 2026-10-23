@@ -41,6 +41,6 @@ export const api = {
   /** 終わった対局から次の対局を作る。gameType を省くともう一局 */
   next: (id: string, token: string, gameType?: string) =>
     request<NextGameResponse>(`/games/${id}/next`, { method: "POST", body: JSON.stringify({ gameType }) }, token),
-  move: (id: string, token: string, version: number, move: unknown) =>
-    request<GameView>(`/games/${id}/moves`, { method: "POST", body: JSON.stringify({ version, move }) }, token),
+  move: (id: string, token: string, version: number, move: unknown, lang?: string) =>
+    request<GameView>(`/games/${id}/moves`, { method: "POST", body: JSON.stringify({ version, move, lang }) }, token),
 };

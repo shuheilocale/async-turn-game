@@ -5,6 +5,8 @@ import type { GameStatus, Seat } from "./types.ts";
 export interface PlayerView {
   seat: Seat;
   name: string;
+  /** 画面で使っている言語（ja / en / th）。LINE のカードを受け取る人の言語で作るのに使う */
+  lang: string | null;
 }
 
 export interface GameView {
@@ -31,6 +33,7 @@ export interface CreateGameRequest {
   gameType: string;
   name: string;
   seat: Seat | "random";
+  lang?: string;
   /** LINE から使っているときの ID トークン。サーバが LINE アカウントを確かめて席と結びつける */
   idToken?: string;
 }
@@ -45,6 +48,7 @@ export interface CreateGameResponse {
 export interface JoinGameRequest {
   inviteCode: string;
   name: string;
+  lang?: string;
   idToken?: string;
 }
 
@@ -68,6 +72,8 @@ export interface MyGame {
 export interface MoveRequest {
   version: number;
   move: unknown;
+  /** 指した人の画面の言語。変わっていればサーバが覚え直す */
+  lang?: string;
 }
 
 export interface ApiError {

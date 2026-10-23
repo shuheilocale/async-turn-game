@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { GameView } from "@atg/core";
 import { api } from "../api.ts";
-import { errorText, useI18n } from "../i18n/index.tsx";
+import { asLang, errorText, translator, useI18n } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
 import { lineIdToken, lineSession, postToChat } from "../line.ts";
 import { progressCard } from "../notify.ts";
@@ -9,7 +9,7 @@ import { navigate } from "../router.ts";
 import { savedGames, savedName } from "../storage.ts";
 
 export function Join({ id }: { id: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const code = new URLSearchParams(location.search).get("code") ?? "";
   const [view, setView] = useState<GameView | null>(null);
   const [name, setName] = useState(() => savedName.get() || lineSession()?.displayName || "");
@@ -39,11 +39,16 @@ export function Join({ id }: { id: string }) {
     setError(null);
     try {
       savedName.set(name);
-      const res = await api.joinGame(id, { inviteCode: code, name, idToken: lineIdToken() });
+      const res = await api.joinGame(id, { inviteCode: code, name, lang, idToken: lineIdToken() });
       savedGames.save(id, { token: res.token, seat: res.seat });
       // 招待カードを開いたトークに「参加しました」と知らせる（作った人に通知が届く）
       const joined = await api.getGame(id, res.token).catch(() => null);
-      if (joined) await postToChat(id, progressCard(t, joined, t("line.joined", { name: name.trim() || t("home.namePlaceholder") })));
+      if (joined) {
+        // 作った人の言語で知らせる
+        const host = joined.players.find((p) => p.seat !== res.seat);
+        const tr = translator(asLang(host?.lang) ?? lang);
+        await postToChat(id, progressCard(tr, joined, tr("line.joined", { name: name.trim() || tr("home.namePlaceholder") })));
+      }
       navigate(`/g/${id}`, true);
     } catch (err) {
       setError(errorText(t, err));

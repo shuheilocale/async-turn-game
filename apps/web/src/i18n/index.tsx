@@ -46,6 +46,20 @@ function detectLang(): Lang {
   return "en";
 }
 
+/** 指定した言語で文言を作る。画面の言語とは別の言語が要るとき（LINE のカードを相手の言語で作る）に使う */
+export function translator(lang: Lang): T {
+  const dict = dictionaries[lang] as Record<string, string>;
+  return (key, vars) => {
+    let text = dict[key] ?? (ja as Record<string, string>)[key] ?? key;
+    for (const [name, v] of Object.entries(vars ?? {})) text = text.replaceAll(`{${name}}`, String(v));
+    return text;
+  };
+}
+
+/** サーバから届いた言語の文字列を、画面が対応している言語にする。対応していなければ null */
+export const asLang = (raw: string | null | undefined): Lang | null =>
+  raw === "ja" || raw === "en" || raw === "th" ? raw : null;
+
 const I18nContext = createContext<{ lang: Lang; setLang(lang: Lang): void; t: T } | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -56,12 +70,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   const value = useMemo(() => {
-    const dict = dictionaries[lang];
-    const t: T = (key, vars) => {
-      let text = (dict as Record<string, string>)[key] ?? (ja as Record<string, string>)[key] ?? key;
-      for (const [name, v] of Object.entries(vars ?? {})) text = text.replaceAll(`{${name}}`, String(v));
-      return text;
-    };
+    const t = translator(lang);
     const setLang = (next: Lang) => {
       try {
         localStorage.setItem(LANG_KEY, next);

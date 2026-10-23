@@ -18,6 +18,10 @@ function cleanName(raw: unknown): string {
   return name || "プレイヤー";
 }
 
+/** 画面が対応している言語だけ受け付ける */
+const LANGS = ["ja", "en", "th"];
+const cleanLang = (raw: unknown): string | null => (typeof raw === "string" && LANGS.includes(raw) ? raw : null);
+
 function bearer(c: Context): string | undefined {
   const header = c.req.header("Authorization");
   return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
@@ -41,7 +45,7 @@ function toView(game: GameRecord, you: Seat | null): GameView {
     version: game.version,
     state: def.viewState ? def.viewState(game.state, you, status.kind === "finished") : game.state,
     status,
-    players: game.players,
+    players: game.players.map((p) => ({ seat: p.seat, name: p.name, lang: p.lang ?? null })),
     you,
     waitingForOpponent: game.players.length < 2,
     inviteCode: you === null ? null : game.inviteCode,
@@ -80,7 +84,7 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const { id, token, inviteCode } = await store.create(
       def.id,
       def.initialState(Math.random),
-      { seat, name: cleanName(body.name) },
+      { seat, name: cleanName(body.name), lang: cleanLang(body.lang) },
       lineUser,
     );
     return c.json<CreateGameResponse>({ id, token, seat, inviteCode }, 201);
@@ -99,7 +103,7 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const lineUser = await lineUserOf(body);
     if (lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
     if (lineUser && (await store.seatOfLineUser(id, lineUser)) !== null) return c.json({ error: "own_game" }, 409);
-    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name), lineUser);
+    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name), lineUser, cleanLang(body.lang));
     if (!joined) return c.json({ error: "invite_invalid" }, 409);
     return c.json<JoinGameResponse>(joined, 201);
   });
@@ -158,6 +162,8 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
       throw e;
     }
     if (!(await store.recordMove(id, game.version, seat, move, next))) return c.json({ error: "version_conflict" }, 409);
+    const lang = cleanLang(body.lang);
+    if (lang && game.players.find((p) => p.seat === seat)?.lang !== lang) await store.setLang(id, seat, lang);
     return c.json(toView((await store.get(id))!, seat));
   });
 

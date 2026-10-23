@@ -398,7 +398,8 @@ details.fold button {
   stroke: #171c28;
 }
 .g-rim {
-  fill: rgb(255 255 255 / 0.3);
+  /* アイコンを PNG に書き出す道具（resvg）が読めるよう、昔からの書き方にする */
+  fill: rgba(255, 255, 255, 0.3);
 }
 .g-cut {
   stroke: var(--surface-2);

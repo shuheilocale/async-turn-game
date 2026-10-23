@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameView, Seat } from "@atg/core";
 import { api, ApiRequestError } from "../api.ts";
 import { boards } from "../boards/index.ts";
-import { errorText, useI18n, type T } from "../i18n/index.tsx";
+import { asLang, errorText, translator, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import { followGame, lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
@@ -14,7 +14,7 @@ import { savedGames } from "../storage.ts";
 const POLL_MS = 5000;
 
 export function Play({ id }: { id: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [token, setToken] = useState<string | undefined>(() => savedGames.get(id)?.token);
   const [view, setView] = useState<GameView | null>(null);
   const [selected, setSelected] = useState<unknown | null>(null);
@@ -96,7 +96,7 @@ export function Play({ id }: { id: string }) {
     setBusy(true);
     setMessage(null);
     try {
-      const next = await api.move(id, token, view.version, move);
+      const next = await api.move(id, token, view.version, move, lang);
       setView(next);
       setSelected(null);
       // 手番が相手に移ったとき・終局したときだけ知らせる（同じ人が続けて指すゲームでは知らせない）
@@ -104,7 +104,8 @@ export function Play({ id }: { id: string }) {
       if (lineSession() && handedOver) {
         // 指したことを相手に LINE で知らせる。トークから開いていれば自動、そうでなければボタンで
         const me = next.players.find((p) => p.seat === next.you)?.name ?? "";
-        const card = progressCard(t, next, t("line.moved", { name: me }));
+        const tr = recipientT(next);
+        const card = progressCard(tr, next, tr("line.moved", { name: me }));
         if (await postToChat(id, card)) setMessage(t("play.notified"));
         else setNotice(card);
       }
@@ -132,6 +133,12 @@ export function Play({ id }: { id: string }) {
     return false;
   }
 
+  /** LINE のカードは受け取る人（相手）の言語で作る。相手の言語が分からなければ自分の言語 */
+  function recipientT(v: GameView): T {
+    const opp = v.you === 0 ? 1 : 0;
+    return translator(asLang(v.players.find((p) => p.seat === opp)?.lang) ?? lang);
+  }
+
   /** 同じ 2 人で次の対局を作る（gameType を省くともう一局）。相手には LINE で知らせる */
   async function startNext(gameType?: string) {
     if (!view || !token || view.you === null) return;
@@ -142,7 +149,10 @@ export function Play({ id }: { id: string }) {
       await goNext(next.id);
       const nextView = await api.getGame(next.id, token).catch(() => null);
       const me = view.players.find((p) => p.seat === view.you)?.name ?? "";
-      if (nextView) await postToChat(next.id, progressCard(t, nextView, t("line.nextGame", { name: me })));
+      if (nextView) {
+        const tr = recipientT(nextView);
+        await postToChat(next.id, progressCard(tr, nextView, tr("line.nextGame", { name: me })));
+      }
       navigate(`/g/${next.id}`);
     } catch (e) {
       setMessage(errorText(t, e));

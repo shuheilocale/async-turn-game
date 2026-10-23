@@ -50,8 +50,8 @@ describe("次の対局（もう一局・ほかのゲーム）", () => {
     expect(view.you).toBe(1);
     expect(view.waitingForOpponent).toBe(false);
     expect(view.players).toEqual([
-      { seat: 0, name: "はる" },
-      { seat: 1, name: "あき" },
+      { seat: 0, name: "はる", lang: null },
+      { seat: 1, name: "あき", lang: null },
     ]);
     expect(((await (await get(`/games/${next.id}`, haru)).json()) as GameView).you).toBe(0);
 

@@ -66,14 +66,39 @@ export interface Card {
   body?: string;
   button: string;
   url: string;
+  /** 左に出すゲームのアイコン（https の PNG）。なければ出さない */
+  icon?: string;
 }
 
 /** トークに送るカード。画面と同じく白黒を基調にする */
 function flex(card: Card): Messages {
-  const body: object[] = [
+  const heading: object[] = [
     { type: "text", text: card.label, size: "xs", color: "#5d6577" },
     { type: "text", text: card.title, size: "lg", weight: "bold", wrap: true, color: "#171c28" },
   ];
+  // アイコンがあれば左に置き、どのゲームの知らせかひと目で分かるようにする
+  const body: object[] = card.icon
+    ? [
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "md",
+          alignItems: "center",
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              width: "52px",
+              height: "52px",
+              cornerRadius: "12px",
+              backgroundColor: "#f2f4f8",
+              contents: [{ type: "image", url: card.icon, size: "full", aspectMode: "fit", aspectRatio: "1:1" }],
+            },
+            { type: "box", layout: "vertical", spacing: "xs", contents: heading },
+          ],
+        },
+      ]
+    : heading;
   if (card.body) body.push({ type: "text", text: card.body, size: "sm", wrap: true, color: "#3a4254" });
   return [
     {

@@ -4,6 +4,8 @@ import { q, type Sql } from "./sql.ts";
 export interface PlayerRecord {
   seat: Seat;
   name: string;
+  /** 画面で使っている言語（ja / en / th）。分からなければ null */
+  lang?: string | null;
 }
 
 export interface GameRecord {
@@ -62,12 +64,13 @@ export class GameStore {
         t,
       ),
       q(
-        "INSERT INTO players (game_id, seat, name, token_hash, line_user_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang) VALUES (?, ?, ?, ?, ?, ?)",
         id,
         creator.seat,
         creator.name,
         tokenHash,
         lineUserId,
+        creator.lang ?? null,
       ),
       q("INSERT INTO tokens (token_hash, game_id, seat) VALUES (?, ?, ?)", tokenHash, id, creator.seat),
     ]);
@@ -77,7 +80,10 @@ export class GameStore {
   async get(id: string): Promise<GameRecord | null> {
     const [row] = await this.db.all<Record<string, any>>("SELECT * FROM games WHERE id = ?", id);
     if (!row) return null;
-    const players = await this.db.all<PlayerRecord>("SELECT seat, name FROM players WHERE game_id = ? ORDER BY seat", id);
+    const players = await this.db.all<PlayerRecord>(
+      "SELECT seat, name, lang FROM players WHERE game_id = ? ORDER BY seat",
+      id,
+    );
     return {
       id: row.id,
       gameType: row.game_type,
@@ -110,6 +116,11 @@ export class GameStore {
       lineUserId,
     );
     return row ? row.seat : null;
+  }
+
+  /** プレイヤーの言語を書き換える（指すたびに、そのときの画面の言語を送ってもらう） */
+  async setLang(id: string, seat: Seat, lang: string): Promise<void> {
+    await this.db.batch([q("UPDATE players SET lang = ? WHERE game_id = ? AND seat = ?", lang, id, seat)]);
   }
 
   /** LINE アカウントで本人と確かめられたら、この端末用の合言葉を新しく発行する */
@@ -154,8 +165,8 @@ export class GameStore {
         id,
       ),
       q(
-        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id)
-         SELECT ?, 1 - seat, name, token_hash, line_user_id FROM players WHERE game_id = ? AND ${notYet}`,
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang)
+         SELECT ?, 1 - seat, name, token_hash, line_user_id, lang FROM players WHERE game_id = ? AND ${notYet}`,
         nextId,
         id,
         id,
@@ -177,6 +188,7 @@ export class GameStore {
     inviteCode: string,
     name: string,
     lineUserId: string | null = null,
+    lang: string | null = null,
   ): Promise<{ token: string; seat: Seat } | null> {
     const game = await this.get(id);
     if (!game || game.inviteCode === null || game.inviteCode !== inviteCode) return null;
@@ -188,12 +200,13 @@ export class GameStore {
     // 招待コードがまだ残っているときだけ参加者を足し、同時にコードを消す
     const [inserted] = await this.db.batch([
       q(
-        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id) SELECT ?, ?, ?, ?, ? ${stillOpen}`,
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang) SELECT ?, ?, ?, ?, ?, ? ${stillOpen}`,
         id,
         seat,
         name,
         tokenHash,
         lineUserId,
+        lang,
         id,
         inviteCode,
       ),
