@@ -195,6 +195,10 @@ function bannerText(
   return t("learn.both", { seat: names[status.turn] });
 }
 
+/** 光らせる場所。まだ画面にない（コンピュータの番で手札が隠れている など）ときは盤を光らせる */
+const findTarget = (root: HTMLElement | null, step: TourStep) =>
+  (step.target ? root?.querySelector(step.target) : null) ?? root?.querySelector(".play-main > *") ?? null;
+
 /**
  * 案内の吹き出し。target の場所を枠で光らせ、その下（入らなければ上）に出す。
  * 画面は暗くせず、盤はそのまま触れる（「指したら進む」案内のため）
@@ -225,7 +229,7 @@ function Tour({
     let frame = 0;
     let last = "";
     const update = () => {
-      const el = root.current?.querySelector(step.target ?? ".play-main > *");
+      const el = findTarget(root.current, step);
       const r = el?.getBoundingClientRect() ?? null;
       const key = r ? `${r.top},${r.left},${r.width},${r.height}` : "";
       if (key !== last) {
@@ -240,7 +244,7 @@ function Tour({
 
   // 初めて出たときに、光らせる場所が見えるようにする
   useEffect(() => {
-    root.current?.querySelector(step.target ?? ".play-main > *")?.scrollIntoView({ block: "center", behavior: "smooth" });
+    findTarget(root.current, step)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [root, step]);
 
   // 画面の下は「これで決定」が出る場所なので空けておく。指して進む案内は盤の上に出す
