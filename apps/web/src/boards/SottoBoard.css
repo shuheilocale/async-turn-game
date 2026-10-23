@@ -1,0 +1,428 @@
+/*
+ * そっと出し。共通の部品（.card-face）を変えるときは .sotto を頭に付けて、ほかの盤に影響しないようにする
+ */
+.sotto {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+/* ---------- ライフと待てる回数 ---------- */
+
+.sotto-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sotto-meter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.sotto-meter-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sotto-lives,
+.sotto-waits {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.sotto-lives {
+  gap: 6px;
+}
+
+.sotto-waits {
+  gap: 3px;
+}
+
+.sotto-life {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.sotto-life.lost {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--glyph-line);
+}
+
+/* さっきのミスで減ったライフ */
+.sotto-life.just-lost {
+  animation: sotto-life-lost 0.9s ease-out;
+}
+
+@keyframes sotto-life-lost {
+  0% {
+    background: var(--danger);
+    transform: scale(1.25);
+  }
+  40% {
+    transform: scale(0.8);
+  }
+}
+
+.sotto-hourglass {
+  flex: none;
+  width: 14px;
+  height: 18px;
+}
+
+.sotto-hourglass .frame {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sotto-hourglass .sand {
+  fill: var(--ink-soft);
+}
+
+.sotto-hourglass.used .frame {
+  stroke: var(--glyph-line);
+}
+
+/* 選んだ「待つ」で使う分 */
+.sotto-hourglass.pending {
+  animation: sotto-pending 1s ease-in-out infinite alternate;
+}
+
+@keyframes sotto-pending {
+  to {
+    opacity: 0.2;
+  }
+}
+
+/* ---------- 卓 ---------- */
+
+.sotto-table {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 14px 12px 16px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.sotto-side {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.sotto-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  font-size: 0.8rem;
+}
+
+.sotto-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sotto-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--seat-color);
+}
+
+.sotto-empty {
+  display: grid;
+  place-items: center;
+  min-height: 66px;
+}
+
+.sotto-hand {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sotto-slot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  transition: transform 0.15s;
+}
+
+.sotto-next-tag {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--seat-color) 14%, var(--surface));
+  color: var(--seat-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+/* 場の一番上の札 */
+.sotto-pile {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.sotto-pile-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ---------- 札 ---------- */
+
+.sotto .sotto-card {
+  flex: none;
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgb(20 28 48 / 0.12);
+}
+
+.sotto .sotto-card.mid {
+  width: 58px;
+  height: 82px;
+  font-size: 1.75rem;
+  border: 2.5px solid var(--seat-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 18%, transparent);
+  transition: box-shadow 0.15s;
+}
+
+/* 「出す」を選んだら、出す札を少し持ち上げる */
+.sotto-slot.lift {
+  transform: translateY(-8px);
+}
+
+.sotto-slot.lift .sotto-card.mid {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--seat-color) 30%, transparent),
+    0 10px 18px rgb(20 28 48 / 0.18);
+}
+
+.sotto .sotto-card.big {
+  width: 96px;
+  height: 132px;
+  font-size: 3rem;
+  border-radius: 16px;
+  border: 4px solid var(--seat-color);
+  box-shadow: 0 6px 18px rgb(20 28 48 / 0.16);
+}
+
+/* 出たばかりの札は下からそっと置かれる */
+.sotto .sotto-card.big.placed {
+  animation: sotto-place 0.35s ease-out;
+}
+
+@keyframes sotto-place {
+  from {
+    transform: translateY(18px) scale(0.92);
+    opacity: 0;
+  }
+}
+
+.sotto .sotto-card.big.placeholder {
+  border: 2px dashed var(--glyph-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* 伏せた札の裏。画面の明暗に関係なく紺の地に斜めの線 */
+.sotto .sotto-card.back {
+  border: 3px solid #fff;
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.12) 0 3px, transparent 3px 7px),
+    var(--rack);
+  box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgb(20 28 48 / 0.12);
+}
+
+/* 終局後に表にした、伏せていた札 */
+.sotto .sotto-card.revealed {
+  border: 1.5px dashed var(--muted);
+}
+
+/* ---------- 知らせ ---------- */
+
+/* 相手が待った。相手の札から出た吹き出しの形 */
+.sotto-waited {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 6px 16px 6px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 14%, var(--surface));
+  animation: sotto-pop 0.35s ease-out;
+}
+
+.sotto-waited::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: calc(50% - 6px);
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--seat-color);
+  border-left: 2px solid var(--seat-color);
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+/* 観戦中に手前側の人が待ったときは、下の札を指す */
+.sotto-waited.down {
+  margin: 0 0 4px;
+}
+
+.sotto-waited.down::before {
+  top: auto;
+  bottom: -7px;
+  transform: rotate(225deg);
+}
+
+.sotto-waited strong {
+  color: var(--seat-text);
+  font-size: 1.02rem;
+  line-height: 1.4;
+}
+
+.sotto-waited .sotto-hourglass .frame {
+  stroke: var(--seat-text);
+}
+
+.sotto-waited .sotto-hourglass .sand {
+  fill: var(--seat-text);
+}
+
+/* ミスで何が起きたか */
+.sotto-alert {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 2px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  text-align: center;
+  line-height: 1.45;
+  animation: sotto-pop 0.35s ease-out;
+}
+
+.sotto-alert strong {
+  color: var(--danger);
+}
+
+.sotto-alert span {
+  font-size: 0.88rem;
+}
+
+@keyframes sotto-pop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+/* ---------- 手のボタン ---------- */
+
+.sotto-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sotto .sotto-action {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 76px;
+  padding: 10px 8px;
+  border-width: 2px;
+  border-radius: 16px;
+  line-height: 1.35;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+}
+
+.sotto .sotto-action:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.sotto-action-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sotto-action-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.sotto .sotto-action.selected {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 14%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 25%, transparent);
+}
+
+.sotto .sotto-action.selected .sotto-action-name {
+  color: var(--seat-text);
+}
+
+/* ---------- 出した札の流れ ---------- */
+
+.sotto-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sotto-flow li {
+  display: flex;
+  gap: 3px;
+}
+
+/* 下の線で誰が出したか分かるようにする */
+.sotto .sotto-card.played {
+  border-bottom: 3px solid var(--seat-color);
+  box-shadow: none;
+}
+
+/* ミスで捨てた札は、斜線を引いて薄くする */
+.sotto .sotto-card.discarded {
+  border: 1.5px dashed var(--seat-color);
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--danger) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    var(--surface);
+  color: var(--muted);
+  box-shadow: none;
+}
