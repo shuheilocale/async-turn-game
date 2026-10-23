@@ -113,7 +113,7 @@ export function Learn({ gameType }: { gameType: string }) {
             <div key={seat} className={`player seat${seat} ${turn === seat ? "turn" : ""}`}>
               <SeatToken gameType={gameType} seat={seat} />
               <span className="name">{names[seat]}</span>
-              {withBot && seat === 0 && <span className="you">{t("play.you")}</span>}
+              {withBot && seat === 0 && names[0] !== t("play.you") && <span className="you">{t("play.you")}</span>}
             </div>
           ))}
         </div>
