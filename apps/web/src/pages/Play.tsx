@@ -98,7 +98,9 @@ export function Play({ id }: { id: string }) {
       const next = await api.move(id, token, view.version, selected);
       setView(next);
       setSelected(null);
-      if (lineSession()) {
+      // 手番が相手に移ったとき・終局したときだけ知らせる（同じ人が続けて指すゲームでは知らせない）
+      const handedOver = next.status.kind === "finished" || next.status.turn !== next.you;
+      if (lineSession() && handedOver) {
         // 指したことを相手に LINE で知らせる。トークから開いていれば自動、そうでなければボタンで
         const me = next.players.find((p) => p.seat === next.you)?.name ?? "";
         const card = progressCard(t, next, t("line.moved", { name: me }));

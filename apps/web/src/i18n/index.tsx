@@ -11,7 +11,20 @@ export const LANGS: { id: Lang; label: string }[] = [
   { id: "th", label: "ไทย" },
 ];
 
-const dictionaries: Record<Lang, Messages> = { ja, en, th };
+/**
+ * ゲームごとの文言（i18n/games/<ゲームID>.ts）。キーは game.<ID>.* と error.<コード>。
+ * ゲームを足すときは ja.ts などを触らず、ここにファイルを 1 つ足せばよい
+ */
+export type GameMessages = Record<Lang, Record<string, string>>;
+const gameFiles = import.meta.glob<{ default: GameMessages }>("./games/*.ts", { eager: true });
+const gameMessages = (lang: Lang) =>
+  Object.values(gameFiles).reduce<Record<string, string>>((all, file) => ({ ...all, ...file.default[lang] }), {});
+
+const dictionaries: Record<Lang, Messages> = {
+  ja: { ...gameMessages("ja"), ...ja },
+  en: { ...gameMessages("en"), ...en },
+  th: { ...gameMessages("th"), ...th },
+};
 const LANG_KEY = "atg:lang";
 
 /** ゲームごと・エラーごとのキーは実行時に組み立てるので、文字列も受け付ける */

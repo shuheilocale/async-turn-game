@@ -115,6 +115,15 @@ const glyphs: Record<string, () => ReactNode> = {
   ),
 };
 
+/**
+ * ゲームごとのアイコン（glyphs/<ゲームID>.tsx の default export）。ゲームを足すときは
+ * ここを触らず、ファイルを 1 つ足せばよい。viewBox は 0 0 64 64、色は上と同じ g-* のクラスで付ける
+ */
+const glyphFiles = import.meta.glob<{ default: () => ReactNode }>("./glyphs/*.tsx", { eager: true });
+for (const [path, file] of Object.entries(glyphFiles)) {
+  glyphs[path.replace(/^\.\/glyphs\/(.+)\.tsx$/, "$1")] = file.default;
+}
+
 /** ゲームを表すアイコン。そのゲームの盤や駒をそのまま図にしたもの */
 export function GameGlyph({ id, className = "" }: { id: string; className?: string }) {
   const draw = glyphs[id];

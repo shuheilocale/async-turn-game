@@ -123,10 +123,13 @@ LINE Developers に「LINE ミニアプリ」のチャネルを作ってある�
 
 ## ゲームを追加するには
 
-1. `packages/core/src/games/<名前>.ts` に `GameDefinition` を実装し、`packages/core/src/index.ts` の `games` に登録する
+新しく作るファイルはゲームごとに分かれていて、共有ファイルへの追記は登録の 2 行だけ。
+
+1. `packages/core/src/games/<ID>.ts` に `GameDefinition` を実装し、`<ID>.test.ts` にルールのテストを書く。`packages/core/src/index.ts` の `games` に登録する
    - 相手に隠す情報があるなら `viewState` と `viewMove` も実装する（`hitblow.ts` / `auction.ts` が例）
-2. `apps/web/src/boards/<名前>Board.tsx` に盤の見た目を作り、`apps/web/src/boards/index.ts` の `boards` に登録する（長さの目安もここ）。アイコンは `apps/web/src/icons.tsx` の `glyphs` に SVG で描く
-3. `apps/web/src/i18n/ja.ts` に `game.<ID>.name / desc / rules / seat0 / seat1` などを足し、`en.ts` と `th.ts` にも同じキーを足す（足りないと型チェックで止まる）
-4. ルールのテストを `*.test.ts` に書く
+   - 同じ人が続けて指す（手番が移らない）手は LINE で知らせない
+2. `apps/web/src/boards/<名前>Board.tsx` に盤の見た目を作り、`apps/web/src/boards/index.ts` の `boards` に登録する（長さの目安もここ）。盤だけで使う CSS は同じフォルダの `<名前>Board.css` に書いて、盤から読み込む
+3. 文言は `apps/web/src/i18n/games/<ID>.ts` に日本語・英語・タイ語をまとめて書く（`game.<ID>.name / desc / rules / seat0 / seat1` など。エラーなら `error.<コード>`）。置くだけで読み込まれる
+4. アイコンは `apps/web/src/glyphs/<ID>.tsx` に SVG で描く（viewBox は 0 0 64 64。色は `icons.tsx` の `g-*` クラス）。置くだけで読み込まれる
 
 サーバ側の変更は不要。
