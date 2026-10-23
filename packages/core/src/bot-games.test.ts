@@ -64,7 +64,7 @@ const everyMove: Record<string, unknown[]> = {
   othello: range(64).map((i) => ({ row: Math.floor(i / 8), col: i % 8 })),
 };
 const fullInfo = Object.keys(everyMove);
-const hidden = ["hitblow", "auction", "bluff"];
+const hidden = ["hitblow", "auction", "bluff", "pour", "balloon"];
 
 const keys = (moves: unknown[]) => moves.map((m) => JSON.stringify(m)).sort();
 

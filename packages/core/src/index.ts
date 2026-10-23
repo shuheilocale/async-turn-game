@@ -14,6 +14,8 @@ import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { stack } from "./games/stack.ts";
+import { pour } from "./games/pour.ts";
+import { balloon } from "./games/balloon.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -33,6 +35,8 @@ export * as Bluff from "./games/bluff.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
 export * as Stack from "./games/stack.ts";
+export * as Pour from "./games/pour.ts";
+export * as Balloon from "./games/balloon.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -51,6 +55,8 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [bluff.id]: bluff,
   [sotto.id]: sotto,
   [treasure.id]: treasure,
+  [pour.id]: pour,
+  [balloon.id]: balloon,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {
