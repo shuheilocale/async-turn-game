@@ -7,6 +7,7 @@ import { HitBlowBoard } from "./HitBlowBoard.tsx";
 import { AuctionBoard } from "./AuctionBoard.tsx";
 import { GobbleBoard } from "./GobbleBoard.tsx";
 import { NimBoard } from "./NimBoard.tsx";
+import { BoxesBoard } from "./BoxesBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -39,6 +40,7 @@ export const boards: Record<string, BoardUI> = {
   gobble: { Board: GobbleBoard, length: "short" },
   nim: { Board: NimBoard, length: "short" },
   connect4: { Board: Connect4Board, length: "medium" },
+  boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
   auction: { Board: AuctionBoard, length: "medium", hidden: true },

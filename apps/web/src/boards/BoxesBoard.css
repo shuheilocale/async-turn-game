@@ -1,0 +1,196 @@
+/* 線とり陣取り */
+.boxes {
+  width: min(100%, 420px);
+}
+
+/* あなた n 箱／相手 m 箱 */
+.boxes-score {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.boxes-score > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boxes-score > span::before {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--seat-color) 45%, transparent);
+  box-shadow: inset 0 0 0 2px var(--seat-color);
+}
+
+/* 盤。位置と大きさはすべて盤の幅に対する % で決める（点のまわりに半マスの余白） */
+.boxes-board {
+  position: relative;
+  width: min(100%, calc(max(260px, 100dvh - var(--chrome, 340px) - 90px)));
+  aspect-ratio: 1;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  touch-action: manipulation;
+}
+
+.boxes-dot {
+  position: absolute;
+  width: 3.6%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--ink);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 取った箱は持ち主の色で薄く塗る。直前に取られた箱は少し濃く */
+.boxes-cell {
+  position: absolute;
+  background: color-mix(in srgb, var(--seat-color) 16%, transparent);
+}
+
+.boxes-cell.recent {
+  background: color-mix(in srgb, var(--seat-color) 32%, transparent);
+  animation: place 0.3s ease-out;
+}
+
+/* 選んだ線で閉じる箱（まだ決定前） */
+.boxes-cell.preview {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--seat-color) 22%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+}
+
+/*
+ * 線 1 本ごとのボタン。線を対角線とするひし形を当たり判定にする。
+ * となりの線のひし形とすき間なく敷きつめられるので、細い線でも指で押しやすい
+ */
+.boxes-edge {
+  position: absolute;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.boxes-edge:disabled {
+  opacity: 1;
+}
+
+/* ひし形で切り抜くと枠線が見えないので、キーボードで選んだときはひし形ごと色を付ける */
+.boxes-edge:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* 見えている線。長さは盤から style で、太さはここで決める（盤は正方形なので % は縦横同じ） */
+.boxes-line {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--seat-color);
+  pointer-events: none;
+}
+
+.boxes-line.h {
+  height: 2.5%;
+  transform: translateY(-50%);
+}
+
+.boxes-line.v {
+  width: 2.5%;
+  transform: translateX(-50%);
+}
+
+/* まだ引いていない線は点線。押せる番のときは少し濃く */
+.boxes-line.open:not(.selected) {
+  color: var(--glyph-line);
+}
+
+.boxes-board.interactive .boxes-line.open:not(.selected) {
+  color: var(--muted);
+}
+
+.boxes-line.h.open:not(.selected) {
+  height: 3px;
+  background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 10px);
+}
+
+.boxes-line.v.open:not(.selected) {
+  width: 3px;
+  background: repeating-linear-gradient(180deg, currentColor 0 5px, transparent 5px 10px);
+}
+
+/* 選んだ線（決定前）は、手番の人の色の半透明の影。太さと色は引いた線と同じ */
+.boxes-line.selected {
+  opacity: 0.45;
+}
+
+/* マウスを乗せたときは、もっと薄い影 */
+@media (hover: hover) {
+  .boxes-edge:not(:disabled):hover + .boxes-line.h.open:not(.selected) {
+    height: 2.5%;
+  }
+  .boxes-edge:not(:disabled):hover + .boxes-line.v.open:not(.selected) {
+    width: 2.5%;
+  }
+  .boxes-edge:not(:disabled):hover + .boxes-line.open:not(.selected) {
+    background: var(--seat-color);
+    opacity: 0.25;
+  }
+}
+
+/* 最後に引かれた線は、まわりをほんのり光らせ、まん中に小さな印を付ける */
+.boxes-line.last {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--seat-color) 30%, transparent);
+}
+
+.boxes-line.last::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--surface);
+  transform: translate(-50%, -50%);
+}
+
+.boxes-line.h.last {
+  animation: boxes-draw-h 0.3s ease-out;
+}
+
+.boxes-line.v.last {
+  animation: boxes-draw-v 0.3s ease-out;
+}
+
+@keyframes boxes-draw-h {
+  from {
+    transform: translateY(-50%) scaleX(0);
+  }
+}
+
+@keyframes boxes-draw-v {
+  from {
+    transform: translateX(-50%) scaleY(0);
+  }
+}
