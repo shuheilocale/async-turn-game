@@ -13,6 +13,7 @@ import { bridge } from "./games/bridge.ts";
 import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
+import { stack } from "./games/stack.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -31,6 +32,7 @@ export * as Bridge from "./games/bridge.ts";
 export * as Bluff from "./games/bluff.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
+export * as Stack from "./games/stack.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -40,6 +42,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [nim.id]: nim,
   [tateyoko.id]: tateyoko,
   [bridge.id]: bridge,
+  [stack.id]: stack,
   [connect4.id]: connect4,
   [boxes.id]: boxes,
   [othello.id]: othello,

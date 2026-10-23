@@ -1,0 +1,202 @@
+/*
+ * いしつみ。SVG の中の数値（線の太さなど）はメートル単位（盤の幅が 4 m）。
+ * styles.css のあとに読み込まれるので、.stack-sm などの既定値はここで上書きできる
+ */
+.stack-board.stack-sm {
+  --rock: #6e6862;
+  --rock-edge: #5a554f;
+  --rock-crack: #5c5650;
+  --rock-top: #8a847c;
+  --ground: #d8d0c3;
+  --ground-edge: #bdb3a4;
+  --sky-top: var(--surface);
+  --sky-bottom: var(--surface-2);
+  gap: 12px;
+  /* 縦長の盤が画面に収まるようにする（幅 : 高さ = 5 : 7） */
+  width: min(100%, 420px, calc(max(300px, 100dvh - var(--chrome, 340px)) * 5 / 7));
+}
+
+/* PC では盤の下のボタンまで画面に収める */
+@media (min-width: 960px) {
+  .stack-board.stack-sm {
+    width: min(100%, 420px, calc(max(300px, 100dvh - var(--chrome, 190px) - 70px) * 5 / 7));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .stack-board.stack-sm {
+    --rock: #57524d;
+    --rock-edge: #45413d;
+    --rock-crack: #48443f;
+    --rock-top: #706a63;
+    --ground: #2c2925;
+    --ground-edge: #3d3933;
+  }
+}
+
+.stack-view {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: linear-gradient(var(--sky-top), var(--sky-bottom));
+}
+
+.stack-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 横のドラッグは石を動かすのに使い、縦はページのスクロールに回す */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stack-svg.aiming {
+  cursor: grab;
+}
+
+.stack-svg:focus-visible {
+  outline: none;
+}
+
+.stack-view:has(.stack-svg:focus-visible) {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+}
+
+/* 塔が伸びて見える範囲がずれるとき、なめらかに動かす */
+.stack-world {
+  transition: transform 0.7s ease;
+}
+
+.stack-ground {
+  fill: var(--ground);
+}
+
+.stack-ground-edge {
+  stroke: var(--ground-edge);
+  stroke-width: 0.02;
+}
+
+.stack-rock {
+  fill: var(--rock);
+  stroke: var(--rock-edge);
+  stroke-width: 0.025;
+  stroke-linejoin: round;
+}
+
+.stack-crack {
+  fill: none;
+  stroke: var(--rock-crack);
+  stroke-width: 0.018;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 台の上面は、石を積む場所だと分かるよう明るい線にする */
+.stack-rock-top {
+  stroke: var(--rock-top);
+  stroke-width: 0.03;
+  stroke-linecap: round;
+}
+
+/* 石：灰〜茶の色（--tone）に、置いた人の色を薄く混ぜて縁取る。
+   縁の線は物理演算の石の「皮」（約 1 cm）と同じくらいの太さで、石どうしのすき間を埋める */
+.stack-stone {
+  fill: color-mix(in srgb, var(--seat-color) 14%, var(--tone));
+  stroke: color-mix(in srgb, var(--seat-color) 72%, var(--tone));
+  stroke-width: 0.022;
+  stroke-linejoin: round;
+}
+
+.stack-sheen {
+  fill: url(#stack-sheen);
+  pointer-events: none;
+}
+
+/* 最後に落とされた石は縁を太くする */
+.stack-stone.last {
+  stroke: var(--seat-color);
+  stroke-width: 0.032;
+}
+
+/* 落とす前の石：半透明で、点線の縁 */
+.stack-stone.ghost {
+  fill-opacity: 0.55;
+  stroke: var(--seat-color);
+  stroke-width: 0.022;
+  stroke-dasharray: 0.06 0.04;
+}
+
+.stack-ghost .stack-sheen {
+  opacity: 0.5;
+}
+
+.stack-arrow {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 0.04;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 高さの目盛り。台の上面からの高さ */
+.stack-ruler line {
+  stroke: var(--glyph-line);
+  stroke-width: 0.014;
+}
+
+.stack-ruler text {
+  fill: var(--muted);
+  font-family: var(--font-num);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* 落ちる場所の目安の線 */
+.stack-guide {
+  stroke: var(--muted);
+  stroke-width: 0.012;
+  stroke-dasharray: 0.05 0.05;
+  opacity: 0.55;
+}
+
+/* 「つぎ」「いま」の石の見本 */
+.stack-inset rect {
+  fill: color-mix(in srgb, var(--surface) 94%, transparent);
+  stroke: var(--line);
+  stroke-width: 0.012;
+}
+
+.stack-inset text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 「もう一度見る」は上の端のまん中（左右の角には石の見本、下には落ちた石が来る） */
+.stack-replay.ghost-button {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.stack-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.stack-controls button {
+  padding: 10px 8px;
+}
