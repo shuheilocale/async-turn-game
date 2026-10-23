@@ -8,6 +8,7 @@ import { AuctionBoard } from "./AuctionBoard.tsx";
 import { GobbleBoard } from "./GobbleBoard.tsx";
 import { NimBoard } from "./NimBoard.tsx";
 import { TateyokoBoard } from "./TateyokoBoard.tsx";
+import { FadingBoard } from "./FadingBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -44,4 +45,5 @@ export const boards: Record<string, BoardUI> = {
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
   auction: { Board: AuctionBoard, length: "medium", hidden: true },
   tateyoko: { Board: TateyokoBoard, length: "short" },
+  fading: { Board: FadingBoard, length: "short" },
 };
