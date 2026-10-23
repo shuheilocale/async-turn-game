@@ -12,6 +12,7 @@ import { FadingBoard } from "./FadingBoard.tsx";
 import { BoxesBoard } from "./BoxesBoard.tsx";
 import { BridgeBoard } from "./BridgeBoard.tsx";
 import { BluffBoard } from "./BluffBoard.tsx";
+import { StackBoard } from "./StackBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -51,6 +52,7 @@ export const boards: Record<string, BoardUI> = {
   nim: { Board: NimBoard, length: "short" },
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
+  stack: { Board: StackBoard, length: "short" },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },
