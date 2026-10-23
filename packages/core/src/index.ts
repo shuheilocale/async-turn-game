@@ -6,6 +6,7 @@ import { hitblow } from "./games/hitblow.ts";
 import { auction } from "./games/auction.ts";
 import { gobble } from "./games/gobble.ts";
 import { nim } from "./games/nim.ts";
+import { tateyoko } from "./games/tateyoko.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -16,6 +17,7 @@ export * as HitBlow from "./games/hitblow.ts";
 export * as Auction from "./games/auction.ts";
 export * as Gobble from "./games/gobble.ts";
 export * as Nim from "./games/nim.ts";
+export * as Tateyoko from "./games/tateyoko.ts";
 
 /** 遊べるゲームの一覧（トップ画面にこの順で並ぶ）。ゲームを追加したらここに登録する */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -26,6 +28,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [othello.id]: othello,
   [hitblow.id]: hitblow,
   [auction.id]: auction,
+  [tateyoko.id]: tateyoko,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

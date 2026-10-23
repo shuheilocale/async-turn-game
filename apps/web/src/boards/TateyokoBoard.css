@@ -1,0 +1,62 @@
+/*
+ * タテヨコ置き。このファイルは styles.css より先に読み込まれるので、
+ * .stack-sm や .grid-board の既定値に負けないよう、クラスを 2 つ重ねて指定する
+ */
+.tateyoko.stack-sm {
+  width: min(100%, 420px);
+}
+
+/* 盤の seat0 / seat1 は今の手番。マスに触れたときの色に使う */
+.grid-board.tateyoko-grid {
+  --cols: 5;
+  --rows: 5;
+  --board-w: 420px;
+  gap: 3px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.tateyoko-grid .cell {
+  background: var(--surface);
+}
+
+.tateyoko-grid .cell:not(:disabled):hover {
+  background: color-mix(in srgb, var(--seat-color) 10%, var(--surface));
+}
+
+/* 自分の番で、どちら向きにも棒を置けない空きマス */
+.tateyoko-grid .cell.dead {
+  background: var(--surface-2);
+}
+
+/* 棒：2 マスにまたがる角丸。下のマスをタップできるよう、指の操作は通す */
+.tateyoko-bar {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  margin: clamp(5px, 1.8vw, 8px);
+  border-radius: 999px;
+  background: var(--seat-color);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.16);
+  pointer-events: none;
+}
+
+.tateyoko-bar.ghost {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+/* 最後に置かれた棒には、まん中に白い印 */
+.tateyoko-bar.last {
+  animation: place 0.25s ease-out;
+}
+
+.tateyoko-bar.last::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.85);
+}
