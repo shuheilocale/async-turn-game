@@ -19,6 +19,7 @@ import { StackBoard } from "./StackBoard.tsx";
 import { PourBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
 import { StopwatchBoard } from "./StopwatchBoard.tsx";
+import { FreehandBoard } from "./FreehandBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -47,6 +48,8 @@ export interface GameMeta {
   coop?: boolean;
   /** 長押しやタップの回数など、タイミングで遊ぶゲーム */
   timing?: boolean;
+  /** 指で描いて遊ぶゲーム */
+  drawing?: boolean;
 }
 
 /** ゲームごとの画面部品。ルールは @atg/core、見た目と文言はここと i18n */
@@ -67,6 +70,7 @@ export const boards: Record<string, BoardUI> = {
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
   stopwatch: { Board: StopwatchBoard, length: "short", hidden: true, timing: true },
+  freehand: { Board: FreehandBoard, length: "short", hidden: true, drawing: true },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },

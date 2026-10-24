@@ -27,6 +27,7 @@ export const en: Messages = {
   "tag.hidden": "Bluffing",
   "tag.coop": "Co-op",
   "tag.timing": "Timing",
+  "tag.drawing": "Drawing",
 
   "badge.finished": "Finished",
   "badge.cleared": "Cleared",
