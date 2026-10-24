@@ -18,6 +18,7 @@ import { doors } from "./games/doors.ts";
 import { memory } from "./games/memory.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
+import { heart } from "./games/heart.ts";
 import { stack } from "./games/stack.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
@@ -47,6 +48,7 @@ export * as Doors from "./games/doors.ts";
 export * as Memory from "./games/memory.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
+export * as Heart from "./games/heart.ts";
 export * as Stack from "./games/stack.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
@@ -82,6 +84,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [memory.id]: memory,
   [sotto.id]: sotto,
   [treasure.id]: treasure,
+  [heart.id]: heart,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

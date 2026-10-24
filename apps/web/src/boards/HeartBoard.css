@@ -1,0 +1,685 @@
+/*
+ * はんぶんこハート。styles.css より先に読み込まれるので、共通の部品（.panel・button など）を
+ * 変えるときは .heart を頭に付けて優先させる。色は 2 人の色（--p0 青・--p1 オレンジ）をうすく混ぜて使う
+ */
+.heart {
+  --heart-soft: color-mix(in srgb, var(--p0) 9%, color-mix(in srgb, var(--p1) 9%, var(--surface)));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+/* ---------- 上：回戦 ---------- */
+
+.heart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  min-height: 1.3em;
+}
+
+.heart-round-no {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* お題の札（目安あり・目安なし・目隠し） */
+.heart-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: fit-content;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.heart-chip.theme-blind {
+  background: var(--ink-soft);
+  color: var(--surface);
+}
+
+/* ---------- 描く人 ---------- */
+
+.heart-stage {
+  display: grid;
+  gap: 12px;
+}
+
+.heart-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 2px 4px 0;
+}
+
+.heart-task > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.heart-task strong {
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.heart-theme-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 2px;
+}
+
+.heart-half-mark {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-top: 2px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heart-half-mark .on {
+  stroke: var(--seat-color);
+  stroke-width: 2.6;
+}
+
+.heart-half-mark .off {
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.heart-half-mark .mid {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 1.5 2;
+}
+
+/* 描く場所。正方形で、自分の側だけ明るい */
+.heart-pad {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 22px;
+  border: 1.5px solid var(--line);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.heart-pad.ready {
+  border-color: var(--seat-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--seat-color) 14%, transparent);
+  cursor: crosshair;
+}
+
+.heart-pad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 指で描くとき、ページがスクロールしたり、文字が選ばれたりしないようにする */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.heart-pad-mine {
+  fill: color-mix(in srgb, var(--seat-color) 5%, var(--surface));
+}
+
+/* 相手の側は、画面の地の色に沈める（ダークモードでも自分の側より暗い） */
+.heart-pad-other {
+  fill: var(--bg);
+}
+
+.heart-hatch {
+  stroke: color-mix(in srgb, var(--ink) 5%, transparent);
+  stroke-width: 7;
+}
+
+.heart-mid {
+  stroke: color-mix(in srgb, var(--muted) 70%, transparent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 5 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.heart-guide .ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--seat-color) 45%, transparent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.heart-guide .dot {
+  fill: color-mix(in srgb, var(--seat-color) 70%, var(--surface));
+}
+
+.heart-stroke {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.heart-finger {
+  fill: var(--seat-color);
+  opacity: 0;
+}
+
+.heart-finger.on {
+  opacity: 0.8;
+}
+
+/* 左右の半分の名前（上のすみ） */
+.heart-pad-label {
+  position: absolute;
+  top: 10px;
+  max-width: calc(50% - 20px);
+  padding: 1px 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.heart-pad-label.side-left {
+  left: 10px;
+}
+
+.heart-pad-label.side-right {
+  right: 10px;
+}
+
+.heart-pad-label.mine {
+  background: color-mix(in srgb, var(--seat-color) 16%, var(--surface));
+  color: var(--seat-text);
+}
+
+.heart-pad-label.other {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.heart-overlay {
+  position: absolute;
+  inset: auto 14px 14px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.heart-overlay.faint {
+  opacity: 0.7;
+}
+
+.heart-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+.heart-hidden-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* 鍵の印 */
+.heart-lock {
+  position: relative;
+  flex: none;
+  width: 11px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.heart-lock::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -5px;
+  width: 7px;
+  height: 6px;
+  border: 1.6px solid currentColor;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  box-sizing: border-box;
+}
+
+/* ---------- 相手を待っている ---------- */
+
+.heart-wait {
+  display: grid;
+  gap: 12px;
+}
+
+.heart-wait-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.heart-wait-row p {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.heart-wait-art {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heart-wait-art .rest {
+  stroke: var(--line);
+  stroke-width: 4;
+  stroke-dasharray: 4 6;
+}
+
+/* ペンがくぼみからとがりまでなぞって、少し止まって消える。をくり返す */
+.heart-wait-art .pen {
+  stroke: var(--seat-color);
+  stroke-width: 5;
+  stroke-dasharray: 1 2;
+  animation: heart-pen 2.8s ease-in-out infinite;
+}
+
+@keyframes heart-pen {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  60%,
+  85% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-wait-art .pen {
+    animation: none;
+  }
+}
+
+.heart .heart-mine {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+.heart-mine .heart-art {
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.heart-mine-text {
+  display: grid;
+  gap: 6px;
+}
+
+.heart-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* ---------- 合わせたハート ---------- */
+
+.heart-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.heart-art.big {
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 45%, var(--heart-soft), var(--surface-2) 75%);
+}
+
+.heart-art .heart-mid {
+  stroke: var(--line);
+}
+
+.heart-line {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 34;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heart-art.big .heart-line {
+  stroke-width: 12;
+}
+
+.heart-stop {
+  stop-color: var(--seat-color);
+}
+
+/* 点数が高いほど濃く塗る */
+.heart-fill {
+  opacity: 0.12;
+}
+
+.grade-close .heart-fill {
+  opacity: 0.2;
+}
+
+.grade-good .heart-fill {
+  opacity: 0.3;
+}
+
+.grade-great .heart-fill {
+  opacity: 0.42;
+}
+
+.grade-perfect .heart-fill {
+  opacity: 0.55;
+}
+
+.heart-gap {
+  stroke: color-mix(in srgb, var(--danger) 75%, transparent);
+  stroke-width: 6;
+  stroke-dasharray: 2 14;
+  stroke-linecap: round;
+}
+
+/* 演出：左の線、右の線の順に描いてから、塗りがふわっと出る。ぴったりならとくとくと鼓動する */
+.heart-art.animate .heart-line {
+  animation: heart-draw 0.8s ease-in-out backwards;
+}
+
+.heart-art.animate .heart-line.second {
+  animation-delay: 0.7s;
+}
+
+.heart-art.animate .heart-fill-wrap {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: heart-fill-in 1s 1.45s ease-out backwards;
+}
+
+.heart-art.animate.grade-perfect,
+.heart-art.animate.grade-great {
+  animation: heart-beat 0.9s 2.4s ease-in-out 2;
+}
+
+@keyframes heart-draw {
+  from {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes heart-fill-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes heart-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.035);
+  }
+  55% {
+    transform: scale(0.995);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-art.animate,
+  .heart-art.animate .heart-line,
+  .heart-art.animate .heart-fill-wrap {
+    animation: none;
+  }
+}
+
+/* ---------- 結果 ---------- */
+
+.heart .heart-reveal {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.heart-reveal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.heart-score {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.heart-score strong {
+  font-size: 2.6rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.heart-grade {
+  margin-top: -4px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.grade-perfect .heart-grade,
+.heart-final.cleared .heart-grade {
+  background: linear-gradient(90deg, var(--p0-text), var(--p1-text));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.heart-meters {
+  display: grid;
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.heart-meter {
+  display: grid;
+  grid-template-columns: minmax(6.5em, auto) minmax(0, 1fr) 2.2em;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+
+.heart-meter-label {
+  color: var(--ink-soft);
+}
+
+.heart-meter-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.heart-meter-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--p0), var(--p1));
+  opacity: 0.75;
+}
+
+.heart-meter-num {
+  text-align: right;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.heart-who {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  color: var(--muted);
+}
+
+.heart-who > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.heart-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.heart-next {
+  justify-self: center;
+  min-width: 160px;
+}
+
+/* ---------- 終局 ---------- */
+
+.heart .heart-final {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.heart .heart-final.cleared {
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--p0) 11%, var(--surface)),
+    color-mix(in srgb, var(--p1) 11%, var(--surface))
+  );
+}
+
+.heart-final .heart-grade {
+  margin-top: 0;
+}
+
+.heart-final-note {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+
+/* ---------- これまでのハート ---------- */
+
+.heart-history h3 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+
+.heart-history ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.heart .heart-slot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: 16px;
+}
+
+.heart .heart-slot:disabled {
+  opacity: 1;
+}
+
+.heart .heart-slot.on {
+  border-color: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px var(--ink-soft);
+}
+
+.heart-slot .heart-art {
+  width: min(100%, 84px);
+}
+
+.heart-slot-empty {
+  display: block;
+  width: min(100%, 84px);
+  aspect-ratio: 1;
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.4;
+  stroke-dasharray: 4 5;
+  stroke-linejoin: round;
+}
+
+.heart-slot-text {
+  display: grid;
+  justify-items: center;
+  line-height: 1.25;
+  font-size: 0.72rem;
+}
+
+.heart-slot-text strong {
+  font-size: 1rem;
+}

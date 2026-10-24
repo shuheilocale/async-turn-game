@@ -19,6 +19,7 @@ import { DoorsBoard } from "./DoorsBoard.tsx";
 import { MemoryBoard } from "./MemoryBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
+import { HeartBoard } from "./HeartBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
 import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
@@ -105,4 +106,5 @@ export const boards: Record<string, BoardUI> = {
   memory: { Board: MemoryBoard, length: "medium", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
+  heart: { Board: HeartBoard, length: "short", hidden: true, coop: true },
 };
