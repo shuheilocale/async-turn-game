@@ -18,6 +18,7 @@ import { BluffBoard } from "./BluffBoard.tsx";
 import { DoorsBoard } from "./DoorsBoard.tsx";
 import { MemoryBoard } from "./MemoryBoard.tsx";
 import { TsuboBoard } from "./TsuboBoard.tsx";
+import { ShoppingBoard } from "./ShoppingBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
 import { OekakiBoard } from "./OekakiBoard.tsx";
@@ -106,6 +107,7 @@ export const boards: Record<string, BoardUI> = {
   doors: { Board: DoorsBoard, length: "short", hidden: true },
   memory: { Board: MemoryBoard, length: "medium", hidden: true },
   tsubo: { Board: TsuboBoard, length: "short", hidden: true },
+  shopping: { Board: ShoppingBoard, length: "medium", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
   oekaki: { Board: OekakiBoard, length: "medium", hidden: true, coop: true },

@@ -1,0 +1,967 @@
+/*
+ * ブランド爆買いオークション。styles.css より先に読み込まれるので、共通の部品（.history や input）を
+ * 変えるときは .shopping を頭に付けて優先させる。
+ * ショーウィンドウと品物の札は、画面の明暗に関係なく同じ色（夜のブティックとクリーム色の札）
+ */
+.shopping {
+  --shop-gold: #d9b45a;
+  --shop-gold-deep: #a87a1e;
+  --shop-cream: #f7efe2;
+  --shop-plum: #432649;
+  --shop-plum-deep: #1f1125;
+  --shop-rose: #b8325a;
+  --shop-ink: #2a1f2a;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+/* シリーズの色。札の下のふちと、点数の丸、シリーズ名の帯に使う */
+.series-fashion {
+  --series: #d6336c;
+}
+.series-jewelry {
+  --series: #1a7fa8;
+}
+.series-beauty {
+  --series: #8a46c2;
+}
+.series-treat {
+  --series: #23824f;
+}
+
+/* ---------- 2 人のお財布 ---------- */
+
+.shop-wallets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.shop-wallet {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 12px 10px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--seat-color);
+  transition: box-shadow 0.2s;
+}
+
+.shop-wallet.turn {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--seat-color) 45%, transparent);
+}
+
+.shop-wallet-name,
+.shop-result-name,
+.shop-shelf-title,
+.shop-history-head span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.shop-wallet-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.shop-wallet-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.shop-wallet-money {
+  font-family: var(--font-num);
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.shop-wallet-bar {
+  height: 5px;
+  margin: 2px 0 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.shop-wallet-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--seat-color);
+  transition: width 0.6s ease-out;
+}
+
+.shop-wallet-score {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.shop-wallet-score b {
+  font-family: var(--font-num);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+/* ---------- ショーウィンドウ ---------- */
+
+.shop-window {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 0 14px 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 75% 50% at 50% 34%, rgb(255 226 178 / 0.2), transparent 72%),
+    linear-gradient(180deg, var(--shop-plum), var(--shop-plum-deep));
+  box-shadow: 0 10px 24px rgb(31 17 37 / 0.28);
+}
+
+/* 金の額縁。日よけの上にも重ねるので、いちばん上に描く */
+.shop-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 3px var(--shop-gold),
+    inset 0 0 0 6px rgb(0 0 0 / 0.22);
+  pointer-events: none;
+}
+
+/* しま模様の日よけ。下のふちは、しまごとに半円で波うつ */
+.shop-awning {
+  justify-self: stretch;
+  height: 31px;
+  margin: 0 -14px;
+  background:
+    radial-gradient(circle at 50% 0, var(--shop-cream) 9.6px, transparent 10px) -10px 20px / 40px 11px repeat-x,
+    radial-gradient(circle at 50% 0, var(--shop-rose) 9.6px, transparent 10px) 10px 20px / 40px 11px repeat-x,
+    repeating-linear-gradient(90deg, var(--shop-cream) 0 20px, var(--shop-rose) 20px 40px) 0 0 / 100% 20px no-repeat;
+  filter: drop-shadow(0 3px 3px rgb(0 0 0 / 0.3));
+}
+
+.shop-window-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 0.82rem;
+  color: rgb(255 255 255 / 0.85);
+}
+
+.shop-next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-next.last {
+  color: var(--shop-gold);
+  font-weight: 700;
+}
+
+/* 伏せた次の品物 */
+.shop-next-box {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1.5px dashed rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.08);
+  font-family: var(--font-num);
+  font-weight: 700;
+  color: var(--shop-gold);
+}
+
+.shop-bundle {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--shop-gold);
+  color: var(--shop-ink);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
+  animation: shop-pop 0.35s ease-out;
+}
+
+.shop-bundle strong {
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+/* 今の品物を飾る台。上からスポットライト、下に台座 */
+.shop-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 4px;
+  width: 100%;
+  height: 176px;
+}
+
+.shop-spot {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  width: 280px;
+  height: 230px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgb(255 240 210 / 0.3), transparent 88%);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+.shop-pedestal {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 200px;
+  height: 24px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 35%, #f3e3c3, #b89a63 72%);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 0.45);
+}
+
+/* 品物はクリーム色の丸い飾り板の上に置く（黒いバッグも夜の地に沈まないように） */
+.shop-stage-item {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffaf0 0 55%, var(--shop-cream) 70%);
+  box-shadow:
+    0 0 0 3px var(--shop-gold),
+    0 10px 18px rgb(0 0 0 / 0.4);
+  animation: shop-item-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.shop-stage-item.main {
+  width: 152px;
+  height: 152px;
+  margin-bottom: 12px;
+}
+
+.shop-stage-item.side {
+  width: 92px;
+  height: 92px;
+  margin-bottom: 12px;
+}
+
+.shop-stage.multi .shop-stage-item.main {
+  width: 132px;
+  height: 132px;
+}
+
+.shop-stage-item .shop-art {
+  width: 76%;
+  height: 76%;
+}
+
+/* 品物の名前の値札 */
+.shop-tags {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+/* 上の段にシリーズと点数、下の段に名前（長い名前も途中で折り返さずに読めるよう、幅をまるごと使う） */
+.shop-tag {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "series pts"
+    "name name";
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 10px 9px 20px;
+  border-radius: 6px 12px 12px 6px;
+  background: var(--shop-cream);
+  color: var(--shop-ink);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.3);
+}
+
+/* 値札のひもを通す穴 */
+.shop-tag::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--shop-plum-deep);
+  box-shadow: inset 0 0 0 1.5px var(--shop-gold-deep);
+}
+
+.shop-series {
+  grid-area: series;
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--series);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.shop-tag-name {
+  grid-area: name;
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.shop-tag-pts {
+  grid-area: pts;
+  justify-self: end;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--shop-gold);
+  font-family: var(--font-num);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 入札のようす（封をした封筒＝入札済み、金額は秘密） */
+.shop-bidstate {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.shop-bidnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: rgb(0 0 0 / 0.28);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgb(255 255 255 / 0.92);
+}
+
+.shop-bidnote.done {
+  background: color-mix(in srgb, var(--seat-color) 38%, rgb(0 0 0 / 0.35));
+}
+
+.shop-envelope {
+  flex: none;
+  width: 22px;
+  height: 17px;
+  animation: shop-drop 0.45s ease-out both;
+}
+
+.shop-envelope rect {
+  fill: var(--shop-cream);
+}
+
+.shop-envelope path {
+  fill: none;
+  stroke: #b9a684;
+  stroke-width: 1.4;
+}
+
+.shop-envelope .seal {
+  fill: var(--seat-color);
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+/* まだ入札していない人の「考え中」の点 */
+.shop-dots {
+  flex: none;
+  width: 18px;
+  height: 6px;
+  background: radial-gradient(circle, currentColor 2px, transparent 2.5px) 0 0 / 6px 6px repeat-x;
+  opacity: 0.7;
+  animation: shop-blink 1.2s ease-in-out infinite;
+}
+
+/* ---------- 入札 ---------- */
+
+.shop-bid {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 2px solid var(--seat-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--seat-color) 14%, transparent);
+}
+
+.shop-bid-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shop-bid-head .muted {
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.shop-bid-amount {
+  justify-self: center;
+  font-family: var(--font-num);
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--seat-text);
+  white-space: nowrap;
+}
+
+.shop-bid-amount.unset {
+  color: var(--muted);
+}
+
+.shop-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.shopping .shop-steps button {
+  min-height: 48px;
+  padding: 8px 2px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.08s;
+}
+
+.shopping .shop-steps button.plus {
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--seat-color) 40%, var(--line));
+  color: var(--seat-text);
+}
+
+.shopping .shop-bid button:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+/* 金額のスライダー。指で動かしやすいよう、つまみを大きくする */
+.shopping .shop-slider,
+.shopping .shop-slider:focus {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 0;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.shop-slider:focus-visible {
+  outline: 2px solid var(--seat-color);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.shop-slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--seat-color) var(--fill), var(--surface-2) var(--fill));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.shop-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--seat-color);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+.shop-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.shop-slider::-moz-range-progress {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--seat-color);
+}
+
+.shop-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--seat-color);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+.shop-quick {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 6px;
+}
+
+.shopping .shop-quick button {
+  min-height: 44px;
+  padding: 8px 4px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.shopping .shop-quick button.selected {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 14%, var(--surface));
+  color: var(--seat-text);
+}
+
+.shop-bid-hint {
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* ---------- 直前の競りの結果 ---------- */
+
+.shop-result {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  animation: shop-pop 0.35s ease-out;
+}
+
+.shop-result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shop-result-items {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.shop-result-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.shop-result-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.shop-result-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.6em minmax(0, 1fr) 6.6em;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.shop-result-bar {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+/* 2 人の入札額の棒。少しずらして伸ばし、勝った方だけ濃くする */
+.shop-result-bar > span {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--seat-color);
+  opacity: 0.4;
+  animation: shop-bar 0.7s var(--delay) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.shop-result-row.won .shop-result-bar > span {
+  opacity: 1;
+}
+
+.shop-result-amt {
+  font-family: var(--font-num);
+  font-size: 0.82rem;
+  text-align: right;
+  white-space: nowrap;
+  animation: shop-fade 0.3s calc(var(--delay) + 0.45s) both;
+}
+
+.shop-result-row.won .shop-result-amt {
+  color: var(--seat-text);
+  font-weight: 700;
+}
+
+/* 落札のはんこ。棒が伸びきってから押す */
+.shop-stamp {
+  position: absolute;
+  left: 52%;
+  top: 50%;
+  padding: 0 8px;
+  border: 2px solid #d23c3c;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: #d23c3c;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.5;
+  white-space: nowrap;
+  translate: -50% -50%;
+  rotate: -10deg;
+  animation: shop-stamp 0.35s 1s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+/* ---------- 最終結果 ---------- */
+
+.shop-final {
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.shop-final table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.shop-final th,
+.shop-final td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.shop-final thead th {
+  max-width: 7em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--seat-text);
+}
+
+.shop-final tbody th {
+  text-align: left;
+  font-weight: 500;
+}
+
+.shop-final td {
+  font-family: var(--font-num);
+}
+
+.shop-final small {
+  display: block;
+  font-family: var(--font);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.shop-final tr.total th,
+.shop-final tr.total td {
+  border-bottom: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.shop-final td.win {
+  color: var(--seat-text);
+}
+
+.shop-final td.win::before {
+  content: "★ ";
+  color: var(--shop-gold);
+}
+
+.shop-leftover {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ---------- 棚 ---------- */
+
+.shop-shelves {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-shelf {
+  padding: 10px 12px 0;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--seat-color);
+  overflow: hidden;
+}
+
+.shop-shelf-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shop-shelf-pts {
+  flex: none;
+  font-family: var(--font-num);
+  color: var(--seat-text);
+}
+
+/* 木の板。品物はこの上に並ぶ */
+.shop-shelf-board {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px 10px;
+  min-height: 78px;
+  margin: 0 -12px;
+  padding: 12px 12px 22px;
+  box-shadow:
+    inset 0 -8px 0 #c3955c,
+    inset 0 -10px 0 #8f6434;
+}
+
+.shop-shelf-board > .muted {
+  align-self: center;
+}
+
+.shop-group {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+/* そろったシリーズは金のふちで囲む */
+.shop-group.complete {
+  background: color-mix(in srgb, var(--shop-gold) 22%, transparent);
+  box-shadow: 0 0 0 2px var(--shop-gold);
+}
+
+/* 札の右上には点数の丸があるので、ボーナスの札はグループの下のまん中に貼る */
+.shop-set-badge {
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 1;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--shop-gold);
+  color: var(--shop-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: shop-pop 0.4s ease-out;
+}
+
+/* ---------- 品物の札 ---------- */
+
+.shop-tile {
+  display: inline-grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  flex: none;
+  min-width: 0;
+}
+
+.shop-tile-face {
+  position: relative;
+  display: block;
+  width: 54px;
+  height: 54px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--shop-cream);
+  border-bottom: 3px solid var(--series);
+}
+
+.shop-tile.xs .shop-tile-face {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border-radius: 7px;
+  border-bottom-width: 2px;
+}
+
+.shop-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 点数の丸。色はシリーズ */
+.shop-tile-pts {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--series);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 0.66rem;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.shop-tile.xs .shop-tile-pts {
+  display: none;
+}
+
+.shop-tile-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.shop-upcoming {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 6px;
+}
+
+/* ---------- これまでの競り ---------- */
+
+.shop-history-head,
+.shopping .shop-history li {
+  display: grid;
+  grid-template-columns: 1.4em minmax(0, 1fr) 6.6em 6.6em;
+  gap: 6px;
+  align-items: center;
+}
+
+.shop-history-head {
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+}
+
+.shop-history-head span {
+  text-align: right;
+}
+
+.shop-history-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.shop-history-bid {
+  font-family: var(--font-num);
+  font-size: 0.76rem;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.shop-history-bid.won {
+  color: var(--seat-text);
+  font-weight: 700;
+}
+
+/* ---------- 動き ---------- */
+
+@keyframes shop-item-in {
+  from {
+    transform: translateY(14px) scale(0.82);
+    opacity: 0;
+  }
+}
+
+@keyframes shop-pop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes shop-bar {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes shop-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes shop-stamp {
+  from {
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+
+@keyframes shop-drop {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+
+@keyframes shop-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
