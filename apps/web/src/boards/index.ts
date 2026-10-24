@@ -7,6 +7,7 @@ import { HitBlowBoard } from "./HitBlowBoard.tsx";
 import { AuctionBoard } from "./AuctionBoard.tsx";
 import { GobbleBoard } from "./GobbleBoard.tsx";
 import { NimBoard } from "./NimBoard.tsx";
+import { ChainBoard } from "./ChainBoard.tsx";
 import { TateyokoBoard } from "./TateyokoBoard.tsx";
 import { FadingBoard } from "./FadingBoard.tsx";
 import { BoxesBoard } from "./BoxesBoard.tsx";
@@ -79,6 +80,7 @@ export const boards: Record<string, BoardUI> = {
   fading: { Board: FadingBoard, length: "short" },
   gobble: { Board: GobbleBoard, length: "short" },
   nim: { Board: NimBoard, length: "short" },
+  chain: { Board: ChainBoard, length: "short" },
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
   korokoro: { Board: KorokoroBoard, length: "short" },

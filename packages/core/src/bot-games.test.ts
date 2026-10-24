@@ -67,12 +67,15 @@ const everyMove: Record<string, unknown[]> = {
 const fullInfo = Object.keys(everyMove);
 const hidden = ["hitblow", "auction", "bluff", "pour", "pourhard", "balloon", "stopwatch", "quickdraw", "freehand"];
 
+/** 盤面は全部見えるが、人間らしくまちがえるように botMove で手を選ぶゲーム */
+const humanlike = ["chain"];
+
 const keys = (moves: unknown[]) => moves.map((m) => JSON.stringify(m)).sort();
 
 describe("盤面が全部見えるゲームの手の一覧（legalMoves）", () => {
   it("盤面が全部見えるゲームは legalMoves を、隠す情報があるゲームは botMove を持つ", () => {
     for (const id of fullInfo) expect(games[id]!.legalMoves, id).toBeTypeOf("function");
-    for (const id of hidden) expect(games[id]!.botMove, id).toBeTypeOf("function");
+    for (const id of [...hidden, ...humanlike]) expect(games[id]!.botMove, id).toBeTypeOf("function");
   });
 
   it.each(fullInfo)("%s: 手はすべて applyMove で通り、通る手はもれなく入っている。手番でない席・終局後は空", (id) => {
@@ -151,7 +154,7 @@ describe("盤面が全部見えるゲームの手の一覧（legalMoves）", () 
 });
 
 describe("コンピュータ同士の対局", () => {
-  it.each([...fullInfo, ...hidden])("%s: 20 局とも途中で止まらずに終局する", (id) => {
+  it.each([...fullInfo, ...hidden, ...humanlike])("%s: 20 局とも途中で止まらずに終局する", (id) => {
     const def = games[id]!;
     for (let game = 0; game < 20; game++) {
       const end = selfPlay(def, seeded(game));

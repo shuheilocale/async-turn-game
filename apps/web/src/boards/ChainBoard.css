@@ -1,0 +1,407 @@
+/*
+ * まねっこチェーン。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .chain を頭に付けて優先させる
+ */
+.chain {
+  --pad0: #2f7cf0;
+  --pad1: #f0860f;
+  --pad2: #1d9c5c;
+  --pad3: #8b57ef;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chain {
+    --pad0: #5c9dff;
+    --pad1: #ffa043;
+    --pad2: #3cc684;
+    --pad3: #ae8bff;
+  }
+}
+
+.chain .pad0 {
+  --pad: var(--pad0);
+}
+.chain .pad1 {
+  --pad: var(--pad1);
+}
+.chain .pad2 {
+  --pad: var(--pad2);
+}
+.chain .pad3 {
+  --pad: var(--pad3);
+}
+
+/* ---------- いま何個目か ---------- */
+
+.chain-progress {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.chain-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 10px;
+  margin: 0;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.chain-count strong {
+  font-size: 1.2rem;
+  font-feature-settings: "palt";
+}
+
+.chain-count .muted {
+  font-size: 0.9rem;
+}
+
+/* 並びの数だけの点。色は付けない（点を見て並びが分からないように） */
+.chain-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chain-dots li {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--glyph-line);
+  transition: background-color 0.12s;
+}
+
+.chain-dots li.on {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
+.chain-dots li.now {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.chain-dots li.bad {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* 最後に足す 1 つの枠 */
+.chain-dots li.add {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  margin-left: 3px;
+  border-style: dashed;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chain-dots li.add.now {
+  border-style: solid;
+  color: var(--ink);
+}
+
+/* ---------- パッド ---------- */
+
+.chain-pads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  /* 続けて押しても拡大しない・文字が選ばれない */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.chain .chain-pad {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  border-radius: 26px;
+  border: 2px solid color-mix(in srgb, var(--pad) 38%, var(--line));
+  background: color-mix(in srgb, var(--pad) 12%, var(--surface));
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.1s,
+    border-color 0.1s,
+    box-shadow 0.1s,
+    transform 0.1s;
+}
+
+/* 押せない間も薄くせずに見せる（光る並びを見るため） */
+.chain .chain-pad:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.chain-pads.can .chain-pad {
+  cursor: pointer;
+}
+
+.chain-pads.can .chain-pad:active {
+  transform: scale(0.97);
+}
+
+.chain-face {
+  width: 50%;
+  height: 50%;
+  overflow: visible;
+}
+
+.chain-shape {
+  fill: color-mix(in srgb, var(--pad) 72%, var(--surface));
+  stroke: color-mix(in srgb, var(--pad) 72%, var(--surface));
+  stroke-width: 7;
+  stroke-linejoin: round;
+  transition:
+    fill 0.1s,
+    stroke 0.1s;
+}
+
+/* 光る：地が色で塗られ、形は白く抜ける。少しふくらんで、まわりに光がにじむ */
+.chain .chain-pad.lit {
+  z-index: 1;
+  background: var(--pad);
+  border-color: var(--pad);
+  border-style: solid;
+  transform: scale(1.04);
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--pad) 30%, transparent),
+    0 12px 34px color-mix(in srgb, var(--pad) 55%, transparent);
+}
+
+.chain-pad.lit .chain-shape {
+  fill: #fff;
+  stroke: #fff;
+}
+
+/* 音の代わりに、光るたびに形がぽんと跳ねる */
+.chain-pad.lit .chain-face {
+  animation: chain-pop 0.28s ease-out;
+}
+
+@keyframes chain-pop {
+  40% {
+    transform: scale(1.16);
+  }
+}
+
+/* 相手が足した最後の 1 つは、光の輪を二重にする */
+.chain .chain-pad.lit.newest {
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--pad) 40%, transparent),
+    0 0 0 14px color-mix(in srgb, var(--pad) 18%, transparent),
+    0 12px 34px color-mix(in srgb, var(--pad) 55%, transparent);
+}
+
+/* 押したところから広がる波紋 */
+.chain-ripple {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 3px solid var(--pad);
+  opacity: 0;
+  pointer-events: none;
+  animation: chain-ripple 0.5s ease-out;
+}
+
+@keyframes chain-ripple {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+
+/* まねし終えたら、どれを足してもよいことを点線の枠で示す */
+.chain .chain-pad.addable {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--pad) 70%, var(--line));
+}
+
+/* まちがえたパッドには × を重ねて揺らす */
+.chain .chain-pad.wrong {
+  animation: chain-shake 0.4s ease-out;
+}
+
+.chain-cross {
+  position: absolute;
+  inset: 16%;
+  width: 68%;
+  height: 68%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.chain-cross path {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+@keyframes chain-shake {
+  20% {
+    transform: translateX(-7px);
+  }
+  45% {
+    transform: translateX(6px);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+}
+
+/* 正しかったパッドは、色をはっきりさせて輪で囲む */
+.chain .chain-pad.answer {
+  border-color: var(--pad);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--pad) 45%, transparent);
+  animation: chain-answer 1.3s ease-in-out infinite;
+}
+
+.chain-pad.answer .chain-shape {
+  fill: var(--pad);
+  stroke: var(--pad);
+}
+
+@keyframes chain-answer {
+  50% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--pad) 22%, transparent);
+  }
+}
+
+.chain-tag {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: calc(100% - 16px);
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+}
+
+.chain-tag.answer {
+  top: auto;
+  bottom: 9px;
+}
+
+/* ---------- 説明 ---------- */
+
+.chain-added {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chain .chain-retry {
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 6px 14px;
+  font-size: 0.88rem;
+}
+
+/* 並びを小さく描いた札。下の線は足した人の色 */
+.chain-chip {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 28px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--pad) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--pad) 30%, var(--line));
+}
+
+.chain-chip svg {
+  width: 16px;
+  height: 16px;
+  overflow: visible;
+}
+
+.chain-chip .chain-shape {
+  fill: var(--pad);
+  stroke: var(--pad);
+}
+
+.chain-chip.by {
+  padding-bottom: 4px;
+}
+
+.chain-chip.by::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--seat-color);
+}
+
+.chain-chip.miss {
+  outline: 2px solid var(--danger);
+  outline-offset: 1px;
+}
+
+/* ---------- 終わったあとの並び ---------- */
+
+.chain-review {
+  width: 100%;
+}
+
+.chain-review h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.chain-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
