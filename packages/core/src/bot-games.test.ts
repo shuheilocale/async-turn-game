@@ -73,6 +73,8 @@ const hidden = ["hitblow", "auction", "bluff", "pour", "pourhard", "balloon", "s
 
 /** 盤面は全部見えるが、人間らしくまちがえるように botMove で手を選ぶゲーム */
 const humanlike = ["chain"];
+/** 盤面は全部見えるが、手が多すぎるので legalMoves の代わりに botMove で手を選ぶゲーム */
+const simulated = ["artillery"];
 
 const keys = (moves: unknown[]) => moves.map((m) => JSON.stringify(m)).sort();
 
@@ -159,7 +161,7 @@ describe("盤面が全部見えるゲームの手の一覧（legalMoves）", () 
 });
 
 describe("コンピュータ同士の対局", () => {
-  it.each([...fullInfo, ...hidden, ...humanlike])("%s: 20 局とも途中で止まらずに終局する", (id) => {
+  it.each([...fullInfo, ...hidden, ...humanlike, ...simulated])("%s: 20 局とも途中で止まらずに終局する", (id) => {
     const def = games[id]!;
     for (let game = 0; game < 20; game++) {
       const end = selfPlay(def, seeded(game));
