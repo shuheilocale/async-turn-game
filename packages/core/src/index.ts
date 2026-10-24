@@ -22,6 +22,7 @@ import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { oekaki } from "./games/oekaki.ts";
 import { heart } from "./games/heart.ts";
+import { ishin } from "./games/ishin.ts";
 import { stack } from "./games/stack.ts";
 import { curling } from "./games/curling.ts";
 import { artillery } from "./games/artillery.ts";
@@ -59,6 +60,7 @@ export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
 export * as Oekaki from "./games/oekaki.ts";
 export * as Heart from "./games/heart.ts";
+export * as Ishin from "./games/ishin.ts";
 export * as Stack from "./games/stack.ts";
 export * as Curling from "./games/curling.ts";
 export * as Artillery from "./games/artillery.ts";
@@ -106,6 +108,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [treasure.id]: treasure,
   [oekaki.id]: oekaki,
   [heart.id]: heart,
+  [ishin.id]: ishin,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

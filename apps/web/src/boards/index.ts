@@ -23,6 +23,7 @@ import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
 import { OekakiBoard } from "./OekakiBoard.tsx";
 import { HeartBoard } from "./HeartBoard.tsx";
+import { IshinBoard } from "./IshinBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
 import { CurlingBoard } from "./CurlingBoard.tsx";
 import { ArtilleryBoard } from "./ArtilleryBoard.tsx";
@@ -121,4 +122,5 @@ export const boards: Record<string, BoardUI> = {
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
   oekaki: { Board: OekakiBoard, length: "medium", hidden: true, coop: true },
   heart: { Board: HeartBoard, length: "short", hidden: true, coop: true },
+  ishin: { Board: IshinBoard, length: "short", hidden: true, coop: true },
 };
