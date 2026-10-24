@@ -6,6 +6,7 @@ import { hitblow } from "./games/hitblow.ts";
 import { auction } from "./games/auction.ts";
 import { gobble } from "./games/gobble.ts";
 import { nim } from "./games/nim.ts";
+import { chain } from "./games/chain.ts";
 import { tateyoko } from "./games/tateyoko.ts";
 import { fading } from "./games/fading.ts";
 import { boxes } from "./games/boxes.ts";
@@ -30,6 +31,7 @@ export * as HitBlow from "./games/hitblow.ts";
 export * as Auction from "./games/auction.ts";
 export * as Gobble from "./games/gobble.ts";
 export * as Nim from "./games/nim.ts";
+export * as Chain from "./games/chain.ts";
 export * as Tateyoko from "./games/tateyoko.ts";
 export * as Fading from "./games/fading.ts";
 export * as Boxes from "./games/boxes.ts";
@@ -50,6 +52,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [fading.id]: fading,
   [gobble.id]: gobble,
   [nim.id]: nim,
+  [chain.id]: chain,
   [tateyoko.id]: tateyoko,
   [bridge.id]: bridge,
   [korokoro.id]: korokoro,
