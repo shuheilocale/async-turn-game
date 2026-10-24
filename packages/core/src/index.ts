@@ -2,6 +2,7 @@ import type { GameDefinition } from "./types.ts";
 import { othello } from "./games/othello.ts";
 import { tictactoe } from "./games/tictactoe.ts";
 import { connect4 } from "./games/connect4.ts";
+import { tapioca } from "./games/tapioca.ts";
 import { hitblow } from "./games/hitblow.ts";
 import { auction } from "./games/auction.ts";
 import { gobble } from "./games/gobble.ts";
@@ -26,6 +27,7 @@ export { botMove } from "./bot.ts";
 export * as Othello from "./games/othello.ts";
 export * as TicTacToe from "./games/tictactoe.ts";
 export * as Connect4 from "./games/connect4.ts";
+export * as Tapioca from "./games/tapioca.ts";
 export * as HitBlow from "./games/hitblow.ts";
 export * as Auction from "./games/auction.ts";
 export * as Gobble from "./games/gobble.ts";
@@ -60,6 +62,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [stopwatch.id]: stopwatch,
   [freehand.id]: freehand,
   [connect4.id]: connect4,
+  [tapioca.id]: tapioca,
   [boxes.id]: boxes,
   [othello.id]: othello,
   [hitblow.id]: hitblow,

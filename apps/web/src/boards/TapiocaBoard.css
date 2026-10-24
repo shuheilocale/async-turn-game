@@ -1,0 +1,499 @@
+/*
+ * しずむタピオカ・うかぶ氷。数値の太さは SVG の座標（1 マスが 100）での値。
+ * このファイルは styles.css より先に読み込まれるので、.stack-sm や button の既定値に負けないよう、クラスを 2 つ重ねて指定する
+ */
+.tapioca {
+  /* ミルクティーの色。上はミルクが多く明るく、底はカラメル色 */
+  --tea-top: #f3e5d1;
+  --tea-mid: #e5c9a6;
+  --tea-bottom: #cfa57a;
+  --tea-syrup: rgb(122 70 32 / 0.13);
+  --glass-in: rgb(255 255 255 / 0.5);
+  --glass-line: #b9b2a8;
+  --straw: rgb(255 255 255 / 0.92);
+  --slot: rgb(120 74 38 / 0.07);
+  --slot-line: rgb(255 255 255 / 0.5);
+  --piece-shadow: rgb(84 46 18 / 0.28);
+  /* 最後に入れたもの・勝った並びのふち。お茶の色の上で目立つよう、明暗どちらでも白 */
+  --mark: rgb(255 255 255 / 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tapioca {
+    --tea-top: #806a58;
+    --tea-mid: #685243;
+    --tea-bottom: #4c3a2e;
+    --tea-syrup: rgb(28 14 6 / 0.22);
+    --glass-in: rgb(255 255 255 / 0.05);
+    --glass-line: #5e6578;
+    --straw: rgb(236 240 246 / 0.6);
+    --slot: rgb(0 0 0 / 0.1);
+    --slot-line: rgb(255 255 255 / 0.12);
+    --piece-shadow: rgb(0 0 0 / 0.35);
+  }
+}
+
+.tapioca.stack-sm {
+  width: min(100%, 420px);
+  gap: 12px;
+}
+
+/* ---------- グラス ---------- */
+
+/* 盤が画面の高さに収まるよう、.grid-board と同じ考え方で幅を決める（下の「入れるもの」の分も空ける） */
+.tapioca-glass {
+  position: relative;
+  width: min(100%, 420px, calc(max(260px, 100dvh - var(--chrome, 340px) - 110px) * var(--ratio, 0.8)));
+  aspect-ratio: var(--ratio, 0.8);
+  margin: 0 auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tapioca-back,
+.tapioca-front {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tapioca-front {
+  pointer-events: none;
+}
+
+.tapioca-inside {
+  fill: var(--glass-in);
+}
+
+.tapioca-straw-edge {
+  stroke: var(--glass-line);
+  stroke-width: 50;
+  stroke-linecap: round;
+}
+
+.tapioca-straw {
+  stroke: var(--straw);
+  stroke-width: 44;
+  stroke-linecap: round;
+}
+
+.tapioca-straw-shine {
+  stroke: rgb(255 255 255 / 0.7);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+/* お茶は少しだけ透けて、中のストローがぼんやり見える */
+.tapioca-tea {
+  opacity: 0.9;
+}
+
+.tapioca-tea-top {
+  stop-color: var(--tea-top);
+}
+
+.tapioca-tea-mid {
+  stop-color: var(--tea-mid);
+}
+
+.tapioca-tea-bottom {
+  stop-color: var(--tea-bottom);
+}
+
+.tapioca-syrup path {
+  fill: none;
+  stroke: var(--tea-syrup);
+  stroke-width: 18;
+  stroke-linecap: round;
+}
+
+.tapioca-surface {
+  stroke: rgb(255 255 255 / 0.6);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.tapioca-cup {
+  fill: none;
+  stroke: var(--glass-line);
+  stroke-width: 9;
+  stroke-linejoin: round;
+}
+
+.tapioca-base {
+  stroke: var(--glass-line);
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.tapioca-rim {
+  fill: var(--surface);
+  stroke: var(--glass-line);
+  stroke-width: 4;
+}
+
+.tapioca-shine {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.42);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.tapioca-shine.small {
+  stroke-width: 8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tapioca-shine {
+    stroke: rgb(255 255 255 / 0.12);
+  }
+}
+
+/* 勝った並びの線：勝った色のふちどりに、白い線 */
+.tapioca-winline line {
+  stroke: var(--mark);
+  stroke-width: 12;
+  stroke-linecap: round;
+  opacity: 0.95;
+}
+
+.tapioca-winline line.under {
+  stroke: var(--seat-color);
+  stroke-width: 24;
+  opacity: 0.55;
+}
+
+/* ---------- マス目（列ごとのボタン） ---------- */
+
+.tapioca-grid {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+}
+
+.tapioca-col.tapioca-col {
+  display: grid;
+  grid-template-rows: repeat(var(--rows), 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+
+.tapioca-col.tapioca-col:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .tapioca-col.tapioca-col:not(:disabled):hover {
+    background: rgb(255 255 255 / 0.16);
+  }
+}
+
+/* 選んだ列：明るい帯と、今の手番の色のふち */
+.tapioca-col.tapioca-col.selected {
+  background: rgb(255 255 255 / 0.24);
+  box-shadow: inset 0 0 0 2.5px color-mix(in srgb, var(--seat-color) 60%, transparent);
+}
+
+.tapioca-col:focus-visible {
+  outline-offset: -2px;
+}
+
+.tapioca-cell {
+  position: relative;
+  min-height: 0;
+}
+
+/* 空きマスの目印：うすい角丸 */
+.tapioca-cell::before {
+  content: "";
+  position: absolute;
+  inset: 10%;
+  border-radius: 24%;
+  background: var(--slot);
+  box-shadow: inset 0 0 0 1.5px var(--slot-line);
+}
+
+/* 影まで動いてくる道：点線（タピオカは上から、氷は下から） */
+.tapioca-cell.path::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 2.5px);
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(to bottom, var(--seat-color) 0 7px, transparent 7px 16px);
+  opacity: 0.45;
+}
+
+/* ---------- タピオカと氷 ---------- */
+
+.tapioca-piece {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.tapioca-piece::before {
+  content: "";
+  grid-area: 1 / 1;
+}
+
+/* タピオカ：その色の濃い丸に、つやの点 */
+.tapioca-piece.pearl::before,
+.tapioca-mini.pearl {
+  width: 76%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 30%, rgb(255 255 255 / 0.95) 0 8%, rgb(255 255 255 / 0) 9.5%),
+    radial-gradient(circle at 38% 34%, color-mix(in srgb, var(--seat-color) 88%, #fff) 0%, color-mix(in srgb, var(--seat-color) 72%, #000) 58%, color-mix(in srgb, var(--seat-color) 48%, #000) 100%);
+  box-shadow: 0 3px 5px var(--piece-shadow);
+}
+
+/* 氷：四角く半透明。その色が少し透ける */
+.tapioca-piece.ice::before,
+.tapioca-mini.ice {
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 20%;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.9) 0 14%, rgb(255 255 255 / 0) 34%),
+    linear-gradient(160deg, color-mix(in srgb, var(--seat-color) 30%, rgb(255 255 255 / 0.55)), color-mix(in srgb, var(--seat-color) 62%, rgb(255 255 255 / 0.15)));
+  border: 2.5px solid color-mix(in srgb, var(--seat-color) 70%, #fff);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 255 255 / 0.35),
+    0 2px 6px var(--piece-shadow);
+  transform: rotate(var(--tilt, 0deg));
+}
+
+/* 最後に入れたもの：白いふち */
+.tapioca-piece.last::before {
+  outline: 3px solid var(--mark);
+  outline-offset: 2px;
+}
+
+/* 入れたときの動き。タピオカは空きの一番上から沈み、氷は空きの一番下から浮かんで、少しゆれて止まる */
+/* かかる時間（--settle）は動いたマスの数から盤で決める */
+.tapioca-piece.pearl.last {
+  z-index: 2;
+  animation: tapioca-sink var(--settle, 0.4s) cubic-bezier(0.4, 0.05, 0.5, 1) both;
+}
+
+.tapioca-piece.ice.last {
+  z-index: 2;
+  animation: tapioca-float var(--settle, 0.4s) cubic-bezier(0.25, 0.3, 0.35, 1) both;
+}
+
+@keyframes tapioca-sink {
+  from {
+    transform: translateY(calc(var(--travel, 0) * -100%));
+    opacity: 0.3;
+  }
+  15% {
+    opacity: 1;
+  }
+  84% {
+    transform: translateY(6%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes tapioca-float {
+  from {
+    transform: translateY(calc(var(--travel, 0) * 100%));
+    opacity: 0.3;
+  }
+  15% {
+    opacity: 1;
+  }
+  78% {
+    transform: translateY(-7%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/*
+ * 勝った並び：白いふちと、その色の光。決着したら、並びに入っていないものはうすく。
+ * どちらも、最後に入れたものが止まってから（--settle のあと）出す
+ */
+.tapioca-piece.win::before {
+  outline: 3px solid var(--mark);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--seat-color) 40%, transparent);
+  animation: tapioca-glow 0.35s ease-out var(--settle, 0s) both;
+}
+
+.tapioca-piece.dim {
+  opacity: 0.4;
+  animation: tapioca-dim 0.4s ease-out var(--settle, 0s) both;
+}
+
+.tapioca-winline {
+  animation: tapioca-appear 0.35s ease-out var(--settle, 0s) both;
+}
+
+@keyframes tapioca-glow {
+  from {
+    outline-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes tapioca-dim {
+  from {
+    opacity: 1;
+  }
+}
+
+@keyframes tapioca-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 選んだものが止まる位置の影 */
+.tapioca-piece.ghost {
+  opacity: 0.55;
+  animation: place 0.2s ease-out;
+}
+
+/* 選んでいない方が止まる位置：点線の枠だけ */
+.tapioca-piece.hint::before {
+  background: none;
+  border: 2.5px dashed color-mix(in srgb, var(--seat-color) 75%, transparent);
+  box-shadow: none;
+}
+
+.tapioca-piece.hint {
+  opacity: 0.7;
+}
+
+/* ---------- 入れるもの（タピオカ / 氷） ---------- */
+
+.tapioca-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.tapioca-pick button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  line-height: 1.25;
+}
+
+.tapioca-pick button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow:
+    0 1px 3px rgb(20 28 48 / 0.12),
+    inset 0 0 0 2px var(--seat-color);
+}
+
+.tapioca-pick button:disabled {
+  opacity: 0.5;
+}
+
+.tapioca-mini {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.tapioca-mini.pearl {
+  width: 24px;
+}
+
+.tapioca-mini.ice {
+  width: 23px;
+  border-width: 2px;
+  --tilt: -8deg;
+}
+
+.tapioca-pick-text {
+  display: grid;
+  min-width: 0;
+}
+
+.tapioca-pick-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.tapioca-pick-sub {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+/* ---------- 盤の下の案内 ---------- */
+
+/* 2 行分の高さを取っておく（手が進んでも下の表示がずれないように） */
+.tapioca .board-note {
+  min-height: 2.9rem;
+  align-content: start;
+}
+
+.tapioca-ice-left {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.tapioca-ice-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tapioca-ice-count i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--seat-color) 45%, transparent);
+  border: 1.5px solid var(--seat-color);
+}
+
+.tapioca-ice-count i.used {
+  background: none;
+  border-style: dashed;
+  opacity: 0.45;
+}
+
+.tapioca-ice-count b {
+  margin-left: 3px;
+  color: var(--seat-text);
+  font-size: 0.85rem;
+}

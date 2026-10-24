@@ -3,6 +3,7 @@ import type { GameStatus, Seat } from "@atg/core";
 import { OthelloBoard } from "./OthelloBoard.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
+import { TapiocaBoard } from "./TapiocaBoard.tsx";
 import { HitBlowBoard } from "./HitBlowBoard.tsx";
 import { AuctionBoard } from "./AuctionBoard.tsx";
 import { GobbleBoard } from "./GobbleBoard.tsx";
@@ -73,6 +74,7 @@ export const boards: Record<string, BoardUI> = {
   stopwatch: { Board: StopwatchBoard, length: "short", hidden: true, timing: true },
   freehand: { Board: FreehandBoard, length: "short", hidden: true, drawing: true },
   connect4: { Board: Connect4Board, length: "medium" },
+  tapioca: { Board: TapiocaBoard, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
