@@ -18,6 +18,7 @@ import { TreasureBoard } from "./TreasureBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
 import { PourBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
+import { FreehandBoard } from "./FreehandBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -65,6 +66,7 @@ export const boards: Record<string, BoardUI> = {
   stack: { Board: StackBoard, length: "short" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
+  freehand: { Board: FreehandBoard, length: "short", hidden: true },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
   othello: { Board: OthelloBoard, length: "long" },

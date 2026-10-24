@@ -1,0 +1,639 @@
+/*
+ * ひとふでチャレンジ。styles.css より先に読み込まれるので、共通の部品（.panel・.score など）を
+ * 変えるときは .freehand を頭に付けて優先させる
+ */
+.freehand {
+  --paper: var(--surface);
+  --ideal: color-mix(in srgb, var(--muted) 75%, transparent);
+  --off-meh: color-mix(in srgb, var(--danger) 26%, transparent);
+  --off-bad: color-mix(in srgb, var(--danger) 55%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+.freehand-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.freehand-icon.big {
+  width: 56px;
+  height: 56px;
+  stroke-width: 6;
+}
+
+.freehand-blind-mark {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  vertical-align: -0.15em;
+}
+
+/* 目隠し・伏せてある などの小さな札 */
+.freehand-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ---------- 上：回戦と勝ち数 ---------- */
+
+.freehand-head {
+  display: grid;
+  gap: 6px;
+}
+
+.freehand-round-no {
+  justify-self: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+.freehand .score {
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.freehand-score-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.freehand-score-name > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.freehand-score-name .token,
+.freehand-card-head .token,
+.freehand-row-score .token {
+  width: 10px;
+  height: 10px;
+}
+
+.freehand-wins {
+  display: grid;
+  justify-items: end;
+  line-height: 1.2;
+  flex: none;
+}
+
+.freehand-wins strong {
+  font-size: 1.05rem;
+  color: var(--seat-text);
+}
+
+.freehand-wins .small {
+  font-size: 0.7rem;
+}
+
+/* ---------- お題を選ぶ ---------- */
+
+.freehand-stage {
+  display: grid;
+  gap: 12px;
+}
+
+.freehand .freehand-picker {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.freehand-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.freehand-shapes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.freehand .freehand-shape {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 74px;
+  padding: 8px 2px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.freehand-shape .freehand-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.freehand-shape small {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.freehand .freehand-shape.on {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1.5px var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  color: var(--seat-text);
+}
+
+.freehand .freehand-shape:disabled {
+  opacity: 0.4;
+}
+
+/* 目隠しのスイッチ */
+.freehand-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.freehand-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.freehand-switch-track {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.15s;
+}
+
+.freehand-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+.freehand-switch input:checked + .freehand-switch-track {
+  background: var(--seat-color);
+}
+
+.freehand-switch input:checked + .freehand-switch-track::after {
+  transform: translateX(18px);
+}
+
+.freehand-switch input:focus-visible + .freehand-switch-track {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.freehand-switch input:disabled + .freehand-switch-track {
+  opacity: 0.5;
+}
+
+.freehand-switch-text {
+  display: grid;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.freehand-switch-text strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.92rem;
+}
+
+.freehand-switch-text .small {
+  font-size: 0.76rem;
+}
+
+/* ---------- お題（大きく） ---------- */
+
+.freehand-task {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 4px 0;
+}
+
+.freehand-task .freehand-icon {
+  color: var(--seat-color);
+}
+
+.freehand-task > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.freehand-task strong {
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+
+/* ---------- 描く場所 ---------- */
+
+.freehand-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  border: 1.5px dashed var(--line);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.freehand-canvas.ready {
+  border: 2px solid var(--seat-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--seat-color) 14%, transparent);
+  cursor: crosshair;
+}
+
+.freehand-canvas.blind.ready {
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 14px, color-mix(in srgb, var(--ink) 4%, transparent) 14px 28px),
+    var(--paper);
+}
+
+.freehand-canvas svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 指で描くとき、ページがスクロールしたり、文字が選ばれたりしないようにする */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.freehand-overlay {
+  position: absolute;
+  inset: auto 12px 12px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.freehand-canvas:not(.ready) .freehand-overlay {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.freehand-overlay.faint {
+  opacity: 0.7;
+}
+
+.freehand-stroke {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.freehand-finger {
+  fill: var(--seat-color);
+  opacity: 0;
+}
+
+.freehand-finger.on {
+  opacity: 0.8;
+}
+
+/* 相手の絵は伏せてある */
+.freehand-facedown-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.freehand-card-back {
+  flex: none;
+  width: 22px;
+  height: 28px;
+  border-radius: 5px;
+  border: 2px solid var(--ink-soft);
+  background: repeating-linear-gradient(45deg, var(--surface-2) 0 3px, var(--line) 3px 6px);
+}
+
+/* ---------- 相手を待っている ---------- */
+
+.freehand-wait {
+  display: grid;
+  gap: 12px;
+}
+
+.freehand .freehand-mine {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.freehand-mine-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.freehand-lock {
+  width: 10px;
+  height: 9px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  position: relative;
+}
+
+.freehand-lock::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -5px;
+  width: 6px;
+  height: 6px;
+  border: 1.6px solid currentColor;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  box-sizing: border-box;
+}
+
+.freehand-mine-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.freehand-mine-body .freehand-sketch {
+  max-width: 200px;
+}
+
+/* ---------- 結果 ---------- */
+
+.freehand .freehand-reveal {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.freehand-round-title {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.freehand-round-shape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+}
+
+.freehand-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.freehand-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.freehand-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: 0.85rem;
+}
+
+.freehand-card-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.freehand-badge {
+  align-self: center;
+  margin-left: 4px;
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--seat-color);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  animation: freehand-pop 0.35s 0.8s ease-out both;
+}
+
+@keyframes freehand-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+  }
+}
+
+.freehand-sketch {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+}
+
+.freehand-card.won .freehand-sketch {
+  border-color: var(--seat-color);
+}
+
+.freehand-facedown {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.freehand-ideal {
+  fill: none;
+  stroke: var(--ideal);
+  stroke-width: 2px;
+  stroke-dasharray: 5 5;
+  stroke-linejoin: round;
+}
+
+.freehand-off {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.freehand-off.meh {
+  stroke: var(--off-meh);
+  stroke-width: 9px;
+}
+
+.freehand-off.bad {
+  stroke: var(--off-bad);
+  stroke-width: 12px;
+}
+
+.freehand-gap {
+  stroke: var(--danger);
+  stroke-width: 2.5px;
+  stroke-dasharray: 2 5;
+  stroke-linecap: round;
+}
+
+.freehand-sketch .freehand-stroke {
+  stroke-width: 3px;
+}
+
+.freehand-start {
+  fill: var(--seat-color);
+}
+
+.freehand-score {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.freehand-score strong {
+  font-size: 2.3rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--seat-text);
+}
+
+.freehand-even {
+  text-align: center;
+  font-weight: 700;
+}
+
+.freehand-legend {
+  text-align: center;
+  font-size: 0.76rem;
+}
+
+.freehand-next {
+  justify-self: center;
+  min-width: 160px;
+}
+
+/* ---------- これまでの回戦 ---------- */
+
+.freehand-rounds h3 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+
+.freehand-rounds ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.freehand .freehand-row {
+  display: grid;
+  grid-template-columns: 1.2em 22px minmax(0, 1fr) 4.2em 4.2em;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.freehand .freehand-row:disabled {
+  opacity: 1;
+}
+
+.freehand .freehand-row.on {
+  border-color: var(--ink-soft);
+}
+
+.freehand-row .freehand-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 9;
+}
+
+.freehand-row-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.freehand-row-score {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.freehand-row-score.won {
+  color: var(--seat-text);
+  font-weight: 700;
+}
