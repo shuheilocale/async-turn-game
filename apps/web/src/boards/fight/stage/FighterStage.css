@@ -1,0 +1,258 @@
+/*
+ * 格闘ゲームの 3D の舞台。canvas は透明で、うしろの地の色（昼は明るい体育館、夜はアリーナ）を CSS で描く
+ */
+.fighter-stage {
+  --fs-top: #f7f8fb;
+  --fs-bottom: #d5dae4;
+  --fs-vignette: rgb(20 28 48 / 0.16);
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  /* 昼：上から光が差す、明るく静かな体育館 */
+  background:
+    radial-gradient(70% 55% at 50% 0%, rgb(255 255 255 / 0.95) 0%, transparent 75%),
+    linear-gradient(180deg, #e9edf3 0%, #dde2ea 40%, #d3d9e3 60%, #c9d0db 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fighter-stage {
+    --fs-top: #223152;
+    --fs-bottom: #06080d;
+    --fs-vignette: rgb(0 0 0 / 0.55);
+    background:
+      radial-gradient(60% 55% at 50% 8%, rgb(140 165 230 / 0.28) 0%, transparent 70%),
+      radial-gradient(90% 70% at 50% 40%, #151c2c 0%, transparent 80%),
+      linear-gradient(180deg, #0c111c 0%, var(--fs-bottom) 100%);
+  }
+}
+
+/* 周りを少し暗くして、真ん中の 2 人に目が行くようにする */
+.fighter-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 95% at 50% 45%, transparent 55%, var(--fs-vignette) 100%);
+  z-index: 2;
+}
+
+.fighter-stage .fs-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.fighter-stage.ready .fs-canvas {
+  opacity: 1;
+}
+
+.fs-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ダメージの数字：当たった人の頭の上にはじけて、浮かびながら消える */
+.fs-num {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--seat-color);
+  text-shadow: 0 3px 12px rgb(0 0 0 / 0.3);
+  -webkit-text-stroke: 5px #fff;
+  paint-order: stroke fill;
+  animation: fs-num 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.fs-num.seat0 {
+  --seat-color: var(--p0);
+}
+
+.fs-num.seat1 {
+  --seat-color: var(--p1);
+}
+
+.fs-num.big {
+  font-size: 34px;
+}
+
+@keyframes fs-num {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(0.5);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.18);
+  }
+  28% {
+    transform: translate(-50%, -70%) scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(0.96);
+  }
+}
+
+.fs-banner {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: clamp(44px, 16vw, 68px);
+  letter-spacing: 0.06em;
+  color: #fff;
+  -webkit-text-stroke: 7px rgb(18 22 34 / 0.88);
+  paint-order: stroke fill;
+  text-shadow: 0 8px 30px rgb(0 0 0 / 0.4);
+  animation: fs-banner 2.3s ease forwards;
+}
+
+@keyframes fs-banner {
+  0% {
+    opacity: 0;
+    transform: scale(1.6);
+    filter: blur(6px);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-num,
+  .fs-banner {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+    opacity: 1;
+  }
+}
+
+/* ---- 2D（SVG）の舞台 ---- */
+.fs2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 3D を読み込んでいるあいだは、2D の舞台をうすく見せておく */
+.fighter-stage.loading .fs2 {
+  opacity: 0.35;
+}
+
+.fs2-floor {
+  fill: rgb(20 28 48 / 0.12);
+}
+
+.fs2-fig {
+  --fig: var(--ink-soft);
+  --accent: var(--muted);
+}
+
+.fs2-fig.seat0 {
+  --accent: var(--p0);
+}
+
+.fs2-fig.seat1 {
+  --accent: var(--p1);
+}
+
+.fs2-fig.sil {
+  --fig: var(--muted);
+  opacity: 0.6;
+}
+
+.fs2-limb {
+  stroke: var(--fig);
+  stroke-width: 7;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.fs2-limb.thick {
+  stroke-width: 13;
+}
+
+.fs2-head {
+  fill: var(--fig);
+}
+
+.fs2-glove {
+  fill: var(--accent);
+}
+
+.fs2-breath {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: fs2-breath 3.2s ease-in-out infinite;
+}
+
+.fs2-fig.hit .fs2-breath {
+  animation: fs2-hit 0.45s ease-out;
+}
+
+@keyframes fs2-breath {
+  50% {
+    transform: scaleY(1.015) translateY(-0.5px);
+  }
+}
+
+@keyframes fs2-hit {
+  30% {
+    transform: translateX(4px) rotate(4deg);
+  }
+}
+
+.fs2-num {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 18px;
+  fill: var(--seat-color);
+}
+
+.fs2-num.seat0 {
+  --seat-color: var(--p0);
+}
+
+.fs2-num.seat1 {
+  --seat-color: var(--p1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs2-breath {
+    animation: none;
+  }
+}
