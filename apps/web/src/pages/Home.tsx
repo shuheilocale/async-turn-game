@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { GameStatus, GameView, Seat } from "@atg/core";
 import { api } from "../api.ts";
-import { boards } from "../boards/index.ts";
+import { boards, CATEGORIES, categoryOf, type Category } from "../boards/index.ts";
 import { errorText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
 import { lineIdToken, lineSession } from "../line.ts";
 import { navigate } from "../router.ts";
-import { savedFinishedOpen, savedGames, savedName } from "../storage.ts";
+import { savedCategory, savedFinishedOpen, savedGames, savedName } from "../storage.ts";
 
 type SeatChoice = Seat | "random";
 
@@ -24,24 +24,7 @@ export function Home() {
   return (
     <div className="home">
       <MyGames />
-      <section className="pick">
-        <h2 className="section-title">{t("home.chooseGame")}</h2>
-        <div className="game-tiles">
-          {Object.entries(boards).map(([id, ui]) => (
-            <button key={id} type="button" className="game-tile" onClick={() => setGameType(id)}>
-              <GameGlyph id={id} />
-              <span className="tile-name">{t(`game.${id}.name`)}</span>
-              <span className="tile-meta">
-                <span className={`len len-${ui.length}`}>{t(`tag.${ui.length}`)}</span>
-                {ui.hidden && !ui.coop && !ui.timing && !ui.drawing && <span className="len hidden">{t("tag.hidden")}</span>}
-                {ui.drawing && <span className="len hidden">{t("tag.drawing")}</span>}
-                {ui.timing && <span className="len hidden">{t("tag.timing")}</span>}
-                {ui.coop && <span className="len coop">{t("tag.coop")}</span>}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <GamePicker onPick={setGameType} />
       <CreateSheet gameType={gameType} onClose={() => setGameType(null)} />
       <footer className="home-footer">
         <a href="/privacy" onClick={(e) => (e.preventDefault(), navigate("/privacy"))}>
@@ -49,6 +32,61 @@ export function Home() {
         </a>
       </footer>
     </div>
+  );
+}
+
+/**
+ * ゲームの一覧。上の切り替えで種類を絞り込める。「すべて」のときは種類ごとの見出しで区切る。
+ * 選んだ種類は端末に覚えておく
+ */
+function GamePicker({ onPick }: { onPick(gameType: string): void }) {
+  const { t } = useI18n();
+  const [filter, setFilter] = useState<Category | "all">(() => {
+    const saved = savedCategory.get();
+    return (CATEGORIES as readonly string[]).includes(saved) ? (saved as Category) : "all";
+  });
+  const choose = (next: Category | "all") => {
+    setFilter(next);
+    savedCategory.set(next);
+  };
+  const entries = Object.entries(boards);
+  const groups = CATEGORIES.map((cat) => ({ cat, ids: entries.filter(([, ui]) => categoryOf(ui) === cat).map(([id]) => id) }))
+    .filter((g) => g.ids.length > 0 && (filter === "all" || filter === g.cat));
+
+  const tile = (id: string) => (
+    <button key={id} type="button" className="game-tile" onClick={() => onPick(id)}>
+      <GameGlyph id={id} />
+      <span className="tile-name">{t(`game.${id}.name`)}</span>
+      <span className="tile-meta">
+        <span className={`len len-${boards[id]!.length}`}>{t(`tag.${boards[id]!.length}`)}</span>
+      </span>
+    </button>
+  );
+
+  return (
+    <section className="pick">
+      <h2 className="section-title">{t("home.chooseGame")}</h2>
+      <div className="category-chips" role="tablist" aria-label={t("home.chooseGame")}>
+        {(["all", ...CATEGORIES] as const).map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            role="tab"
+            aria-selected={filter === cat}
+            className={`chip ${filter === cat ? "on" : ""}`}
+            onClick={() => choose(cat)}
+          >
+            {t(`cat.${cat}`)}
+          </button>
+        ))}
+      </div>
+      {groups.map((g) => (
+        <div key={g.cat} className="category-group">
+          {filter === "all" && <h3 className="category-title">{t(`cat.${g.cat}`)}</h3>}
+          <div className="game-tiles">{g.ids.map(tile)}</div>
+        </div>
+      ))}
+    </section>
   );
 }
 

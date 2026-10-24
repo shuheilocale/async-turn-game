@@ -1765,3 +1765,86 @@ button.card-face:disabled {
   font-size: 0.8rem;
   opacity: 0.8;
 }
+
+/* トップのゲーム一覧：種類の切り替えと、種類ごとの見出し */
+/* 切り替えの列（横にスクロールする）の長さで一覧の幅が広がらないようにする */
+.home > * {
+  min-width: 0;
+}
+
+.category-chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 14px;
+  padding: 2px 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  min-height: 38px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.category-group + .category-group {
+  margin-top: 22px;
+}
+
+.category-title {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (min-width: 960px) {
+  .category-chips {
+    margin: 0 0 16px;
+    padding: 0;
+    flex-wrap: wrap;
+  }
+}
+
+/* スマホではタイルを小さめにして 3 列に並べ、本数が増えても一覧が長くなりすぎないようにする */
+@media (max-width: 959px) {
+  .pick .game-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pick .game-tile {
+    padding: 6px 6px 10px;
+    border-radius: 16px;
+    gap: 4px;
+  }
+  .pick .game-tile .glyph {
+    aspect-ratio: 1;
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 2px;
+  }
+  .pick .tile-name {
+    font-size: 0.82rem;
+    padding: 0 2px;
+  }
+  .pick .tile-meta {
+    font-size: 0.7rem;
+    padding: 0 2px;
+  }
+}

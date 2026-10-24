@@ -54,3 +54,9 @@ export const savedFinishedOpen = {
   get: () => read<boolean>("atg:finishedOpen", false),
   set: (open: boolean) => write("atg:finishedOpen", open),
 };
+
+/** トップのゲーム一覧で選んでいる種類（"all" か種類の名前） */
+export const savedCategory = {
+  get: () => read<string>("atg:category", "all"),
+  set: (category: string) => write("atg:category", category),
+};

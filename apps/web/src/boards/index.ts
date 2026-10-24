@@ -50,6 +50,21 @@ export interface GameMeta {
   timing?: boolean;
   /** 指で描いて遊ぶゲーム */
   drawing?: boolean;
+  /** トップの一覧での種類。省くと上の目印から決まる（categoryOf） */
+  category?: Category;
+}
+
+/** トップの一覧で、ゲームを分ける種類（この順に並ぶ） */
+export const CATEGORIES = ["board", "mind", "action", "coop"] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+/** ゲームの種類。協力 → 協力、タイミング・お絵かき → 手さばき、隠す情報あり → かけひき、ほかは盤ゲーム */
+export function categoryOf(ui: GameMeta): Category {
+  if (ui.category) return ui.category;
+  if (ui.coop) return "coop";
+  if (ui.timing || ui.drawing) return "action";
+  if (ui.hidden) return "mind";
+  return "board";
 }
 
 /** ゲームごとの画面部品。ルールは @atg/core、見た目と文言はここと i18n */
@@ -66,7 +81,7 @@ export const boards: Record<string, BoardUI> = {
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
   korokoro: { Board: KorokoroBoard, length: "short" },
-  stack: { Board: StackBoard, length: "short" },
+  stack: { Board: StackBoard, length: "short", category: "action" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   pourhard: { Board: PourHardBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },

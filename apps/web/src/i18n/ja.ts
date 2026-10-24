@@ -5,6 +5,11 @@ export const ja = {
   "lang.label": "言語",
 
   "home.chooseGame": "ゲームを選ぶ",
+  "cat.all": "すべて",
+  "cat.board": "盤ゲーム",
+  "cat.mind": "かけひき・記憶",
+  "cat.action": "タイミング・手さばき",
+  "cat.coop": "協力",
   "home.create.lead": "作ったあと、相手に招待リンクを送ります。",
   "home.name": "あなたの名前",
   "home.namePlaceholder": "プレイヤー",

@@ -6,6 +6,11 @@ export const th: Messages = {
   "lang.label": "ภาษา",
 
   "home.chooseGame": "เลือกเกม",
+  "cat.all": "ทั้งหมด",
+  "cat.board": "เกมกระดาน",
+  "cat.mind": "จิตวิทยาและความจำ",
+  "cat.action": "จังหวะและฝีมือ",
+  "cat.coop": "ร่วมมือ",
   "home.create.lead": "เมื่อสร้างเกมแล้ว ส่งลิงก์เชิญให้อีกฝ่าย",
   "home.name": "ชื่อของคุณ",
   "home.namePlaceholder": "ผู้เล่น",

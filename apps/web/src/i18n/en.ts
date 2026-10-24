@@ -6,6 +6,11 @@ export const en: Messages = {
   "lang.label": "Language",
 
   "home.chooseGame": "Choose a game",
+  "cat.all": "All",
+  "cat.board": "Board",
+  "cat.mind": "Mind & memory",
+  "cat.action": "Timing & skill",
+  "cat.coop": "Co-op",
   "home.create.lead": "After creating the game, send the invite link to your opponent.",
   "home.name": "Your name",
   "home.namePlaceholder": "Player",
