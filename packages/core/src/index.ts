@@ -14,6 +14,7 @@ import { boxes } from "./games/boxes.ts";
 import { bridge } from "./games/bridge.ts";
 import { korokoro } from "./games/korokoro.ts";
 import { bluff } from "./games/bluff.ts";
+import { fight } from "./games/fight.ts";
 import { doors } from "./games/doors.ts";
 import { memory } from "./games/memory.ts";
 import { tsubo } from "./games/tsubo.ts";
@@ -49,6 +50,7 @@ export * as Boxes from "./games/boxes.ts";
 export * as Bridge from "./games/bridge.ts";
 export * as Korokoro from "./games/korokoro.ts";
 export * as Bluff from "./games/bluff.ts";
+export * as Fight from "./games/fight.ts";
 export * as Doors from "./games/doors.ts";
 export * as Memory from "./games/memory.ts";
 export * as Tsubo from "./games/tsubo.ts";
@@ -92,6 +94,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [hitblow.id]: hitblow,
   [auction.id]: auction,
   [bluff.id]: bluff,
+  [fight.id]: fight,
   [doors.id]: doors,
   [memory.id]: memory,
   [tsubo.id]: tsubo,
