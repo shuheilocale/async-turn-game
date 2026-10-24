@@ -16,7 +16,7 @@ import { BluffBoard } from "./BluffBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
-import { PourBoard } from "./PourBoard.tsx";
+import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
 import { StopwatchBoard } from "./StopwatchBoard.tsx";
 
@@ -65,6 +65,7 @@ export const boards: Record<string, BoardUI> = {
   korokoro: { Board: KorokoroBoard, length: "short" },
   stack: { Board: StackBoard, length: "short" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
+  pourhard: { Board: PourHardBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
   stopwatch: { Board: StopwatchBoard, length: "short", hidden: true, timing: true },
   connect4: { Board: Connect4Board, length: "medium" },

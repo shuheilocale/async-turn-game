@@ -15,7 +15,7 @@ import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { stack } from "./games/stack.ts";
-import { pour } from "./games/pour.ts";
+import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
 import { stopwatch } from "./games/stopwatch.ts";
 
@@ -53,6 +53,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [korokoro.id]: korokoro,
   [stack.id]: stack,
   [pour.id]: pour,
+  [pourHard.id]: pourHard,
   [balloon.id]: balloon,
   [stopwatch.id]: stopwatch,
   [connect4.id]: connect4,
