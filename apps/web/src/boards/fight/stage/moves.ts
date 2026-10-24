@@ -3,7 +3,10 @@ import { add, clamp, dist as distance, easings, type EaseName, type V3 } from ".
 import { chestFrame, edit, headCenter, lerpPose, P, pack, pelvisFrame, shoulderLocal, unpack, type Pose, type PoseDesc } from "./pose.ts";
 import { apply3 } from "./math.ts";
 import { clinchPose, downPose, groundBottomPose, groundTopPose, handRoot, stanceOf, withHands } from "./stances.ts";
+import { isDefense, isGrapple, mergeStrikes } from "./ground.ts";
 import type { ActionKind, StageEvent, StageStrike, StyleId } from "./types.ts";
+
+export { mergeStrikes };
 
 /**
  * 技の動き（キーフレーム）と、1 回の攻防（StageEvent）を再生する段取り。
@@ -176,10 +179,6 @@ export function zoneOf(kind: ActionKind): Zone {
       return "head";
   }
 }
-
-const isDefense = (k: ActionKind) => k === "block" || k === "dodge";
-/** 当たると位置関係が変わる技 */
-const isGrapple = (k: ActionKind) => k === "clinch" || k === "takedown" || k === "throw" || k === "submission";
 
 export interface Built {
   track: Track;
@@ -1313,15 +1312,6 @@ export function basePoseOf(side: Side, position: Position, role: "top" | "bottom
 
 /** ダメージから、当たりの強さ（0.6〜1.4） */
 export const powerOf = (damage: number) => clamp(0.6 + damage / 25, 0.6, 1.4);
-
-/** 守りの技（block / dodge）のうち、となりの技の結果ですでに見せられるものを省く */
-export function mergeStrikes(strikes: StageStrike[]): StageStrike[] {
-  return strikes.filter((s, i) => {
-    if (!isDefense(s.kind)) return true;
-    const near = [strikes[i - 1], strikes[i + 1]].filter((x): x is StageStrike => !!x && x.by !== s.by && !isDefense(x.kind));
-    return !near.some((x) => (s.kind === "block" ? x.result === "blocked" : x.result === "dodged"));
-  });
-}
 
 /**
  * 1 回の攻防の段取りを作る。技を順に出し、受ける人の動き・当たる瞬間・位置関係の切りかえ・KO を並べる

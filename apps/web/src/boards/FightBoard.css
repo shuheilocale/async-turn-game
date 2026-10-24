@@ -49,6 +49,18 @@
   width: 100%;
 }
 
+/* キャラ作りでは、カードやパラメータを動かしながら見た目の変わり方が見えるよう、舞台を画面の上にとどめる */
+.fight-screen.building {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+  align-self: center;
+  width: min(100%, 300px);
+  box-shadow:
+    inset 0 -3px 0 var(--seat-color),
+    0 10px 24px -12px rgb(0 0 0 / 0.45);
+}
+
 /* 仮の舞台の文字が読めるように（本物の舞台は自分で描く） */
 .fight-stage.fighter-stage-placeholder {
   font-size: 0.85rem;

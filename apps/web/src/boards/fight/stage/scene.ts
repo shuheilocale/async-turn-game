@@ -435,6 +435,14 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     }
   }
 
+  function syncPosition(pos: Position, tp: 0 | 1) {
+    if (pos === position && (pos !== "ground" || tp === top)) return;
+    for (const a of actors) a.snapNext = true;
+    position = pos;
+    top = tp;
+    dist = distOf(pos, [actors[0].side(), actors[1].side()]);
+  }
+
   function applySwitch(p: Playing) {
     p.switched = true;
     if (p.ex.position !== position || p.ex.top !== top) for (const a of actors) a.snapNext = true;
@@ -778,6 +786,8 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
       setLook(actors[0], next.fighters[0]);
       setLook(actors[1], next.fighters[1]);
       if ((next.me ?? 0) !== prevMe) readTheme();
+      // 再生していないときは、渡された位置関係にそろえる（開き直したとき、寝技のまま始められるように）
+      if (!playing && next.mode === "fight" && next.position) syncPosition(next.position, next.top ?? top);
       const ev = next.event;
       if (ev && ev.id !== lastEventId && !done.has(ev.id)) {
         lastEventId = ev.id;

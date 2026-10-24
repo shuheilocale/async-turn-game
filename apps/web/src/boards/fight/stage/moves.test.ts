@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bodyOf, NEUTRAL_STATS } from "./body.ts";
 import { basePoseOf, buildExchange, distOf, mergeStrikes, sampleTrack, type ExchangeCtx, type Position, type Side } from "./moves.ts";
+import { topAfter } from "./ground.ts";
 import { newPose, P } from "./pose.ts";
 import type { ActionKind, StageEvent, StageStrike, StyleId } from "./types.ts";
 
@@ -142,5 +143,29 @@ describe("1 回の攻防の段取り", () => {
     // 柔道どうし（両手を前へ出す）は、ボクシングどうしより離れる
     expect(distOf("standing", sidesOf(5, ["judo", "judo"]))).toBeGreaterThan(distOf("standing", sidesOf(5, ["boxing", "boxing"])));
     expect(distOf("clinch")).toBeLessThan(distOf("standing"));
+  });
+});
+
+describe("寝技で上になる人（topAfter）", () => {
+  it("攻防の再生（buildExchange）が決める上下と、どの技・結果・位置の組み合わせでも同じ", () => {
+    for (const from of POSITIONS)
+      for (const to of POSITIONS)
+        for (const top of [0, 1] as const)
+          for (const a of KINDS)
+            for (const result of RESULTS) {
+              const strikes: StageStrike[] = [
+                { by: 1, kind: "jab", result: "blocked", damage: 0 },
+                { by: 0, kind: a, result, damage: 5 },
+              ];
+              const ev: StageEvent = { id: 1, strikes, position: to, ko: null };
+              expect(topAfter(ev, from, top), `${from}→${to} ${a} ${result} top=${top}`).toBe(buildExchange(ev, ctxOf(from, undefined, top)).top);
+            }
+  });
+
+  it("タックル・投げで寝技になれば、その人が上", () => {
+    const ev = { strikes: [{ by: 1 as const, kind: "takedown" as const, result: "hit" as const, damage: 6 }], position: "ground" as const };
+    expect(topAfter(ev, "standing", 0)).toBe(1);
+    // 寝技の中では上下は入れかわらない
+    expect(topAfter(ev, "ground", 0)).toBe(0);
   });
 });

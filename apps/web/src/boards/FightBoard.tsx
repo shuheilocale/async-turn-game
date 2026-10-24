@@ -3,6 +3,7 @@ import { Fight, other, type Seat } from "@atg/core";
 import { useI18n, type T } from "../i18n/index.tsx";
 import type { BoardProps } from "./index.ts";
 import { FighterStage } from "./fight/stage/FighterStage.tsx";
+import { topAfter } from "./fight/stage/ground.ts";
 import type { FighterLook, StageEvent } from "./fight/stage/types.ts";
 import { MoveIcon, PositionIcon, StyleIcon } from "./fight/art.tsx";
 import "./FightBoard.css";
@@ -32,6 +33,9 @@ function toEvent(ex: Fight.Exchange, id: number): StageEvent {
     ko: ex.ko,
   };
 }
+
+/** 寝技で上にいる人。記録を頭から順にたどる（3D の舞台が攻防の再生で決めるのと同じ決め方） */
+const topOf = (history: Fight.Exchange[]): Seat => history.reduce<Seat>((top, ex) => topAfter(toEvent(ex, 0), ex.from, top), 0);
 
 /**
  * 格闘ゲーム「バックボーン・ファイト」。キャラ作り（バックボーンのカードとパラメータの振り分け）と、
@@ -115,7 +119,7 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
 
   return (
     <div className="fight">
-      <div className={`fight-screen seat${me}`}>{stage}</div>
+      <div className={`fight-screen building seat${me}`}>{stage}</div>
       {v.built[opp] && <p className={`fight-flag seat${opp}`}>{t("game.fight.theyBuilt", { name: names[opp] })}</p>}
       <p className="board-note">{note}</p>
 
@@ -275,6 +279,7 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
   const position = replaying ? v.history[shown.index]!.from : v.position;
   const round = replaying ? shown.index + 1 : Math.min(v.exchange + 1, EXCHANGES);
   const history = replaying ? v.history.slice(0, shown.index) : v.history;
+  const top = topOf(history);
   const lastEx = !replaying ? v.history.at(-1) : undefined;
 
   let note: string | null = null;
@@ -297,6 +302,8 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
           me={me}
           event={event}
           hp={hp}
+          position={position}
+          top={top}
           onEventDone={finish}
           className="fight-stage"
         />

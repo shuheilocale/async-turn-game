@@ -92,5 +92,12 @@ export interface FighterStageProps {
   onEventDone?(id: number): void;
   /** 0〜100。少ないほど息が荒く前かがみ、0 なら倒れた姿勢 */
   hp?: [number, number];
+  /**
+   * 再生していないときの位置関係（開き直したときなど）。再生中は event の流れを優先し、
+   * 再生が終わってからこの値にそろえる。省くと、舞台は攻防の再生で移った位置のまま
+   */
+  position?: StageEvent["position"];
+  /** 寝技のとき上にいる人。ground.ts の topAfter で記録から求められる */
+  top?: 0 | 1;
   className?: string;
 }
