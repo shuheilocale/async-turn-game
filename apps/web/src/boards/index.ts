@@ -15,6 +15,7 @@ import { BoxesBoard } from "./BoxesBoard.tsx";
 import { BridgeBoard } from "./BridgeBoard.tsx";
 import { KorokoroBoard } from "./KorokoroBoard.tsx";
 import { BluffBoard } from "./BluffBoard.tsx";
+import { DoorsBoard } from "./DoorsBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
@@ -99,6 +100,7 @@ export const boards: Record<string, BoardUI> = {
   hitblow: { Board: HitBlowBoard, length: "medium", hidden: true },
   auction: { Board: AuctionBoard, length: "medium", hidden: true },
   bluff: { Board: BluffBoard, length: "medium", hidden: true },
+  doors: { Board: DoorsBoard, length: "short", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
 };

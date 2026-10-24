@@ -1,0 +1,555 @@
+/*
+ * わなの扉。styles.css より先に読み込まれるので、共通の部品（button や .score、.history）を
+ * 変えるときは .doors を頭に付けて優先させる
+ */
+.doors {
+  /* 石の壁と木の扉は、画面の明暗に関係なく暗めの色にする（扉の中の光と落とし穴が見えるように） */
+  --hall: #3b4459;
+  --hall-deep: #2b3243;
+  --floor: #232938;
+  --wood: #c27c40;
+  --wood-deep: #8e5427;
+  --wood-line: rgb(60 30 8 / 0.35);
+  --brass: #f3cd68;
+  --plaque: #ebbd4f;
+  --plaque-ink: #3d2a06;
+  --void: #07090f;
+  --glow: #ffe39a;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .doors {
+    --hall: #283044;
+    --hall-deep: #1b2131;
+    --floor: #151a26;
+    --wood: #ad6c34;
+    --wood-deep: #7a4620;
+    --plaque: #d9aa3f;
+  }
+}
+
+/* 長い名前は「…」で切る */
+.doors-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 点数 ---------- */
+
+.doors .score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 8px;
+  padding: 8px 14px;
+}
+
+.doors-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doors .score .token {
+  width: 12px;
+  height: 12px;
+}
+
+.doors .score strong {
+  grid-row: span 2;
+  font-size: 1.6rem;
+}
+
+.doors-safes {
+  font-size: 0.75rem;
+}
+
+/* ---------- 回戦と役 ---------- */
+
+.doors-round {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 0 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.doors-round > .num {
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.doors-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.doors-roles > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.doors-roles .token {
+  width: 9px;
+  height: 9px;
+}
+
+/* ---------- 扉の並ぶ壁 ---------- */
+
+.doors-hall {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 12px 6px;
+  border-radius: 22px;
+  /* 下は床。壁はれんがの目地を横に引く */
+  background:
+    linear-gradient(to bottom, transparent calc(100% - 54px), var(--floor) calc(100% - 54px)),
+    repeating-linear-gradient(0deg, transparent 0 20px, var(--hall-deep) 20px 22px),
+    var(--hall);
+  box-shadow: inset 0 0 0 4px var(--hall-deep);
+  color: #fff;
+}
+
+.doors .doors-door {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.doors .doors-door:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* 扉の上の点の札。点の数だけ丸を並べる */
+.doors-plaque {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 8px;
+  background: var(--plaque);
+  color: var(--plaque-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.doors-pips {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.doors-pips i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* 扉の枠（上が丸いアーチ）。奥は真っ暗で、扉の板を開けると中が見える */
+.doors-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.64;
+  border-radius: 48% 48% 6px 6px / 30% 30% 6px 6px;
+  background: var(--void);
+  box-shadow: 0 0 0 4px var(--hall-deep), 0 6px 0 2px rgb(0 0 0 / 0.25);
+  perspective: 520px;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.doors-inside,
+.doors-panel {
+  position: absolute;
+  inset: 5px;
+  border-radius: 46% 46% 4px 4px / 28% 28% 4px 4px;
+}
+
+.doors-inside {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--void);
+}
+
+/* セーフの扉の中は明るい */
+.doors-door.safe .doors-inside {
+  background: radial-gradient(circle at 50% 62%, #fffbe6 0 12%, var(--glow) 38%, #f0a63a 88%);
+}
+
+/* アウトの扉の中は、床に大きな落とし穴 */
+.doors-door.out .doors-inside {
+  background: linear-gradient(to bottom, #1d2232, #0b0e16);
+}
+
+.doors-hole {
+  align-self: end;
+  width: 84%;
+  height: 34%;
+  margin-bottom: 8%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, #000 0 55%, #3a0c0c 85%, transparent 88%);
+}
+
+.doors-gain {
+  margin-top: 30%;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #7a3d00;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
+}
+
+/* 扉の板。縦の板目と取っ手。左の蝶番を軸に開く */
+.doors-panel {
+  display: block;
+  background:
+    linear-gradient(90deg, transparent 31%, var(--wood-line) 31% 33.5%, transparent 33.5% 65%, var(--wood-line) 65% 67.5%, transparent 67.5%),
+    linear-gradient(180deg, var(--wood), var(--wood-deep));
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0.18), inset 0 10px 18px rgb(255 255 255 / 0.12);
+  transform-origin: left center;
+  transition: filter 0.15s;
+}
+
+.doors-knob {
+  position: absolute;
+  right: 11%;
+  top: 56%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+}
+
+.doors-door.open .doors-panel {
+  transform: rotateY(-80deg);
+  filter: brightness(0.75);
+}
+
+/* 床。扉のすぐ前に落とし穴、その下に札を置く */
+.doors-floor {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  width: 100%;
+  height: 46px;
+  margin-top: -2px;
+}
+
+.doors-pit {
+  width: 88%;
+  height: 16px;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* 仕掛けようとしている扉：自分の色の影がゆらぐ */
+.doors-door.pit-ghost .doors-pit {
+  opacity: 1;
+  background: color-mix(in srgb, var(--seat-color) 45%, #000);
+  border: 2px dashed var(--seat-color);
+  animation: doors-ghost 1.1s ease-in-out infinite alternate;
+}
+
+/* 自分が仕掛けたわな（相手には見えていない） */
+.doors-door.pit-own .doors-pit {
+  opacity: 1;
+  background: #05070b;
+  border: 2px dashed var(--seat-color);
+}
+
+/* 明かしたわな */
+.doors-door.pit-shown .doors-pit {
+  opacity: 1;
+  background: radial-gradient(ellipse, #000 0 55%, #2a0a0a 100%);
+  box-shadow: 0 0 0 2px var(--danger);
+}
+
+/* わなを仕掛けた扉は、足もとに影が落ちる */
+.doors-door.pit-ghost .doors-frame::after,
+.doors-door.pit-own .doors-frame::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 46% 46% 4px 4px / 28% 28% 4px 4px;
+  background: linear-gradient(to bottom, transparent 45%, color-mix(in srgb, var(--seat-color) 55%, #000) 100%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.doors-door.pit-ghost .doors-frame::after {
+  animation: doors-ghost 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes doors-ghost {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.doors-tag {
+  max-width: 100%;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--seat-color);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doors-door.pit-shown .doors-tag {
+  background: var(--danger);
+}
+
+/* 触れる扉。くぐろうとしている扉は自分の色で光る */
+.doors-hall.can .doors-door:hover .doors-panel {
+  filter: brightness(1.1);
+}
+
+.doors-hall.can .doors-door:active .doors-frame {
+  transform: scale(0.97);
+}
+
+.doors-door.picked .doors-frame {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 4px var(--seat-color),
+    0 0 22px 2px color-mix(in srgb, var(--seat-color) 70%, transparent);
+}
+
+/* 結果：くぐった扉はくぐった人の色でかこむ */
+.doors-hall.result .doors-door.open .doors-frame {
+  box-shadow: 0 0 0 4px var(--seat-color), 0 6px 0 2px rgb(0 0 0 / 0.25);
+}
+
+/* ---------- 結果の再生（扉が開く → 中が見える → わなの場所が分かる） ---------- */
+
+.doors-hall.animate .doors-door.open .doors-panel {
+  animation: doors-open 0.55s ease-in-out 0.45s backwards;
+}
+
+.doors-hall.animate .doors-door.open .doors-gain {
+  animation: doors-pop 0.4s ease-out 0.95s backwards;
+}
+
+.doors-hall.animate .doors-door.open .doors-tag {
+  animation: doors-tag-in 0.35s ease-out 1s backwards;
+}
+
+.doors-hall.animate .doors-door.out .doors-pit,
+.doors-hall.animate .doors-door.out .doors-hole {
+  animation: doors-pit 0.35s ease-out 1s backwards;
+}
+
+.doors-hall.animate .doors-door.out .doors-frame {
+  animation: doors-shake 0.5s ease-in-out 1s;
+}
+
+.doors-hall.animate .doors-door.pit-shown:not(.open) .doors-pit {
+  animation: doors-pit 0.4s ease-out 1.5s backwards;
+}
+
+.doors-hall.animate .doors-door.pit-shown:not(.open) .doors-tag {
+  animation: doors-tag-in 0.35s ease-out 1.6s backwards;
+}
+
+.doors-replaying .doors-reveal {
+  animation: doors-fade 0.3s ease-out 1.1s backwards;
+}
+
+@keyframes doors-open {
+  from {
+    transform: rotateY(0);
+    filter: none;
+  }
+}
+
+@keyframes doors-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes doors-tag-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes doors-pit {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes doors-shake {
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes doors-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- 直前の回戦 ---------- */
+
+.doors-replaying {
+  min-height: 3.2em;
+}
+
+.doors-last {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.doors-last > .muted {
+  grid-column: 1;
+}
+
+.doors .doors-again {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* ---------- これまでの回戦 ---------- */
+
+.doors-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+}
+
+.doors-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doors-minis {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* 小さな扉。わなの扉は黒く塗り、くぐった扉はくぐった人の色でかこむ */
+.doors-mini {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  border-radius: 8px 8px 3px 3px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--font-num);
+  font-size: 0.66rem;
+  font-style: normal;
+}
+
+/* わなの扉は、画面の明暗に関係なく落とし穴の黒に赤いふち */
+.doors-mini.trap {
+  border-color: var(--danger);
+  background: var(--void);
+  color: #fff;
+}
+
+.doors-mini.walk {
+  box-shadow: 0 0 0 2px var(--seat-color);
+  color: var(--seat-text);
+  font-weight: 700;
+}
+
+.doors-mini.trap.walk {
+  box-shadow: 0 0 0 2px var(--danger);
+  color: #fff;
+}
+
+.doors-legend .doors-mini {
+  width: 14px;
+  height: 17px;
+}
+
+.doors-legend .doors-mini.walk {
+  box-shadow: 0 0 0 2px var(--ink-soft);
+}
+
+.doors .history li {
+  grid-template-columns: 1.4em auto minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.doors-row-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doors-row-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.doors-row-result {
+  font-size: 0.9rem;
+}
+
+.doors-row-result.out {
+  color: var(--danger);
+}
