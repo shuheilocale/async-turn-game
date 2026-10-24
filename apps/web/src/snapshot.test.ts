@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botMove, Curling, getGame, type Seat } from "@atg/core";
+import { botMove, Curling, getGame, Mochi, type Seat } from "@atg/core";
 import { snapshotOf, snapshotToFlex } from "./snapshot.ts";
 
 const DRAWN = ["tictactoe", "fading", "gobble", "nim", "tateyoko", "bridge", "korokoro", "connect4", "tapioca", "boxes", "othello", "artillery"];
@@ -58,6 +58,35 @@ describe("LINE のカードに載せる今の局面", () => {
       expect(snap.rows.flatMap((r) => r.cells).filter((c) => c.dot).length).toBe(inView.length);
     }
     expect(Math.max(...sizes)).toBeLessThan(25_000);
+  });
+
+  it("mochi：卵・あかちゃん・こども・おとなのどの姿も描け、行の幅がそろい、上限に収まる", () => {
+    const def = getGame("mochi")!;
+    const HOUR = 3_600_000;
+    let state = def.initialState(Math.random) as Mochi.MochiState;
+    const stages = new Set<string>();
+    const forms = new Set<string>();
+    const check = (s: Mochi.MochiState) => {
+      const snap = snapshotOf("mochi", s);
+      expect(snap).not.toBeNull();
+      for (const row of snap!.rows) expect(row.cells.reduce((sum, c) => sum + c.w, 0)).toBe(112);
+      expect(snap!.rows).toHaveLength(10);
+      expect(JSON.stringify(snapshotToFlex(snap!)).length).toBeLessThan(25_000);
+    };
+    check(state);
+    for (let i = 0; i < 60 && def.status(state).kind === "playing"; i++) {
+      const turn = (def.status(state) as { turn: 0 | 1 }).turn;
+      state = def.applyMove(state, def.stampMove!({ care: Mochi.CARES[i % 6] }, Date.UTC(2026, 9, 1) + i * 8 * HOUR), turn);
+      stages.add(Mochi.stageOf(state.growth));
+      check(state);
+    }
+    expect([...stages]).toEqual(expect.arrayContaining(["egg", "baby", "child", "adult"]));
+    // おとなの姿ごとのしるしも描ける
+    for (const form of Mochi.FORMS) {
+      check({ ...state, form });
+      forms.add(form);
+    }
+    expect(forms.size).toBe(7);
   });
 
   it("隠す情報があるゲームは描かない（送る人の秘密が載らないように）", () => {

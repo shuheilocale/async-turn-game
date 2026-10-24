@@ -1,0 +1,1155 @@
+/*
+ * ふたりのもち。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .mochi を頭に付けて優先させる。
+ * 昼の部屋はあたたかいクリーム色、暗い画面では夜の部屋（月と星、ランプの明かり）。もちの体の色は絵の側で決める
+ */
+.mochi {
+  --mochi-wall: #f8f0e6;
+  --mochi-wall-2: #f1e5d7;
+  --mochi-floor: #ead8c3;
+  --mochi-floor-line: #dfc8ae;
+  --mochi-skirting: #e2cdb6;
+  --mochi-rug: #f4dfd6;
+  --mochi-rug-line: #ebcabd;
+  --mochi-sky-top: #bcdcf4;
+  --mochi-sky-bottom: #eaf5fc;
+  --mochi-frame: #fffaf4;
+  --mochi-frame-line: #dccbb7;
+  --mochi-shelf: #d8b893;
+  --mochi-shadow: rgb(96 70 44 / 0.16);
+  --mochi-pot: #e2a27c;
+  --mochi-pot-line: #c98762;
+  --mochi-plant: #86bd88;
+  --mochi-plant-line: #5f9a63;
+  --mochi-lamp: #d8c3a8;
+  --mochi-shade: #f6e6c9;
+  --mochi-glow: 0;
+  --mochi-nest: #efd9c2;
+  --mochi-nest-line: #d9bc9c;
+  --mochi-speck0: #a9bdf7;
+  --mochi-speck1: #f8c49a;
+  --mochi-ink: #3b3142;
+  --mochi-tummy: #f2a65a;
+  --mochi-joy: #ef8aa1;
+  --mochi-sleepy: #9a8ce0;
+  --mochi-tint: color-mix(in srgb, var(--mochi-speck1) 16%, var(--surface));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .mochi {
+    --mochi-wall: #232a48;
+    --mochi-wall-2: #1b2039;
+    --mochi-floor: #2b2c47;
+    --mochi-floor-line: #35375a;
+    --mochi-skirting: #34365a;
+    --mochi-rug: #3b3459;
+    --mochi-rug-line: #4b4270;
+    --mochi-sky-top: #0f1736;
+    --mochi-sky-bottom: #2a3a74;
+    --mochi-frame: #313a62;
+    --mochi-frame-line: #434e7e;
+    --mochi-shelf: #4c4366;
+    --mochi-shadow: rgb(0 0 0 / 0.38);
+    --mochi-pot: #9c6a55;
+    --mochi-pot-line: #7d5141;
+    --mochi-plant: #4f7f5a;
+    --mochi-plant-line: #3c6446;
+    --mochi-lamp: #6c6487;
+    --mochi-shade: #ffe3a6;
+    --mochi-glow: 1;
+    --mochi-nest: #4a4062;
+    --mochi-nest-line: #5d527a;
+    --mochi-tummy: #f0a35c;
+    --mochi-joy: #f08fa6;
+    --mochi-sleepy: #a99cf0;
+    --mochi-tint: color-mix(in srgb, #8d7fd6 16%, var(--surface));
+  }
+}
+
+/* ---------- 段階と日数 ---------- */
+
+.mochi-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  flex-wrap: wrap;
+}
+
+.mochi-stage {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.mochi-day {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.mochi-steps {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.mochi-step {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.mochi-step.on {
+  background: linear-gradient(135deg, var(--mochi-speck0), var(--mochi-speck1));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.mochi-growth {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.mochi-growth > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mochi-speck0), var(--mochi-speck1));
+  transition: width 0.6s ease;
+}
+
+/* ---------- 部屋 ---------- */
+
+.mochi-room-box {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent),
+    0 10px 28px rgb(60 40 30 / 0.1);
+  border: 1px solid color-mix(in srgb, var(--mochi-frame-line) 60%, transparent);
+}
+
+.mochi-room {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mochi-floor {
+  fill: var(--mochi-floor);
+}
+.mochi-floor-line {
+  fill: none;
+  stroke: var(--mochi-floor-line);
+  stroke-width: 1.2;
+}
+.mochi-skirting {
+  fill: var(--mochi-skirting);
+}
+.mochi-frame {
+  fill: var(--mochi-frame);
+  stroke: var(--mochi-frame-line);
+  stroke-width: 1.5;
+}
+.mochi-frame-bar {
+  fill: none;
+  stroke: var(--mochi-frame);
+  stroke-width: 4;
+}
+.mochi-sill {
+  fill: var(--mochi-frame);
+  stroke: var(--mochi-frame-line);
+  stroke-width: 1.2;
+}
+.mochi-shelf {
+  fill: var(--mochi-shelf);
+}
+.mochi-shelf-line {
+  fill: none;
+  stroke: var(--mochi-shelf);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.mochi-pot {
+  fill: var(--mochi-pot);
+  stroke: var(--mochi-pot-line);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.mochi-plant,
+.mochi-leaf {
+  fill: var(--mochi-plant);
+  stroke: var(--mochi-plant-line);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.mochi-lamp-pole {
+  fill: none;
+  stroke: var(--mochi-lamp);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.mochi-lamp-shade {
+  fill: var(--mochi-shade);
+  stroke: var(--mochi-lamp);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.mochi-glow {
+  opacity: var(--mochi-glow);
+}
+.mochi-rug {
+  fill: var(--mochi-rug);
+}
+.mochi-rug-line {
+  fill: none;
+  stroke: var(--mochi-rug-line);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 4;
+}
+.mochi-shadow {
+  fill: var(--mochi-shadow);
+}
+.mochi-nest {
+  fill: var(--mochi-nest);
+}
+.mochi-nest-line {
+  fill: none;
+  stroke: var(--mochi-nest-line);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.mochi-crack {
+  fill: none;
+  stroke: #b49e84;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mochi-line {
+  fill: none;
+  stroke: var(--mochi-ink);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mochi-line.thin,
+.mochi-line.thin * {
+  fill: none;
+  stroke: var(--mochi-ink);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* 昼と夜の窓 */
+.mochi-win-night {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mochi-win-day {
+    display: none;
+  }
+  .mochi-win-night {
+    display: inline;
+  }
+}
+
+.mochi-cloud {
+  animation: mochi-cloud 26s ease-in-out infinite alternate;
+}
+
+@keyframes mochi-cloud {
+  from {
+    transform: translateX(-6px);
+  }
+  to {
+    transform: translateX(14px);
+  }
+}
+
+.mochi-star {
+  animation: mochi-twinkle-star 3.2s ease-in-out infinite;
+}
+.mochi-star.s2 {
+  animation-delay: 1.1s;
+}
+.mochi-star.s3 {
+  animation-delay: 2.1s;
+}
+
+@keyframes mochi-twinkle-star {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* ---------- もちの動き ---------- */
+
+.mochi-hit {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mochi-breathe,
+.mochi-bob,
+.mochi-squish,
+.mochi-wobble,
+.mochi-hit {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* 寝息のように、ふくらんだりしぼんだり */
+.mochi-breathe {
+  animation: mochi-breathe 3.6s ease-in-out infinite;
+}
+
+.mood-asleep .mochi-breathe {
+  animation-duration: 5.2s;
+}
+
+@keyframes mochi-breathe {
+  50% {
+    transform: scale(1.018, 0.968);
+  }
+}
+
+/* まばたき */
+.mochi-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: mochi-blink 5.2s infinite;
+}
+
+@keyframes mochi-blink {
+  0%,
+  91%,
+  97%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.12);
+  }
+}
+
+.mochi-snore {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: mochi-snore 5.2s ease-in-out infinite;
+}
+
+@keyframes mochi-snore {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+/* 相手の番：ゆらゆら待つ */
+.mochi-hit.waiting .mochi-bob {
+  animation: mochi-sway 4.4s ease-in-out infinite;
+}
+
+@keyframes mochi-sway {
+  0%,
+  100% {
+    transform: rotate(-2.2deg);
+  }
+  50% {
+    transform: rotate(2.2deg);
+  }
+}
+
+/* お世話のあと：ぴょんと跳ねる */
+.mochi-hit.reacting .mochi-bob {
+  animation: mochi-hop 0.62s ease-out 2;
+}
+
+@keyframes mochi-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  18% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+  48% {
+    transform: translateY(-12px) scale(0.95, 1.06);
+  }
+  78% {
+    transform: translateY(0) scale(1.05, 0.95);
+  }
+}
+
+/* おとなになった：うれしくて弾む */
+.mochi-hit.cheer .mochi-bob {
+  animation: mochi-hop 0.7s ease-out infinite;
+  animation-delay: 0.4s;
+}
+
+/* ぴょんもちは、ときどき自分で跳ねる */
+.form-hop .mochi-bob {
+  animation: mochi-hop-idle 5s ease-in-out infinite;
+}
+
+@keyframes mochi-hop-idle {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  78% {
+    transform: translateY(-9px) scale(0.97, 1.04);
+  }
+  86% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+}
+
+/* さわったとき：ぷにっ */
+.mochi-squish {
+  animation: mochi-squish 0.5s ease-out;
+}
+
+@keyframes mochi-squish {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.1, 0.86);
+  }
+  60% {
+    transform: scale(0.96, 1.06);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* 卵：ときどきころんとゆれる */
+.mochi-wobble {
+  animation: mochi-wobble 4.2s ease-in-out infinite;
+}
+
+.mochi-hit.waiting .mochi-wobble {
+  animation-duration: 5.4s;
+}
+
+@keyframes mochi-wobble {
+  0%,
+  62%,
+  100% {
+    transform: rotate(0);
+  }
+  70% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(5deg);
+  }
+  90% {
+    transform: rotate(-2deg);
+  }
+}
+
+/* 垂れた耳がゆれる */
+.mochi-ear {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: mochi-ear 3.6s ease-in-out infinite;
+}
+
+.mochi-ear.right {
+  animation-delay: -1.8s;
+}
+
+@keyframes mochi-ear {
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+/* 喜んだときのしるし（上へふわっと消える） */
+.mochi-p {
+  opacity: 0;
+  animation: mochi-float 1.8s ease-out forwards;
+}
+
+.mochi-p.quick {
+  animation-duration: 1s;
+}
+
+@keyframes mochi-float {
+  0% {
+    transform: translateY(6px) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.mochi-z {
+  opacity: 0;
+  animation: mochi-z 3.3s ease-in-out infinite;
+}
+
+@keyframes mochi-z {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(12px, -26px) scale(1.15);
+    opacity: 0;
+  }
+}
+
+.mochi-twinkle {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: mochi-twinkle 2s ease-in-out infinite;
+}
+
+@keyframes mochi-twinkle {
+  0%,
+  100% {
+    transform: scale(0.4);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ほしいものの吹き出し */
+.mochi-bubble {
+  animation: mochi-bubble 3s ease-in-out infinite;
+}
+
+@keyframes mochi-bubble {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.mochi-bubble-bg {
+  fill: #fff;
+  stroke: color-mix(in srgb, var(--mochi-ink) 18%, transparent);
+  stroke-width: 1;
+}
+
+.mochi-tap-text {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+  pointer-events: none;
+  animation: mochi-tap-text 1s ease-out forwards;
+}
+
+@keyframes mochi-tap-text {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mochi-p,
+  .mochi-z {
+    opacity: 1;
+  }
+  .mochi-tap-text {
+    display: none;
+  }
+}
+
+/* ---------- しるし（お世話・具合） ---------- */
+
+.mochi-icon {
+  display: block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+}
+
+.mochi-icon * {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ic-white {
+  fill: #fff;
+  stroke: var(--mochi-ink);
+  stroke-width: 1.4;
+}
+.ic-nori {
+  fill: #2f3b35;
+}
+.ic-yellow {
+  fill: #ffd66e;
+  stroke: #c9962f;
+  stroke-width: 1.2;
+}
+.ic-stripe {
+  fill: none;
+  stroke: #ec8a3f;
+  stroke-width: 1.6;
+}
+.ic-pink {
+  fill: #f48ea6;
+  stroke: #cf5f7c;
+  stroke-width: 1.2;
+}
+.ic-motion {
+  fill: none;
+  stroke: #cf5f7c;
+  stroke-width: 1.4;
+  stroke-dasharray: 2 2.4;
+}
+.ic-dot {
+  fill: var(--mochi-ink);
+}
+.ic-moon {
+  fill: #f6d470;
+  stroke: #c9a33f;
+  stroke-width: 1.2;
+}
+.ic-star {
+  fill: #f6d470;
+}
+.ic-leaf {
+  fill: #8fcb8b;
+  stroke: #5f9a63;
+  stroke-width: 1.2;
+}
+.ic-vein {
+  fill: none;
+  stroke: #5f9a63;
+  stroke-width: 1.2;
+}
+
+/* ---------- 部屋の下の文 ---------- */
+
+.mochi-note {
+  display: grid;
+  gap: 6px;
+  padding: 0 4px;
+  min-height: 3.2em;
+}
+
+.mochi-note-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.mochi-note-line.react {
+  font-size: 1.05rem;
+  animation: mochi-note-in 0.3s ease-out;
+}
+
+.mochi-note-line.hap {
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--mochi-tint);
+  border: 1px solid color-mix(in srgb, var(--mochi-speck1) 40%, var(--line));
+  font-weight: 500;
+}
+
+.mochi-note-line.hap.past {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.mochi-note-line.new {
+  color: var(--p1-text);
+  font-size: 0.9rem;
+}
+
+.mochi-note-line .mochi-item-svg {
+  width: 28px;
+  height: 28px;
+}
+
+@keyframes mochi-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.mochi-feeling {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.mochi-feeling .mochi-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.mochi-last {
+  font-size: 0.8rem;
+}
+
+/* ---------- 具合 ---------- */
+
+.mochi-meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mochi-meter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 5px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.mochi-meter .mochi-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.mochi-meter-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mochi-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.mochi-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.6s ease;
+}
+
+.m-tummy .mochi-bar > span {
+  background: var(--mochi-tummy);
+}
+.m-joy .mochi-bar > span {
+  background: var(--mochi-joy);
+}
+.m-sleepy .mochi-bar > span {
+  background: var(--mochi-sleepy);
+}
+
+/* ---------- お世話のボタン ---------- */
+
+.mochi-cares-box {
+  display: grid;
+  gap: 8px;
+}
+
+.mochi-prompt {
+  padding: 0 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.mochi-cares {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mochi .mochi-care {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px 4px 9px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  transition:
+    transform 0.12s ease,
+    border-color 0.2s ease;
+}
+
+.mochi .mochi-care .mochi-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.mochi .mochi-care:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.mochi .mochi-care:disabled {
+  opacity: 0.55;
+}
+
+.mochi .mochi-care.wanted {
+  border-color: color-mix(in srgb, var(--p1) 60%, var(--line));
+  background: var(--mochi-tint);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mochi-speck1) 45%, transparent);
+}
+
+.mochi-care-name {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.mochi-care-mark {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--p1);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+  animation: mochi-bubble 2.4s ease-in-out infinite;
+}
+
+/* 相手の番 */
+.mochi-wait {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.mochi-wait p:first-child {
+  font-weight: 700;
+}
+
+.mochi-wait .muted {
+  font-size: 0.85rem;
+}
+
+.mochi-wait-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.5em;
+  border-radius: 50%;
+  background: var(--seat-color);
+  animation: mochi-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mochi-pulse {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--seat-color) 20%, transparent);
+  }
+}
+
+/* ---------- ふたりのお世話 ---------- */
+
+.mochi-two {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.mochi-two h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.mochi-two-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mochi-two-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mochi-two-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.mochi-two-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+
+.mochi-two-count {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--seat-text);
+}
+
+.mochi-mix {
+  padding: 6px 0;
+}
+
+.mochi-mix-bar {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.mochi-mix-pin {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  transform: translate(-50%, -50%);
+  transition: left 0.6s ease;
+}
+
+.mochi-two-note {
+  font-size: 0.78rem;
+}
+
+/* ---------- たからもの ---------- */
+
+.mochi-treasures summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mochi-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mochi-empty {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.mochi-items {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mochi-item-tile {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 2px;
+  min-height: 82px;
+  padding: 8px 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.mochi-item-tile.unknown {
+  align-content: center;
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
+.mochi-item-tile.new {
+  background: var(--mochi-tint);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--p1) 45%, transparent);
+}
+
+.mochi-q {
+  font-family: var(--font-num);
+  font-size: 1rem;
+  color: var(--glyph-line);
+}
+
+.mochi-item-svg {
+  display: block;
+  width: 34px;
+  height: 34px;
+}
+
+.mochi-item-name {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.mochi-item-day {
+  font-size: 0.64rem;
+}
+
+/* ---------- おとなになった ---------- */
+
+.mochi-final {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px 16px 14px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--mochi-tint), var(--surface));
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.mochi-final-lead {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mochi-final-name {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.mochi-final-desc {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.mochi-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 10px 0 0;
+}
+
+.mochi-stats > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.mochi-stats dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.mochi-stats dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.mochi-most {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.mochi-most-title {
+  font-size: 0.75rem;
+}
+
+.mochi-most ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mochi-most li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.mochi-most li .num {
+  font-weight: 700;
+  font-size: 0.78rem;
+}

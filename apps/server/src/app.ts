@@ -151,8 +151,10 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const body = await jsonBody(c);
     if (body.version !== game.version) return c.json({ error: "version_conflict" }, 409);
     const def = getGame(game.gameType)!;
-    const move = def.parseMove(body.move);
-    if (move === null) return c.json({ error: "bad_move" }, 400);
+    const parsed = def.parseMove(body.move);
+    if (parsed === null) return c.json({ error: "bad_move" }, 400);
+    // 時間を使うゲームは、受け取った時刻をサーバの時計で手に書き込む（送られてきた時刻は使わない）。記録にもこの手が残る
+    const move = def.stampMove ? def.stampMove(parsed, Date.now()) : parsed;
 
     let next: unknown;
     try {

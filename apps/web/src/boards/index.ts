@@ -35,6 +35,7 @@ import { QuickdrawBoard } from "./QuickdrawBoard.tsx";
 import { SodaBoard } from "./SodaBoard.tsx";
 import { TiltBoard } from "./TiltBoard.tsx";
 import { FreehandBoard } from "./FreehandBoard.tsx";
+import { MochiBoard } from "./MochiBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -125,4 +126,5 @@ export const boards: Record<string, BoardUI> = {
   oekaki: { Board: OekakiBoard, length: "medium", hidden: true, coop: true },
   heart: { Board: HeartBoard, length: "short", hidden: true, coop: true },
   ishin: { Board: IshinBoard, length: "short", hidden: true, coop: true },
+  mochi: { Board: MochiBoard, length: "long", coop: true },
 };

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CreateGameResponse, GameView, JoinGameResponse } from "@atg/core";
 import { createApp } from "./app.ts";
 import { sqliteDb } from "./sqlite.ts";
@@ -71,6 +71,37 @@ describe("api", () => {
     expect((await post(`/games/${id}/moves`, { version: 5, move: { row: 2, col: 3 } }, white)).status).toBe(409);
     expect((await post(`/games/${id}/moves`, { version: 0, move: { row: 99 } }, white)).status).toBe(400);
     expect((await post(`/games/${id}/moves`, { version: 0, move: { row: 2, col: 3 } }, "bogus")).status).toBe(401);
+  });
+
+  it("時間を使うゲームは、サーバが受け取った時刻を手に書き込み、記録にも残す（送られてきた時刻は使わない）", async () => {
+    const { id, black, white } = await setupGame("mochi");
+    const nine = Date.UTC(2026, 9, 1, 9);
+    const clock = vi.spyOn(Date, "now");
+    try {
+      clock.mockReturnValue(nine);
+      const first = await post(`/games/${id}/moves`, { version: 0, move: { care: "feed", at: 1 } }, black);
+      expect(first.status).toBe(200);
+      expect(((await first.json()) as { state: { at: number } }).state.at).toBe(nine);
+      // サーバの時計が前の手より戻っても、もちの時刻は前の手にそろう（手の記録には受け取った時刻が残る）
+      clock.mockReturnValue(nine - 3_600_000);
+      const second = await post(`/games/${id}/moves`, { version: 1, move: { care: "pet", at: 9e15 } }, white);
+      expect(second.status).toBe(200);
+      expect(((await second.json()) as { state: { at: number } }).state.at).toBe(nine);
+    } finally {
+      clock.mockRestore();
+    }
+    const history = (await (await get(`/games/${id}/moves`)).json()) as { move: unknown }[];
+    expect(history.map((m) => m.move)).toEqual([
+      { care: "feed", at: nine },
+      { care: "pet", at: nine - 3_600_000 },
+    ]);
+  });
+
+  it("時間を使わないゲームの手には時刻を書き込まない", async () => {
+    const { id, black } = await setupGame();
+    await post(`/games/${id}/moves`, { version: 0, move: { row: 2, col: 3, at: 5 } }, black);
+    const history = (await (await get(`/games/${id}/moves`)).json()) as { move: unknown }[];
+    expect(history[0]!.move).toEqual({ row: 2, col: 3 });
   });
 
   it("相手が参加する前は指せない", async () => {

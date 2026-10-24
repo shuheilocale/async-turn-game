@@ -34,6 +34,7 @@ import { quickdraw } from "./games/quickdraw.ts";
 import { soda } from "./games/soda.ts";
 import { tilt } from "./games/tilt.ts";
 import { freehand } from "./games/freehand.ts";
+import { mochi } from "./games/mochi.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -73,6 +74,7 @@ export * as Quickdraw from "./games/quickdraw.ts";
 export * as Soda from "./games/soda.ts";
 export * as Tilt from "./games/tilt.ts";
 export * as Freehand from "./games/freehand.ts";
+export * as Mochi from "./games/mochi.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -112,6 +114,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [oekaki.id]: oekaki,
   [heart.id]: heart,
   [ishin.id]: ishin,
+  [mochi.id]: mochi,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

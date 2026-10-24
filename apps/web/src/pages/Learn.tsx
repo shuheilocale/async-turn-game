@@ -9,6 +9,11 @@ import { tourOf, type TourStep } from "../tour.ts";
 
 /** コンピュータが指すまでの間（すぐ指すと何が起きたか分からないので少し待つ） */
 const BOT_DELAY_MS = 700;
+/**
+ * 時間を使うゲーム（stampMove を持つ）のお試しでは、1 手ごとに時計をこれだけ進める。
+ * サーバの代わりに「今の時刻 + 指した数 × これ」を手に書き込み、育つ様子などを短い時間で見られるようにする
+ */
+const LEARN_STEP_MS = 12 * 3_600_000;
 
 /**
  * 「ルールを学ぶ」：サーバを使わず、この端末だけで 1 局ためす画面。
@@ -23,6 +28,8 @@ export function Learn({ gameType }: { gameType: string }) {
   const [selected, setSelected] = useState<unknown | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [moves, setMoves] = useState(0);
+  /** この局で指した手の数（コンピュータの手も数える）。お試しの時計に使う */
+  const [plies, setPlies] = useState(0);
   const steps = tourOf(gameType);
   const [step, setStep] = useState<number | null>(steps.length > 0 ? 0 : null);
   const root = useRef<HTMLDivElement>(null);
@@ -44,7 +51,10 @@ export function Learn({ gameType }: { gameType: string }) {
       const parsed = def.parseMove(move);
       try {
         if (parsed === null) throw new IllegalMoveError("bad_move");
-        setState(def.applyMove(state, parsed, seat));
+        // サーバと同じく時刻を書き込む。お試しでは 1 手ごとに時計を進める
+        const stamped = def.stampMove ? def.stampMove(parsed, Date.now() + plies * LEARN_STEP_MS) : parsed;
+        setState(def.applyMove(state, stamped, seat));
+        setPlies((n) => n + 1);
         setSelected(null);
         setMessage(null);
         return true;
@@ -54,7 +64,7 @@ export function Learn({ gameType }: { gameType: string }) {
         return false;
       }
     },
-    [def, state, t],
+    [def, state, t, plies],
   );
 
   // コンピュータの番なら、少し待ってから指す
@@ -89,6 +99,7 @@ export function Learn({ gameType }: { gameType: string }) {
     setSelected(null);
     setMessage(null);
     setMoves(0);
+    setPlies(0);
   };
 
   return (

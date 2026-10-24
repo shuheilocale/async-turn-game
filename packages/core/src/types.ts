@@ -26,6 +26,12 @@ export interface GameDefinition<S = unknown, M = unknown> {
   /** 外部から来た未検証の値を手として解釈する。解釈できなければ null */
   parseMove(raw: unknown): M | null;
   /**
+   * 時間を使うゲームだけ実装する。サーバが手を受け取った時刻（now、ミリ秒）を手に書き込んで返す。
+   * applyMove は時計を読めないので、時刻はこれで手に入れる。サーバは parseMove のあと・applyMove の前に必ず通し、
+   * 書き込んだ手をそのまま記録する。画面から送られてきた時刻は信じず、ここで上書きする
+   */
+  stampMove?(move: M, now: number): M;
+  /**
    * 相手に隠す情報があるゲームだけ実装する。viewer（観戦者は null）が見てよい形に
    * state を加工して返す。revealAll が true（終局後）なら隠さずに同じ形で返す。
    */

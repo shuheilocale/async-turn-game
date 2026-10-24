@@ -1,0 +1,513 @@
+import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Seat } from "../types.ts";
+
+/**
+ * ふたりのもち（協力ゲーム）：卵からかえる小さな生きもの「もち」を、2 人で交代でお世話して育てる放置ゲーム。
+ * - 自分の番にお世話を 1 つ選ぶ（ごはん・あそぶ・なでる・おしゃべり・ねかしつける・おでかけ）と、相手の番になる
+ * - お世話のあいだも本物の時計で時間が進む。おなか・きげんはゆっくり減り、ねむけは増える。
+ *   ねむけが 100 になると自分で眠り、眠るとねむけが減って起きる。どれだけ放っておいても死なない・弱らない
+ * - 育つのは、お世話のあと GROW_HOURS 時間のあいだ。具合がよいほど速い。ほしがっているお世話をするとおまけで育つ
+ * - 卵 → 赤ちゃん → こども → おとな。おとなになったら 2 人でクリア（育てられないことはないので失敗はない）
+ * - おとなの姿は、どのお世話が多かったかの偏りで 7 種類に分かれる。体の色は 2 人のお世話の量で混ざる
+ * - 留守のあいだに小さなできごとが 1 つ起きる（拾いもの・夢・ひとこま）。拾ったものは「たからもの」になる
+ *
+ * applyMove は時計を読めないので、時刻はサーバが stampMove で手に書き込む。お世話のあいだの具合は
+ * conditionAt で計算する（盤の表示もこれを使う）。できごとの乱数は initialState で作った種から決める
+ */
+
+export const HOUR = 3_600_000;
+export const DAY = 24 * HOUR;
+
+export const CARES = ["feed", "play", "pet", "talk", "sleep", "walk"] as const;
+export type Care = (typeof CARES)[number];
+/** きげんをよくするお世話。きげんが足りないときは、このうちどれか 1 つをほしがる */
+export const JOY_CARES: readonly Care[] = ["play", "pet", "talk", "walk"];
+
+export const STAGES = ["egg", "baby", "child", "adult"] as const;
+export type Stage = (typeof STAGES)[number];
+
+/** 育った量がこれ以上になると、卵がかえる・こどもになる・おとなになる */
+export const HATCH = 8;
+export const CHILD = 52;
+export const ADULT = 130;
+
+/** 1 時間あたりの具合の変わり方。眠っているあいだはおなかの減りがゆっくりで、きげんは減らない */
+export const RATES = { tummy: 2.5, joy: 3.5, sleepyUp: 4, sleepyDown: 12.5, tummyAsleep: 1.25, joyAsleep: 0 };
+/** お世話のあと、この時間だけ育つ（それより放っておくと、育つのをひと休みする） */
+export const GROW_HOURS = 12;
+/** 1 時間に育つ量は GROW_MIN〜1。具合がいちばん悪くても GROW_MIN、いちばんよければ 1 */
+export const GROW_MIN = 0.55;
+/** お世話のおまけ（育つ量）。ほしがっているお世話なら CARE_MATCH */
+export const CARE_BASE = 0.5;
+export const CARE_MATCH = 2.5;
+/** 前のお世話からこの時間たっていないと、おまけは少ない（すぐに続けても速くは育たない） */
+export const BONUS_HOURS = 3;
+/** 足りない量（おなか・きげんは 100 からの差、ねむけはそのまま）がこれ以上のものをほしがる */
+export const WANT_AT = 35;
+
+export interface Needs {
+  /** おなか（100 = いっぱい） */
+  tummy: number;
+  /** きげん（100 = ごきげん） */
+  joy: number;
+  /** ねむけ（0 = ぱっちり、100 = 眠ってしまう） */
+  sleepy: number;
+}
+
+/** 卵がかえったときの具合（卵のあいだは変わらない） */
+export const START_NEEDS: Needs = { tummy: 80, joy: 80, sleepy: 0 };
+
+/** お世話の効き方（具合に足す量）。ねかしつけると眠る。なでても眠ったまま。ほかのお世話では起きる */
+export const EFFECTS: Record<Care, Partial<Needs>> = {
+  feed: { tummy: 55, joy: 5 },
+  play: { joy: 35, tummy: -8, sleepy: 10 },
+  pet: { joy: 22 },
+  talk: { joy: 28, sleepy: -5 },
+  sleep: { sleepy: -10 },
+  walk: { joy: 30, tummy: -8, sleepy: 10 },
+};
+
+// ---------- できごと ----------
+
+/** 前のお世話からこの時間たつと、できごとが 1 つ起きる */
+export const EVENT_MIN_HOURS = 1;
+/** おでかけのあと以外で、何かを拾ってくる確率 */
+export const FIND_CHANCE = 0.4;
+
+/** 拾ってくるもの（日本とタイの身近なもの）。画面では game.mochi.item.<名前> */
+export const ITEMS = [
+  "mango",
+  "tapioca",
+  "sakura",
+  "jasmine",
+  "bell",
+  "plumeria",
+  "coconut",
+  "acorn",
+  "momiji",
+  "marble",
+  "crane",
+  "shell",
+  "furin",
+  "elephant",
+  "krathong",
+  "clover",
+] as const;
+export type Item = (typeof ITEMS)[number];
+/** 眠っていたときに見る夢 */
+export const DREAMS = ["sky", "mango", "sea", "snow", "stars", "elephant", "sakura", "together"] as const;
+/** 起きていたときのひとこま */
+export const MOMENTS = ["sunbath", "rain", "hum", "roll", "clouds", "shadow", "door", "tidy"] as const;
+/** 卵のあいだのできごと */
+export const EGG_MOMENTS = ["wobble", "warm", "knock", "hum"] as const;
+
+export type Happening =
+  | { kind: "egg"; topic: (typeof EGG_MOMENTS)[number] }
+  | { kind: "hatched" }
+  | { kind: "grew" }
+  | { kind: "found"; item: Item; walk: boolean }
+  | { kind: "dream"; topic: (typeof DREAMS)[number] }
+  | { kind: "moment"; topic: (typeof MOMENTS)[number] };
+
+/** 日記の 1 行。お世話をしたとき、その前の留守のあいだのできごとを、戻ってきた人（seat）の名前で残す */
+export interface DiaryEntry {
+  at: number;
+  seat: Seat;
+  happening: Happening;
+}
+
+export interface Treasure {
+  item: Item;
+  /** 見つけた（日記に残した）時刻 */
+  at: number;
+}
+
+// ---------- おとなの姿 ----------
+
+export const FORMS = ["round", "hop", "fluffy", "ears", "dreamy", "explorer", "harmony"] as const;
+export type Form = (typeof FORMS)[number];
+/** いちばん偏ったお世話で決まる姿。よく食べるとまんまる、よく遊ぶと身軽、おしゃべりが多いと耳が長い など */
+export const FORM_OF: Record<Care, Form> = {
+  feed: "round",
+  play: "hop",
+  pet: "fluffy",
+  talk: "ears",
+  sleep: "dreamy",
+  walk: "explorer",
+};
+/**
+ * その姿になる、お世話の割合のめやす。ほしがるものにだいたい合わせて遊ぶと、ごはんは 3 割ほど、ねかしつけるは 2 割ほど、
+ * ほかは 1 割ちょっとになる（テストの遊び方で数えた）。そうして遊んだ 2 人のうち、多い方から 1 割ほどが届くくらいにしてある。
+ * ごはんはもともと多いので、ほかより高い
+ */
+export const FORM_AT: Record<Care, number> = {
+  feed: 0.31,
+  play: 0.21,
+  pet: 0.21,
+  talk: 0.21,
+  sleep: 0.27,
+  walk: 0.21,
+};
+
+/**
+ * 2 人の色（青 #2b59f0・オレンジ #f27a12）をやわらかくした、体の色（色相・あざやかさ・明るさ）。
+ * 青は色相 226 度、オレンジは 27 度
+ */
+const SOFT_HSL = [
+  [226, 0.8, 0.82],
+  [27, 0.85, 0.79],
+] as const;
+
+// ---------- 状態 ----------
+
+export interface MochiMove {
+  care: Care;
+  /** サーバが受け取った時刻（stampMove が書き込む）。なければ前のお世話と同じ時刻 */
+  at?: number;
+}
+
+export interface LastCare {
+  care: Care;
+  seat: Seat;
+  at: number;
+  /** そのときほしがっていたもの */
+  want: Care | null;
+  /** ほしがっていたお世話だったか */
+  matched: boolean;
+}
+
+export interface MochiState {
+  /** できごとを決める種（initialState で作る） */
+  seed: number;
+  /** はじめてお世話した時刻（卵をあずかった時刻）。まだなら null */
+  bornAt: number | null;
+  /** 最後のお世話の時刻。まだなら null */
+  at: number | null;
+  /** 最後のお世話の直後の具合 */
+  needs: Needs;
+  asleep: boolean;
+  /** 最後のお世話の直後の、育った量 */
+  growth: number;
+  /** お世話の種類ごとの回数 */
+  cares: Record<Care, number>;
+  /** 席ごとのお世話の回数 */
+  bySeat: [number, number];
+  turn: Seat;
+  last: LastCare | null;
+  /** 拾ったもの（拾った順） */
+  treasures: Treasure[];
+  /** 留守のあいだのできごと（古い順。DIARY_MAX まで） */
+  diary: DiaryEntry[];
+  /** おとなになった時刻と姿。なるまでは null */
+  adultAt: number | null;
+  form: Form | null;
+}
+
+const DIARY_MAX = 60;
+
+/** ある時刻のようす。conditionAt で計算する */
+export interface Condition {
+  at: number;
+  needs: Needs;
+  asleep: boolean;
+  growth: number;
+  /** 最後のお世話からこの時刻までに、眠っていた時間があったか */
+  slept: boolean;
+  /** 見た目の段階。おとなになるのはお世話をしたときなので、それまではこどもで待つ */
+  stage: Stage;
+}
+
+export const stageOf = (growth: number): Stage =>
+  growth >= ADULT ? "adult" : growth >= CHILD ? "child" : growth >= HATCH ? "baby" : "egg";
+
+const BOUNDS = [0, HATCH, CHILD, ADULT];
+
+/** 今の段階の中で、次の段階までどこまで来たか（0〜1）。おとななら 1 */
+export function stageProgress(growth: number): number {
+  const i = STAGES.indexOf(stageOf(growth));
+  if (i >= STAGES.length - 1) return 1;
+  return Math.min(1, Math.max(0, (growth - BOUNDS[i]!) / (BOUNDS[i + 1]! - BOUNDS[i]!)));
+}
+
+/** 表示に使う「今」。端末の時計と、最後のお世話の時刻の遅い方 */
+export const nowOf = (s: MochiState, clock: number) => Math.max(clock, s.at ?? clock);
+
+/** 卵をあずかった日を 1 日目として、何日目か */
+export const dayOf = (s: MochiState, now: number) =>
+  s.bornAt === null ? 1 : Math.floor(Math.max(0, now - s.bornAt) / DAY) + 1;
+
+const clamp = (v: number) => Math.min(100, Math.max(0, v));
+/** 計算のずれで 0 や 100 のすぐ近くになった値を、ちょうどにする */
+const snap = (v: number) => (Math.abs(v) < 1e-9 ? 0 : Math.abs(v - 100) < 1e-9 ? 100 : clamp(v));
+
+/** 具合のよさ（0〜1）。眠っているあいだは、ねむけの分はいちばんよいとみなす（寝る子は育つ） */
+const wellness = (n: Needs, asleep: boolean) => (n.tummy + n.joy + (asleep ? 100 : 100 - n.sleepy)) / 300;
+const rateOf = (w: number) => GROW_MIN + (1 - GROW_MIN) * w;
+
+/**
+ * 最後のお世話から now までの時間を進めた、now のようす。純粋関数で、盤の表示とルールの両方で使う。
+ * 具合は区切り（眠る・起きる・おなかやきげんが 0 になる・育つ時間が終わる・卵がかえる）ごとに直線で変わるので、
+ * 区切りまでをまとめて進める。育つ量は区切りの中で具合のよさの平均（はじめと終わりの平均）を使う
+ */
+export function conditionAt(s: MochiState, now: number): Condition {
+  let needs = { ...s.needs };
+  let asleep = s.asleep;
+  let growth = s.growth;
+  let slept = false;
+  const start = s.at;
+  const total = start === null ? 0 : Math.max(0, now - start) / HOUR;
+  let t = 0;
+  // 区切りの数は、眠って起きる 1 回り（およそ 1 日）ごとに数個。何年たっても終わるように上限を置く
+  for (let guard = 0; t < total && guard < 100_000; guard++) {
+    const growing = t < GROW_HOURS;
+    let dt = total - t;
+    if (growing) dt = Math.min(dt, GROW_HOURS - t);
+
+    if (growth < HATCH) {
+      // 卵のあいだは具合が変わらない。育つ時間が終わっていれば、もう何も変わらない
+      if (!growing) break;
+      dt = Math.min(dt, HATCH - growth);
+      growth = dt === HATCH - growth ? HATCH : growth + dt;
+      t += dt;
+      continue;
+    }
+
+    const dTummy = -(asleep ? RATES.tummyAsleep : RATES.tummy);
+    const dJoy = -(asleep ? RATES.joyAsleep : RATES.joy);
+    const dSleepy = asleep ? -RATES.sleepyDown : RATES.sleepyUp;
+    // 眠る・起きる区切り
+    const toggle = asleep ? needs.sleepy / RATES.sleepyDown : (100 - needs.sleepy) / RATES.sleepyUp;
+    if (toggle <= 0) {
+      asleep = !asleep;
+      continue;
+    }
+    dt = Math.min(dt, toggle);
+    if (needs.tummy > 0 && dTummy < 0) dt = Math.min(dt, needs.tummy / -dTummy);
+    if (needs.joy > 0 && dJoy < 0) dt = Math.min(dt, needs.joy / -dJoy);
+
+    const next: Needs = {
+      tummy: snap(needs.tummy + dTummy * dt),
+      joy: snap(needs.joy + dJoy * dt),
+      sleepy: snap(needs.sleepy + dSleepy * dt),
+    };
+    if (growing) growth += dt * rateOf((wellness(needs, asleep) + wellness(next, asleep)) / 2);
+    if (asleep) slept = true;
+    needs = next;
+    t += dt;
+    if (!asleep && needs.sleepy >= 100) asleep = true;
+    else if (asleep && needs.sleepy <= 0) asleep = false;
+  }
+  const stage = stageOf(growth);
+  return {
+    at: start === null ? now : Math.max(now, start),
+    needs,
+    asleep,
+    growth,
+    slept,
+    stage: s.form !== null ? "adult" : stage === "adult" ? "child" : stage,
+  };
+}
+
+/**
+ * 0 以上 1 未満の決まった数。種・何回目のお世話か（k）・使いみち（salt）が同じなら、いつ計算しても同じ
+ * （applyMove では乱数を使えないので、initialState で作った種から作る）
+ */
+function hash(seed: number, k: number, salt: number): number {
+  let h = (seed ^ Math.imul(k + 1, 0x9e3779b1) ^ Math.imul(salt + 1, 0x85ebca77)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+const pick = <T>(list: readonly T[], r: number): T => list[Math.min(list.length - 1, Math.floor(r * list.length))]!;
+const movesOf = (s: MochiState) => s.bySeat[0] + s.bySeat[1];
+
+/**
+ * 今ほしがっているお世話。卵のあいだ・眠っているあいだ・具合がよいときは null（何をしてもうれしい）。
+ * 起きていれば、いちばん足りないもの（同じなら おなか → ねむけ → きげん の順）。
+ * きげんが足りないときに何で遊んでほしいかは、お世話ごとに種から決める（次のお世話までは変わらない）
+ */
+export function wantOf(s: MochiState, c: Condition): Care | null {
+  if (c.stage === "egg" || s.form !== null) return null;
+  if (c.asleep) return null;
+  const lack = { feed: 100 - c.needs.tummy, sleep: c.needs.sleepy, joy: 100 - c.needs.joy };
+  const most = Math.max(lack.feed, lack.sleep, lack.joy);
+  if (most < WANT_AT) return null;
+  if (lack.feed === most) return "feed";
+  if (lack.sleep === most) return "sleep";
+  return pick(JOY_CARES, hash(s.seed, movesOf(s), 7));
+}
+
+/** 見た目のようす */
+export type Mood = "egg" | "asleep" | "sleepy" | "hungry" | "sad" | "happy" | "calm";
+
+export function moodOf(c: Condition): Mood {
+  if (c.stage === "egg") return "egg";
+  if (c.asleep) return "asleep";
+  const { tummy, joy, sleepy } = c.needs;
+  if (sleepy >= 75) return "sleepy";
+  if (tummy < 25) return "hungry";
+  if (joy < 30) return "sad";
+  if (tummy >= 50 && joy >= 60 && sleepy < 60) return "happy";
+  return "calm";
+}
+
+/**
+ * 最後のお世話から now までの留守のあいだに起きた、小さなできごと。EVENT_MIN_HOURS たっていなければ null。
+ * 決まり方：卵のあいだは卵のできごと → かえった・こどもになった → おでかけのあとはかならず拾いもの →
+ * FIND_CHANCE で拾いもの → 眠っていれば夢 → ひとこま。拾うものは、まだ持っていないものから選ぶ。
+ * 種と何回目のお世話かで決まるので、同じ留守のあいだなら何度開いても同じ（お世話した時刻で日記に残す）
+ */
+export function happeningOf(s: MochiState, now: number, c: Condition = conditionAt(s, now)): Happening | null {
+  if (s.at === null || s.form !== null) return null;
+  if ((now - s.at) / HOUR < EVENT_MIN_HOURS) return null;
+  const k = movesOf(s);
+  const before = stageOf(s.growth);
+  if (c.stage === "egg") return { kind: "egg", topic: pick(EGG_MOMENTS, hash(s.seed, k, 1)) };
+  if (before === "egg") return { kind: "hatched" };
+  if (before === "baby" && c.stage === "child") return { kind: "grew" };
+  const walk = s.last?.care === "walk";
+  if (walk || hash(s.seed, k, 2) < FIND_CHANCE) {
+    const have = new Set(s.treasures.map((t) => t.item));
+    const fresh = ITEMS.filter((i) => !have.has(i));
+    return { kind: "found", item: pick(fresh.length > 0 ? fresh : ITEMS, hash(s.seed, k, 3)), walk };
+  }
+  if (c.slept) return { kind: "dream", topic: pick(DREAMS, hash(s.seed, k, 4)) };
+  return { kind: "moment", topic: pick(MOMENTS, hash(s.seed, k, 5)) };
+}
+
+/**
+ * おとなの姿。お世話の割合がめやす（FORM_AT）にいちばん大きな割合で届いたお世話の姿にする。
+ * どれも届かなければ、まんべんなくお世話したので、なかよしの姿（同じなら CARES の順で先のもの）
+ */
+export function formOf(cares: Record<Care, number>): Form {
+  const total = CARES.reduce((sum, c) => sum + cares[c], 0);
+  if (total === 0) return "harmony";
+  let top: Care = CARES[0];
+  let best = -1;
+  for (const c of CARES) {
+    const ratio = cares[c] / total / FORM_AT[c];
+    if (ratio > best) [top, best] = [c, ratio];
+  }
+  return best >= 1 ? FORM_OF[top] : "harmony";
+}
+
+/** 色相（度）・あざやかさ・明るさ（0〜1）から #rrggbb */
+function hslHex(h: number, s: number, l: number): string {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hp = (((h % 360) + 360) % 360) / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  const [r, g, b] = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x] : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x];
+  const m = l - c / 2;
+  return `#${[r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** 青だけ・オレンジだけのときの体の色 */
+export const SOFT = [hslHex(...SOFT_HSL[0]), hslHex(...SOFT_HSL[1])] as const;
+
+/**
+ * 体の色。2 人のやわらかい色を、お世話の回数の割合で混ぜる（まだ誰もお世話していなければ半々）。
+ * 青とオレンジをそのまま混ぜると灰色ににごるので、色相を 青 → ラベンダー → さくら色 → もも色 → オレンジ と回して混ぜ、
+ * 半々に近いほどあざやかさを少し落として明るくする（さくらもちのような色になる）
+ */
+export function bodyColor(bySeat: readonly [number, number]): string {
+  const total = bySeat[0] + bySeat[1];
+  const share = total === 0 ? 0.5 : bySeat[1] / total;
+  if (share <= 0) return SOFT[0];
+  if (share >= 1) return SOFT[1];
+  const [[h0, s0, l0], [h1, s1, l1]] = SOFT_HSL;
+  const mid = 4 * share * (1 - share);
+  return hslHex(h0 + (h1 + 360 - h0) * share, s0 + (s1 - s0) * share - 0.27 * mid, l0 + (l1 - l0) * share + 0.03 * mid);
+}
+
+/** お世話を 1 つした直後の具合。卵のあいだは変わらない */
+function afterCare(c: Condition, care: Care): { needs: Needs; asleep: boolean } {
+  if (c.stage === "egg") return { needs: c.needs, asleep: false };
+  const e = EFFECTS[care];
+  return {
+    needs: {
+      tummy: clamp(c.needs.tummy + (e.tummy ?? 0)),
+      joy: clamp(c.needs.joy + (e.joy ?? 0)),
+      sleepy: clamp(c.needs.sleepy + (e.sleepy ?? 0)),
+    },
+    asleep: care === "sleep" ? true : care === "pet" ? c.asleep : false,
+  };
+}
+
+const isCare = (v: unknown): v is Care => typeof v === "string" && (CARES as readonly string[]).includes(v);
+
+export const mochi: GameDefinition<MochiState, MochiMove> = {
+  id: "mochi",
+
+  initialState(rng) {
+    return {
+      seed: Math.floor(rng() * 4294967296) >>> 0,
+      bornAt: null,
+      at: null,
+      needs: { ...START_NEEDS },
+      asleep: false,
+      growth: 0,
+      cares: Object.fromEntries(CARES.map((c) => [c, 0])) as Record<Care, number>,
+      bySeat: [0, 0],
+      turn: 0,
+      last: null,
+      treasures: [],
+      diary: [],
+      adultAt: null,
+      form: null,
+    };
+  },
+
+  status(state): GameStatus {
+    // 協力ゲームなので勝ち負けはない。おとなになったら 2 人でクリア（失敗はない）
+    if (state.form !== null) return { kind: "finished", winner: null, coop: "cleared" };
+    return { kind: "playing", turn: state.turn };
+  },
+
+  applyMove(state, move, seat) {
+    if (state.form !== null) throw new IllegalMoveError("game_over");
+    if (seat !== state.turn) throw new IllegalMoveError("not_your_turn");
+    if (!isCare(move.care)) throw new IllegalMoveError("mochi_no_such_care");
+
+    // 時刻は前のお世話より戻さない。時刻のない手は前のお世話と同じ時刻
+    const stamped = typeof move.at === "number" && Number.isFinite(move.at) ? move.at : (state.at ?? 0);
+    const t = state.at === null ? stamped : Math.max(stamped, state.at);
+    const c = conditionAt(state, t);
+    const happening = happeningOf(state, t, c);
+    const want = wantOf(state, c);
+    const matched = want === move.care;
+    const since = state.at === null ? Infinity : (t - state.at) / HOUR;
+    const growth = c.growth + (matched ? CARE_MATCH : CARE_BASE) * Math.min(1, since / BONUS_HOURS);
+    const { needs, asleep } = afterCare(c, move.care);
+
+    const cares = { ...state.cares, [move.care]: state.cares[move.care] + 1 };
+    const bySeat: [number, number] = [...state.bySeat];
+    bySeat[seat]++;
+    const grown = growth >= ADULT;
+    return {
+      ...state,
+      bornAt: state.bornAt ?? t,
+      at: t,
+      needs,
+      asleep,
+      growth,
+      cares,
+      bySeat,
+      turn: other(seat),
+      last: { care: move.care, seat, at: t, want, matched },
+      treasures: happening?.kind === "found" ? [...state.treasures, { item: happening.item, at: t }] : state.treasures,
+      diary: happening ? [...state.diary, { at: t, seat, happening }].slice(-DIARY_MAX) : state.diary,
+      adultAt: grown ? t : null,
+      form: grown ? formOf(cares) : null,
+    };
+  },
+
+  parseMove(raw) {
+    // 時刻は送られてきても使わない（サーバが stampMove で書き込む）
+    const care = (raw as { care?: unknown } | null)?.care;
+    return isCare(care) ? { care } : null;
+  },
+
+  stampMove(move, now) {
+    return { care: move.care, at: now };
+  },
+};
