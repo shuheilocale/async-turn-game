@@ -18,6 +18,8 @@ import { stack } from "./games/stack.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
 import { stopwatch } from "./games/stopwatch.ts";
+import { soda } from "./games/soda.ts";
+import { tilt } from "./games/tilt.ts";
 import { freehand } from "./games/freehand.ts";
 
 export * from "./types.ts";
@@ -42,6 +44,8 @@ export * as Stack from "./games/stack.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
 export * as Stopwatch from "./games/stopwatch.ts";
+export * as Soda from "./games/soda.ts";
+export * as Tilt from "./games/tilt.ts";
 export * as Freehand from "./games/freehand.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
@@ -58,6 +62,8 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [pourHard.id]: pourHard,
   [balloon.id]: balloon,
   [stopwatch.id]: stopwatch,
+  [soda.id]: soda,
+  [tilt.id]: tilt,
   [freehand.id]: freehand,
   [connect4.id]: connect4,
   [boxes.id]: boxes,

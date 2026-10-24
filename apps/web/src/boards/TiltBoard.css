@@ -1,0 +1,607 @@
+/*
+ * かたむけコロコロ。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .tilt を頭に付けて優先させる
+ */
+.tilt,
+.tilt-run {
+  --wood: #e7cf9f;
+  --wood-grain: rgb(160 110 50 / 0.16);
+  --frame: #8a5a2b;
+  --frame-edge: #6b4320;
+  --wall: #7a4a22;
+  --wall-shadow: rgb(60 35 10 / 0.35);
+  --hole-deep: #17110c;
+  --hole-rim: #4b3520;
+  --goal: #2f9e5b;
+  --goal-ring: #c7f0d5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tilt,
+  .tilt-run {
+    --wood: #b99a64;
+    --wood-grain: rgb(70 45 15 / 0.22);
+    --frame: #5e3b1b;
+    --frame-edge: #432912;
+    --wall: #573417;
+    --wall-shadow: rgb(0 0 0 / 0.45);
+    --hole-deep: #070504;
+    --hole-rim: #2e1f12;
+    --goal: #2f9e5b;
+    --goal-ring: #9fdcb5;
+  }
+}
+
+.tilt {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  width: min(100%, 420px);
+}
+
+/* ---------- 勝ち数と 3 回戦の印 ---------- */
+
+.tilt-strip {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.tilt-strip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.tilt-side {
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.tilt-side.seat1 {
+  justify-items: end;
+  text-align: right;
+}
+
+.tilt-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tilt-side.seat1 .tilt-who {
+  flex-direction: row-reverse;
+}
+
+.tilt-who > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tilt-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.tilt-wins {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--seat-text);
+}
+
+.tilt-side.seat1 .tilt-wins {
+  flex-direction: row-reverse;
+}
+
+.tilt-wins strong {
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.tilt-pips {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tilt-pip {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tilt-pip.later {
+  border-style: dashed;
+}
+
+.tilt-pip.now {
+  border-color: var(--seat-color);
+  color: var(--seat-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 20%, transparent);
+}
+
+.tilt-pip.won {
+  border-color: var(--seat-color);
+  background: var(--seat-color);
+  color: #fff;
+}
+
+.tilt-pip.draw {
+  background: var(--surface-2);
+}
+
+.tilt-sum {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tilt-sum .num {
+  font-size: 0.78rem;
+  color: var(--seat-text);
+}
+
+/* ---------- 今の回戦の迷路 ---------- */
+
+.tilt-current {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tilt-current-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 10px;
+}
+
+.tilt-preview {
+  position: relative;
+  width: min(100%, 260px);
+}
+
+.tilt-preview.busy .tilt-maze {
+  opacity: 0.75;
+}
+
+.tilt-busy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  animation: tilt-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes tilt-pulse {
+  to {
+    opacity: 0.6;
+  }
+}
+
+.tilt-mine {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  color: var(--seat-text);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.tilt-lock::before {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.55em;
+  margin-right: 5px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow: 0 -0.32em 0 -0.08em var(--bg), 0 -0.36em 0 0 currentColor;
+  vertical-align: 0.05em;
+}
+
+.tilt-warn {
+  color: var(--danger);
+}
+
+/* ---------- 迷路の板 ---------- */
+
+.tilt-maze {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tilt-frame {
+  fill: var(--frame);
+  stroke: var(--frame-edge);
+  stroke-width: 0.8;
+}
+
+.tilt-floor {
+  fill: var(--wood);
+}
+
+.tilt-grain {
+  fill: none;
+  stroke: var(--wood-grain);
+  stroke-width: 0.8;
+}
+
+.tilt-start {
+  fill: none;
+  stroke: var(--seat-color, var(--muted));
+  stroke-width: 0.8;
+  stroke-dasharray: 1.6 1.4;
+}
+
+.tilt-hole-deep {
+  stop-color: var(--hole-deep);
+}
+
+.tilt-hole-rim {
+  stop-color: var(--hole-rim);
+}
+
+.tilt-hole {
+  stroke: rgb(255 255 255 / 0.25);
+  stroke-width: 0.5;
+}
+
+.tilt-goal circle {
+  fill: var(--goal);
+}
+
+.tilt-goal .tilt-goal-ring {
+  fill: none;
+  stroke: var(--goal-ring);
+  stroke-width: 0.9;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tilt-goal 1.6s ease-in-out infinite;
+}
+
+@keyframes tilt-goal {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.4;
+  }
+}
+
+.tilt-flag {
+  fill: #fff;
+  stroke: #fff;
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+.tilt-wall {
+  fill: var(--wall);
+}
+
+.tilt-wall-shadow {
+  fill: var(--wall-shadow);
+}
+
+.tilt-ball-shadow {
+  fill: rgb(0 0 0 / 0.25);
+}
+
+/* ---------- 挑戦する ---------- */
+
+.tilt-controls {
+  width: 100%;
+}
+
+.tilt .tilt-go {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  width: min(100%, 320px);
+  min-height: 64px;
+  border-radius: 20px;
+  background: var(--seat-color);
+  border-color: var(--seat-color);
+  color: #fff;
+  touch-action: manipulation;
+}
+
+.tilt-go-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tilt-go-hint {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* ---------- 転がしている間の全画面（PortraitStage の中） ---------- */
+
+.tilt-run {
+  container-type: size;
+}
+
+.tilt-run-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  width: min(100%, 420px);
+}
+
+.tilt-run-head .input-tag {
+  justify-self: start;
+}
+
+.tilt-run-time {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--seat-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tilt-run-falls {
+  justify-self: end;
+  color: var(--muted);
+}
+
+.tilt-run-board {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  perspective: 900px;
+}
+
+/* 残りの高さに収まる大きさ（縦横比 110:150）。上の時計と下の案内（指ならスティック）の分をあける */
+.tilt-tilt {
+  width: min(100%, 420px, calc((100cqh - 160px) * 110 / 150));
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+}
+
+.tilt-run-board.touch .tilt-tilt {
+  width: min(100%, 420px, calc((100cqh - 270px) * 110 / 150));
+}
+
+.tilt-count {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--seat-color);
+  text-shadow: 0 4px 18px rgb(0 0 0 / 0.25);
+  animation: tilt-count 0.8s ease-out;
+  pointer-events: none;
+}
+
+@keyframes tilt-count {
+  from {
+    scale: 1.6;
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+.tilt-run-result {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 14px 24px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: tilt-result 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.tilt-run-result strong {
+  font-size: 1.6rem;
+  color: var(--seat-text);
+}
+
+.tilt-run-result .num {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+@keyframes tilt-result {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+.tilt-run-foot {
+  display: grid;
+  place-items: center;
+  min-height: 2em;
+}
+
+.tilt-run-hint {
+  text-align: center;
+}
+
+/* 指で傾けるスティック */
+.tilt-stick {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  touch-action: none;
+  cursor: grab;
+}
+
+.tilt-stick.off {
+  opacity: 0.5;
+}
+
+.tilt-stick-ring {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  border: 1.5px dashed var(--line);
+}
+
+.tilt-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  background: var(--seat-color);
+  box-shadow:
+    0 4px 12px rgb(0 0 0 / 0.25),
+    inset 0 -4px 0 rgb(0 0 0 / 0.15);
+}
+
+/* ---------- 回戦の結果 ---------- */
+
+.tilt-card {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.tilt-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tilt-rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tilt-rows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.tilt-row-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.tilt-row-who > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tilt-row-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.tilt-row-time {
+  font-weight: 700;
+  color: var(--seat-text);
+}
+
+.tilt-row-tag {
+  min-width: 2.6em;
+  text-align: right;
+}
+
+.tilt-won {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--seat-color);
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.tilt-row-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.tilt-row-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--seat-color);
+}
+
+.tilt-rows li:not(.won) .tilt-row-bar span {
+  opacity: 0.45;
+}
+
+.tilt-row-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tilt-card-draw {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.tilt-final {
+  width: 100%;
+}

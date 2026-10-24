@@ -19,6 +19,8 @@ import { StackBoard } from "./StackBoard.tsx";
 import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
 import { StopwatchBoard } from "./StopwatchBoard.tsx";
+import { SodaBoard } from "./SodaBoard.tsx";
+import { TiltBoard } from "./TiltBoard.tsx";
 import { FreehandBoard } from "./FreehandBoard.tsx";
 
 export interface BoardProps {
@@ -86,6 +88,8 @@ export const boards: Record<string, BoardUI> = {
   pourhard: { Board: PourHardBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },
   stopwatch: { Board: StopwatchBoard, length: "short", hidden: true, timing: true },
+  soda: { Board: SodaBoard, length: "short", hidden: true, timing: true },
+  tilt: { Board: TiltBoard, length: "short", hidden: true, timing: true },
   freehand: { Board: FreehandBoard, length: "short", hidden: true, drawing: true },
   connect4: { Board: Connect4Board, length: "medium" },
   boxes: { Board: BoxesBoard, length: "medium" },
