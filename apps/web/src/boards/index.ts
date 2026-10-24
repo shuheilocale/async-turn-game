@@ -24,6 +24,7 @@ import { TreasureBoard } from "./TreasureBoard.tsx";
 import { OekakiBoard } from "./OekakiBoard.tsx";
 import { HeartBoard } from "./HeartBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
+import { CurlingBoard } from "./CurlingBoard.tsx";
 import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
 import { StopwatchBoard } from "./StopwatchBoard.tsx";
@@ -94,6 +95,7 @@ export const boards: Record<string, BoardUI> = {
   bridge: { Board: BridgeBoard, length: "short" },
   korokoro: { Board: KorokoroBoard, length: "short" },
   stack: { Board: StackBoard, length: "short", category: "action" },
+  curling: { Board: CurlingBoard, length: "medium", category: "action" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   pourhard: { Board: PourHardBoard, length: "short", hidden: true, timing: true },
   balloon: { Board: BalloonBoard, length: "short", hidden: true, timing: true },

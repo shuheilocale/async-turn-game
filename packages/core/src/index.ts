@@ -23,6 +23,7 @@ import { treasure } from "./games/treasure.ts";
 import { oekaki } from "./games/oekaki.ts";
 import { heart } from "./games/heart.ts";
 import { stack } from "./games/stack.ts";
+import { curling } from "./games/curling.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
 import { stopwatch } from "./games/stopwatch.ts";
@@ -58,6 +59,7 @@ export * as Treasure from "./games/treasure.ts";
 export * as Oekaki from "./games/oekaki.ts";
 export * as Heart from "./games/heart.ts";
 export * as Stack from "./games/stack.ts";
+export * as Curling from "./games/curling.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
 export * as Stopwatch from "./games/stopwatch.ts";
@@ -77,6 +79,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [bridge.id]: bridge,
   [korokoro.id]: korokoro,
   [stack.id]: stack,
+  [curling.id]: curling,
   [pour.id]: pour,
   [pourHard.id]: pourHard,
   [balloon.id]: balloon,

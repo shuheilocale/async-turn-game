@@ -1,0 +1,497 @@
+/*
+ * 3D カーリング。styles.css のあとに読み込まれるので、.stack-sm などの既定値はここで上書きできる
+ */
+.curling-board.stack-sm {
+  gap: 10px;
+  width: min(100%, 420px);
+  container-type: inline-size;
+}
+
+@media (min-width: 960px) {
+  .curling-board.stack-sm {
+    width: min(100%, 460px);
+  }
+}
+
+.curling-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- 得点の表 ---------- */
+
+.curling-score {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  overflow: hidden;
+}
+
+.curling-score th,
+.curling-score td {
+  padding: 5px 6px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.curling-score thead th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-family: var(--font-num);
+  border-bottom: 1px solid var(--line);
+  padding-top: 4px;
+  padding-bottom: 3px;
+}
+
+.curling-score tbody tr + tr > * {
+  border-top: 1px solid var(--line);
+}
+
+.curling-score .who {
+  width: 100%;
+  text-align: left;
+}
+
+.curling-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 58cqw;
+}
+
+.curling-score td {
+  min-width: 2.1em;
+  font-family: var(--font-num);
+  color: var(--muted);
+}
+
+.curling-score td.won {
+  color: var(--seat-text);
+  font-weight: 700;
+}
+
+.curling-score .now {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.curling-score .total {
+  font-family: var(--font-num);
+  font-weight: 700;
+  color: var(--ink);
+  border-left: 1px solid var(--line);
+}
+
+.curling-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--seat-color);
+}
+
+.curling-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.curling-you {
+  flex: none;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.curling-hammer {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.curling-hammer .head {
+  fill: var(--ink-soft);
+}
+
+.curling-hammer .handle {
+  stroke: var(--ink-soft);
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* 残りの投数：塗った丸がまだ投げていない石 */
+.curling-left {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  flex: none;
+}
+
+.curling-left i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--seat-color) 70%, transparent);
+}
+
+.curling-left i.full {
+  background: var(--seat-color);
+  border-color: var(--seat-color);
+}
+
+/* ---------- シート ---------- */
+
+.curling-no3d {
+  margin: 0;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.curling-view {
+  position: relative;
+  width: 100%;
+  /* 縦長。画面の高さが足りなければ少し低くする（盤の上下の表示の分を引く） */
+  height: clamp(300px, calc(100dvh - var(--chrome, 340px) - 120px), 125cqw);
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: #e6ebf2;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .curling-view {
+    background: #141a26;
+  }
+}
+
+/* 2D の図は縦に長いので、高さを図に合わせ、画面の高さに収まるよう幅を細くする */
+.curling-view.is-2d {
+  width: min(100%, max(240px, calc((100dvh - var(--chrome, 340px) - 20px) * 0.53)));
+  height: auto;
+  aspect-ratio: 0.53;
+}
+
+/* ねらっている間は、ドラッグをページのスクロールに使わない */
+.curling-view.aiming {
+  touch-action: none;
+  cursor: grab;
+}
+
+.curling-view:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.curling-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 盤の上に重ねる小さなボタン */
+.curling-pill {
+  position: absolute;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.curling-viewswitch {
+  right: 10px;
+}
+
+.curling-viewswitch[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+
+.curling-replay {
+  left: 10px;
+}
+
+.curling-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.curling-icon .fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* ---------- 強さの目盛り（右の端） ---------- */
+
+.curling-gauge {
+  position: absolute;
+  right: 12px;
+  top: 58px;
+  bottom: 16px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* 2D の図は細いので、ハウスにかからないよう下半分に出す */
+.curling-view.is-2d .curling-gauge {
+  top: 50%;
+  right: 8px;
+}
+
+.curling-gauge-bar {
+  position: relative;
+  width: 12px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 6px;
+  overflow: visible;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.curling-gauge-bar i {
+  display: block;
+  width: 100%;
+}
+
+.curling-gauge-bar i:first-child {
+  border-radius: 0 0 6px 6px;
+}
+
+.curling-gauge-bar i:nth-child(4) {
+  border-radius: 6px 6px 0 0;
+}
+
+.curling-gauge .z-short {
+  background: rgb(140 150 166 / 0.55);
+}
+
+.curling-gauge .z-guard {
+  background: rgb(120 160 214 / 0.75);
+}
+
+.curling-gauge .z-house {
+  background: rgb(86 119 180 / 0.95);
+}
+
+.curling-gauge .z-hit {
+  background: rgb(184 92 110 / 0.85);
+}
+
+/* いまの強さ。席の色の丸 */
+.curling-gauge-mark {
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: 0 0 -11px -11px;
+  border-radius: 50%;
+  background: var(--seat-color);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+}
+
+.curling-gauge-label,
+.curling-gauge-title {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.curling-gauge-title {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- エンドの結果 ---------- */
+
+.curling-endcard {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 220px;
+  padding: 14px 18px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: curling-card-in 0.25s ease-out;
+}
+
+@keyframes curling-card-in {
+  from {
+    transform: translate(-50%, 12px);
+    opacity: 0;
+  }
+}
+
+.curling-endcard p {
+  margin: 0;
+}
+
+.curling-endcard-title {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.curling-endcard-result {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.curling-endcard-result[class*="seat"] {
+  color: var(--seat-text);
+}
+
+.curling-endcard button {
+  min-width: 140px;
+  margin-top: 4px;
+}
+
+/* ---------- 操作 ---------- */
+
+.curling-controls {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.curling-spin {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.curling-spin button {
+  min-width: 56px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.curling-spin button + button {
+  border-left: 1px solid var(--line);
+}
+
+.curling-spin button.on {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.curling-spin .curling-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  margin: 0 auto;
+  stroke-width: 2.2;
+}
+
+.curling-throw {
+  font-size: 1.05rem;
+}
+
+/* ---------- 2D の図（WebGL が使えないとき） ---------- */
+
+.curling-sheet2d {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.curling-sheet2d .c2-ice {
+  fill: #f2f6fa;
+}
+
+.curling-sheet2d .c2-outer {
+  fill: none;
+  stroke: #5677b4;
+}
+
+.curling-sheet2d .c2-inner {
+  fill: #f7f9fb;
+  stroke: #b85c6e;
+}
+
+.curling-sheet2d .c2-hog {
+  stroke: #b85c6e;
+  stroke-width: 0.1;
+}
+
+.curling-sheet2d .c2-line {
+  stroke: #2c3953;
+  stroke-width: 0.02;
+}
+
+.curling-sheet2d .c2-board {
+  fill: #2b3650;
+}
+
+.curling-sheet2d .c2-dot {
+  fill: var(--seat-color);
+}
+
+.curling-sheet2d .c2-stone {
+  fill: #8d9097;
+  stroke: #5d6168;
+  stroke-width: 0.02;
+}
+
+.curling-sheet2d .c2-cap {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 0.03;
+}
+
+.curling-sheet2d .c2-handle {
+  stroke: var(--seat-color);
+  stroke-width: 0.045;
+  stroke-linecap: round;
+}
+
+.curling-sheet2d .c2-count {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 0.035;
+  opacity: 0.9;
+}
