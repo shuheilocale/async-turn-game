@@ -3,6 +3,7 @@ import { Stack, type Seat } from "@atg/core";
 import { useI18n } from "../i18n/index.tsx";
 import type { BoardProps } from "./index.ts";
 import type * as Physics from "./stack/physics.ts";
+import { dragMove, startDrag, type AimDrag } from "./stack/aim.ts";
 import { GROUND_Y, ROCK_CRACKS, ROCK_OUTLINE, STEP, VIEW_BOTTOM, VIEW_H, VIEW_W } from "./stack/scene.ts";
 import "./StackBoard.css";
 
@@ -138,7 +139,10 @@ export function StackBoard({ state, status, you, names, interactive, onSubmit }:
   /** 自分で落として、いま動かしている手（落としたあとの石の数） */
   const local = useRef<number | null>(null);
   const svg = useRef<SVGSVGElement>(null);
-  const drag = useRef<{ id: number; clientX: number; startX: number; moved: boolean } | null>(null);
+  const drag = useRef<AimDrag | null>(null);
+  /** 今の狙い。指の動きが続けて届いても、いちばん新しい値から計算できるように */
+  const aim = useRef(x);
+  aim.current = x;
 
   useEffect(() => {
     loadPhysics();
@@ -205,6 +209,8 @@ export function StackBoard({ state, status, you, names, interactive, onSubmit }:
   const canAim = interactive && !finished && !play && !busy && count < Stack.STONES;
 
   async function drop() {
+    // 「落とす」を押した時点で、ドラッグは必ず終わらせる
+    drag.current = null;
     if (!canAim) return;
     setBusy(true);
     try {
@@ -234,20 +240,41 @@ export function StackBoard({ state, status, you, names, interactive, onSubmit }:
 
   // ---------- ドラッグ・タップ・キー操作 ----------
 
-  const worldPerPx = () => VIEW_W / (svg.current?.getBoundingClientRect().width || 1);
+  // 指を離した知らせが盤に届かなかったときのために、どこで離しても・盤の外に触れてもドラッグを終わらせる
+  useEffect(() => {
+    const end = (e: globalThis.PointerEvent) => {
+      if (drag.current && e.pointerId === drag.current.id) drag.current = null;
+    };
+    const outside = (e: globalThis.PointerEvent) => {
+      if (drag.current && !svg.current?.contains(e.target as Node)) drag.current = null;
+    };
+    addEventListener("pointerup", end);
+    addEventListener("pointercancel", end);
+    addEventListener("pointerdown", outside, true);
+    return () => {
+      removeEventListener("pointerup", end);
+      removeEventListener("pointercancel", end);
+      removeEventListener("pointerdown", outside, true);
+    };
+  }, []);
 
   function onPointerDown(e: PointerEvent<SVGSVGElement>) {
     if (!canAim || !e.isPrimary) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: e.pointerId, clientX: e.clientX, startX: x, moved: false };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // 受け止められなくても、盤の上で動かす分には困らない
+    }
+    drag.current = startDrag(e.pointerId, e.clientX);
   }
 
   function onPointerMove(e: PointerEvent<SVGSVGElement>) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    const dx = e.clientX - d.clientX;
-    if (Math.abs(dx) > 4) d.moved = true;
-    if (d.moved) setX(clampX(d.startX + dx * worldPerPx()));
+    const width = svg.current?.getBoundingClientRect().width || 1;
+    const r = dragMove(d, e.clientX, aim.current, width, VIEW_W);
+    drag.current = r.drag;
+    if (r.aim !== aim.current) setX((aim.current = clampX(r.aim)));
   }
 
   function onPointerUp(e: PointerEvent<SVGSVGElement>) {
@@ -319,6 +346,7 @@ export function StackBoard({ state, status, you, names, interactive, onSubmit }:
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={() => (drag.current = null)}
+          onLostPointerCapture={() => (drag.current = null)}
           onKeyDown={onKeyDown}
         >
           <defs>
