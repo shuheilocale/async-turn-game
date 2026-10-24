@@ -1,0 +1,332 @@
+/*
+ * めくりあわせ。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .memory を頭に付けて優先させる
+ */
+.memory {
+  /* 札の表の地と絵の色。画面の明暗に関係なく、明るい紙の札にする（暗い画面では少し落とす） */
+  --memory-face: #fffaf0;
+  --memory-face-line: #e3dccb;
+  --memory-circle: #e5484d;
+  --memory-triangle: #2f9e44;
+  --memory-star: #f0a800;
+  --memory-heart: #e64980;
+  --memory-moon: #7048e8;
+  --memory-drop: #1098ad;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* 盤とその上下の組の欄が、だいたい 1 画面に収まるようにする（狭すぎるときは収めない） */
+  width: min(100%, 420px, max(280px, calc(100dvh - var(--chrome, 340px) - 150px)));
+}
+
+@media (prefers-color-scheme: dark) {
+  .memory {
+    --memory-face: #ebe6da;
+    --memory-face-line: #b9b2a2;
+  }
+}
+
+/* ---------- 取った組の欄 ---------- */
+
+.memory-tray {
+  display: grid;
+  grid-template-columns: minmax(0, 6.5em) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 今めくっている人の欄は、その人の色でふちどる */
+.memory-tray.turn {
+  border-color: var(--seat-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--seat-color) 25%, transparent);
+}
+
+.memory-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.memory-who .token {
+  width: 12px;
+  height: 12px;
+}
+
+/* 長い名前は「…」で切る */
+.memory-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.memory-pairs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.memory-count {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.memory-count strong {
+  font-family: var(--font-num);
+  font-size: 1.45rem;
+  line-height: 1;
+  color: var(--seat-text);
+}
+
+/* そろえた 2 枚。2 枚目を少し重ねる */
+.memory-pair {
+  display: flex;
+  animation: memory-land 0.25s ease-out;
+}
+
+.memory-pair.arriving {
+  visibility: hidden;
+  animation: none;
+}
+
+@keyframes memory-land {
+  from {
+    transform: scale(1.15);
+  }
+}
+
+.memory-mini {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--memory-face);
+  border: 1px solid var(--memory-face-line);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}
+
+.memory-mini + .memory-mini {
+  margin-left: -7px;
+}
+
+.memory-mini .memory-shape {
+  width: 17px;
+  height: 17px;
+}
+
+/* ---------- 札を並べた盤 ---------- */
+
+.memory-grid {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  background: var(--felt);
+  box-shadow: inset 0 0 0 4px var(--felt-line);
+}
+
+.memory .memory-card {
+  position: relative;
+  display: block;
+  min-height: 0;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  perspective: 700px;
+  cursor: default;
+}
+
+.memory .memory-card.can {
+  cursor: pointer;
+}
+
+.memory .memory-card:focus-visible {
+  outline-offset: 3px;
+}
+
+/* 表と裏を背中合わせにして、表に返すときは縦の軸で回す */
+.memory-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.35, 1);
+}
+
+.memory-card.up .memory-inner {
+  transform: rotateY(180deg);
+}
+
+.memory-back,
+.memory-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.28);
+}
+
+/* 裏。画面の明暗に関係なく紺の地に白いふちと斜めの格子 */
+.memory-back {
+  border: 3px solid #fff;
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.1) 0 3px, transparent 3px 9px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.1) 0 3px, transparent 3px 9px),
+    var(--rack);
+  transition: transform 0.12s;
+}
+
+/* 真ん中のひし形（「前にめくられた」点と見まちがえないよう、丸ではなく線にする） */
+.memory-back::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  rotate: 45deg;
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-radius: 3px;
+}
+
+/* 前にめくられたことのある札は、裏の右上に小さな点を付ける（絵は出さない） */
+.memory-card.seen .memory-back::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffd84d;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.25);
+}
+
+/* めくれる札は、押したときに少し沈む。送って返事を待っている札は持ち上げておく */
+.memory .memory-card.can:active .memory-back {
+  transform: scale(0.96);
+}
+
+.memory .memory-card.pressed .memory-back {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 14px rgb(0 0 0 / 0.35);
+}
+
+.memory-front {
+  display: grid;
+  place-items: center;
+  transform: rotateY(180deg);
+  background: var(--memory-face);
+  border: 1px solid var(--memory-face-line);
+}
+
+.memory-front .memory-shape {
+  width: 68%;
+  height: auto;
+}
+
+/* そろった 2 枚は取った人の色で光らせ、ちがった 2 枚は小さくゆらす（表に返りきってから） */
+.memory-card.match .memory-front {
+  box-shadow:
+    0 0 0 3px var(--seat-color),
+    0 0 16px 2px color-mix(in srgb, var(--seat-color) 60%, transparent);
+  transition: box-shadow 0.2s 0.4s;
+}
+
+.memory-card.miss .memory-inner {
+  animation: memory-shake 0.4s 0.55s ease-in-out;
+}
+
+@keyframes memory-shake {
+  25% {
+    translate: -3px 0;
+  }
+  75% {
+    translate: 3px 0;
+  }
+}
+
+/* 取った人の側へ動いている 2 枚は、ほかの札より上に出す */
+.memory-card.flying {
+  z-index: 3;
+}
+
+/* 取られた札の場所。並びが分かるよう、うすい枠だけ残す */
+.memory-slot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 2px dashed rgb(255 255 255 / 0.28);
+}
+
+/* 終局後は、どこにどの絵があったかを薄く見せる */
+.memory-slot .memory-shape {
+  width: 46%;
+  height: auto;
+  opacity: 0.55;
+}
+
+/* ---------- 絵 ---------- */
+
+.memory-shape * {
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.memory-shape.circle * {
+  fill: var(--memory-circle);
+  stroke: color-mix(in srgb, var(--memory-circle) 70%, #000);
+}
+.memory-shape.triangle * {
+  fill: var(--memory-triangle);
+  stroke: color-mix(in srgb, var(--memory-triangle) 70%, #000);
+}
+.memory-shape.star * {
+  fill: var(--memory-star);
+  stroke: color-mix(in srgb, var(--memory-star) 70%, #000);
+}
+.memory-shape.heart * {
+  fill: var(--memory-heart);
+  stroke: color-mix(in srgb, var(--memory-heart) 70%, #000);
+}
+.memory-shape.moon * {
+  fill: var(--memory-moon);
+  stroke: color-mix(in srgb, var(--memory-moon) 70%, #000);
+}
+.memory-shape.drop * {
+  fill: var(--memory-drop);
+  stroke: color-mix(in srgb, var(--memory-drop) 70%, #000);
+}
+
+/* ---------- 盤の下の一言 ---------- */
+
+.memory-note {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.memory .memory-replay {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
