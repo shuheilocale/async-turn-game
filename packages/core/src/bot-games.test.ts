@@ -69,7 +69,7 @@ const everyMove: Record<string, unknown[]> = {
   korokoro: range(16).map((to) => ({ to })),
 };
 const fullInfo = Object.keys(everyMove);
-const hidden = ["hitblow", "auction", "bluff", "pour", "pourhard", "balloon", "stopwatch", "quickdraw", "freehand", "doors"];
+const hidden = ["hitblow", "auction", "bluff", "pour", "pourhard", "balloon", "stopwatch", "quickdraw", "freehand", "doors", "memory"];
 
 /** 盤面は全部見えるが、人間らしくまちがえるように botMove で手を選ぶゲーム */
 const humanlike = ["chain"];

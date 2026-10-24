@@ -15,6 +15,7 @@ import { bridge } from "./games/bridge.ts";
 import { korokoro } from "./games/korokoro.ts";
 import { bluff } from "./games/bluff.ts";
 import { doors } from "./games/doors.ts";
+import { memory } from "./games/memory.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { stack } from "./games/stack.ts";
@@ -43,6 +44,7 @@ export * as Bridge from "./games/bridge.ts";
 export * as Korokoro from "./games/korokoro.ts";
 export * as Bluff from "./games/bluff.ts";
 export * as Doors from "./games/doors.ts";
+export * as Memory from "./games/memory.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
 export * as Stack from "./games/stack.ts";
@@ -77,6 +79,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [auction.id]: auction,
   [bluff.id]: bluff,
   [doors.id]: doors,
+  [memory.id]: memory,
   [sotto.id]: sotto,
   [treasure.id]: treasure,
 };
