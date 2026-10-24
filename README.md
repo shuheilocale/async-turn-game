@@ -32,6 +32,7 @@
 | ひとふでチャレンジ | `freehand` | 相手に隠す情報があるゲーム（指で一筆で描き、形のきれいさを点数で比べる。相手が描くまで絵と点数が隠れている） |
 | そっと出し | `sotto` | 協力ゲーム（相手の手札は見えない） |
 | 宝と岩 | `treasure` | 協力ゲーム（宝と岩は片方にしか見えない） |
+| おえかきクイズ | `oekaki` | 協力ゲーム（描いた絵を見て、お題を 4 つから当てる。お題は描く人にしか見えない） |
 
 公開中: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev （Cloudflare Workers + D1）
 

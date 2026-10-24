@@ -20,6 +20,7 @@ import { MemoryBoard } from "./MemoryBoard.tsx";
 import { TsuboBoard } from "./TsuboBoard.tsx";
 import { SottoBoard } from "./SottoBoard.tsx";
 import { TreasureBoard } from "./TreasureBoard.tsx";
+import { OekakiBoard } from "./OekakiBoard.tsx";
 import { StackBoard } from "./StackBoard.tsx";
 import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
@@ -107,4 +108,5 @@ export const boards: Record<string, BoardUI> = {
   tsubo: { Board: TsuboBoard, length: "short", hidden: true },
   sotto: { Board: SottoBoard, length: "short", hidden: true, coop: true },
   treasure: { Board: TreasureBoard, length: "short", hidden: true, coop: true },
+  oekaki: { Board: OekakiBoard, length: "medium", hidden: true, coop: true },
 };
