@@ -60,6 +60,10 @@ const everyMove: Record<string, unknown[]> = {
   tateyoko: range(25).map((cell) => ({ cell })),
   bridge: [...range(25).map((cell) => ({ cell })), { swap: true }],
   connect4: range(7).map((col) => ({ col })),
+  tapioca: range(5).flatMap((col) => [
+    { col, piece: "pearl" },
+    { col, piece: "ice" },
+  ]),
   boxes: range(24).map((edge) => ({ edge })),
   othello: range(64).map((i) => ({ row: Math.floor(i / 8), col: i % 8 })),
   korokoro: range(16).map((to) => ({ to })),
@@ -114,6 +118,7 @@ describe("盤面が全部見えるゲームの手の一覧（legalMoves）", () 
       ["tateyoko", 20],
       ["bridge", 25],
       ["connect4", 7],
+      ["tapioca", 10],
       ["boxes", 24],
       ["othello", 4],
       ["korokoro", 6],
