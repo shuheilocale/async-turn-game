@@ -105,7 +105,8 @@ export function Play({ id }: { id: string }) {
         // 指したことを相手に LINE で知らせる。トークから開いていれば自動、そうでなければボタンで
         const me = next.players.find((p) => p.seat === next.you)?.name ?? "";
         const tr = recipientT(next);
-        const card = progressCard(tr, next, tr("line.moved", { name: me }));
+        const what = boards[next.gameType]?.movedText?.(tr, move, me) ?? tr("line.moved", { name: me });
+        const card = progressCard(tr, next, what);
         if (await postToChat(id, card)) setMessage(t("play.notified"));
         else setNotice(card);
       }

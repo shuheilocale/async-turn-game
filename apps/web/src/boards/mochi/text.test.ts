@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Mochi } from "@atg/core";
 import { coopText, translator, type Lang } from "../../i18n/index.tsx";
 import messages from "../../i18n/games/mochi.ts";
+import { boards } from "../index.ts";
 
 const LANGS: Lang[] = ["ja", "en", "th"];
 
@@ -52,5 +53,11 @@ describe("ふたりのもちの文言", () => {
     expect(translator("en")("game.mochi.hap.found", { item: translator("en")("game.mochi.itemIn.acorn") })).toBe(
       "While you were away, it found an acorn",
     );
+  });
+
+  it("LINE の知らせは「指しました」ではなく、したお世話の文にする", () => {
+    const moved = boards.mochi!.movedText!;
+    expect(moved(translator("ja"), { care: "feed" }, "あき")).toBe("あきさんがごはんをあげました");
+    expect(moved(translator("th"), { care: "pet" }, "Nok")).toContain("Nok");
   });
 });

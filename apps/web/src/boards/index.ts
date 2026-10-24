@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import type { GameStatus, Seat } from "@atg/core";
+import type { T } from "../i18n/index.tsx";
 import { OthelloBoard } from "./OthelloBoard.tsx";
 import { TicTacToeBoard } from "./TicTacToeBoard.tsx";
 import { Connect4Board } from "./Connect4Board.tsx";
@@ -68,6 +69,11 @@ export interface GameMeta {
   drawing?: boolean;
   /** トップの一覧での種類。省くと上の目印から決まる（categoryOf） */
   category?: Category;
+  /**
+   * LINE で相手に知らせる「〇〇さんが指しました」の代わりの文（受け取る人の言語の t で作る）。
+   * 「指す」が合わないゲームで、した手に合わせた文にしたいときだけ置く
+   */
+  movedText?(t: T, move: unknown, name: string): string;
 }
 
 /** トップの一覧で、ゲームを分ける種類（この順に並ぶ） */
@@ -126,5 +132,10 @@ export const boards: Record<string, BoardUI> = {
   oekaki: { Board: OekakiBoard, length: "medium", hidden: true, coop: true },
   heart: { Board: HeartBoard, length: "short", hidden: true, coop: true },
   ishin: { Board: IshinBoard, length: "short", hidden: true, coop: true },
-  mochi: { Board: MochiBoard, length: "long", coop: true },
+  mochi: {
+    Board: MochiBoard,
+    length: "long",
+    coop: true,
+    movedText: (t, move, name) => t(`game.mochi.did.${(move as { care: string }).care}`, { who: t("game.mochi.who", { name }) }),
+  },
 };
