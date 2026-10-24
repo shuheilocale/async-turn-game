@@ -1,0 +1,866 @@
+/*
+ * ふたりの以心伝心。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .ishin を頭に付けて優先させる。
+ * 2 人の色（--p0 / --p1）のほかは、ハートの桃色だけを差し色にする
+ */
+.ishin {
+  --heart: #e2457a;
+  --heart-soft: #fde6ee;
+  --heart-line: #f3b5ca;
+  /* 選択肢の絵の色。絵は画面の明暗で色を変えない（暗い画面では明るいタイルにのせる） */
+  --pic-line: #3a4254;
+  --pic-white: #ffffff;
+  --pic-tint: #fbd5e2;
+  --pic-yellow: #f6c445;
+  --pic-orange: #f29a3e;
+  --pic-red: #e4544c;
+  --pic-green: #5cb37b;
+  --pic-blue: #8ccaf1;
+  --pic-brown: #a8693f;
+  --pic-tan: #f0c98d;
+  --pic-gray: #c4cad5;
+  --pic-purple: #9d7ce2;
+  --pic-pastel: #f8cde0;
+  --pic-mint: #bce7d5;
+  --pic-black: #2a2f3a;
+  --pic-tile: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ishin {
+    --heart: #ff6f9b;
+    --heart-soft: #3a2130;
+    --heart-line: #7a3a55;
+    --pic-tile: #ebe7ee;
+  }
+}
+
+/* ---------- 選択肢の絵 ---------- */
+
+.ishin-pic {
+  display: block;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  overflow: visible;
+}
+
+/* 暗い画面では、絵を明るいタイルにのせる（白いもの・黒いものの見え方が変わらないように） */
+@media (prefers-color-scheme: dark) {
+  .ishin-pic {
+    padding: 5px;
+    border-radius: 14px;
+    background: var(--pic-tile);
+  }
+
+  .ishin-mini .ishin-pic {
+    padding: 4px;
+    border-radius: 11px;
+  }
+
+  .ishin-log-pick .ishin-pic {
+    padding: 2px;
+    border-radius: 7px;
+  }
+}
+
+.ishin-pic * {
+  fill: none;
+  stroke: var(--pic-line);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ishin-pic .f { fill: var(--pic-tint); }
+.ishin-pic .w { fill: var(--pic-white); }
+.ishin-pic .d { fill: var(--pic-line); }
+.ishin-pic .tan { fill: var(--pic-tan); }
+.ishin-pic .y { fill: var(--pic-yellow); }
+.ishin-pic .o { fill: var(--pic-orange); }
+.ishin-pic .r { fill: var(--pic-red); }
+.ishin-pic .g { fill: var(--pic-green); }
+.ishin-pic .b { fill: var(--pic-blue); }
+.ishin-pic .br { fill: var(--pic-brown); }
+.ishin-pic .gy { fill: var(--pic-gray); }
+.ishin-pic .pu { fill: var(--pic-purple); }
+.ishin-pic .pastel { fill: var(--pic-pastel); }
+.ishin-pic .mint { fill: var(--pic-mint); }
+.ishin-pic .blk { fill: var(--pic-black); }
+.ishin-pic .a { fill: var(--heart); }
+.ishin-pic .s0 { fill: var(--p0); }
+.ishin-pic .s1 { fill: var(--p1); }
+.ishin-pic .glow { fill: var(--pic-yellow); stroke: none; opacity: 0.35; }
+.ishin-pic .n { stroke: none; }
+.ishin-pic .thin { stroke-width: 1.1; }
+.ishin-pic .thick { stroke-width: 2.4; }
+.ishin-pic .dash { stroke-dasharray: 2.2 2.2; }
+.ishin-pic .ws { stroke: var(--pic-white); }
+.ishin-pic .bs { stroke: var(--pic-blue); }
+.ishin-pic .rs { stroke: var(--pic-red); }
+.ishin-pic .gs { stroke: var(--pic-green); }
+.ishin-pic .ys { stroke: var(--pic-yellow); }
+.ishin-pic .os { stroke: var(--pic-orange); }
+.ishin-pic .t {
+  fill: var(--pic-line);
+  stroke: none;
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* ---------- 問題の数とハート ---------- */
+
+.ishin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+
+.ishin-round {
+  font-family: var(--font-num);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* 12 このハート。1 問 2 こずつ並べ、今の問題をうすく囲む */
+.ishin-hearts {
+  display: flex;
+  gap: 3px;
+}
+
+.ishin-pair {
+  display: flex;
+  gap: 1px;
+  padding: 2px 3px;
+  border-radius: 999px;
+}
+
+.ishin-pair.now {
+  background: var(--heart-soft);
+  box-shadow: inset 0 0 0 1px var(--heart-line);
+}
+
+.ishin-heart {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+.ishin-heart path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.ishin-pair.now .ishin-heart path {
+  stroke: var(--heart-line);
+}
+
+.ishin-heart.on path {
+  fill: var(--heart);
+  stroke: var(--heart);
+}
+
+/* ---------- 質問 ---------- */
+
+.ishin-q {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px 18px 18px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.ishin-genre {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--heart-soft);
+  color: var(--heart);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.ishin-q-text {
+  margin: 0;
+  font-size: 1.32rem;
+  font-weight: 700;
+  line-height: 1.4;
+  font-feature-settings: "palt";
+  text-wrap: balance;
+}
+
+/* ---------- 答えと予想の段 ---------- */
+
+.ishin-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ishin .ishin-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 8px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-align: left;
+  font-weight: 500;
+}
+
+.ishin .ishin-step.on {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1px var(--seat-color);
+}
+
+.ishin-step-no {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--font-num);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ishin-step.on .ishin-step-no {
+  background: var(--seat-color);
+  color: var(--surface);
+}
+
+.ishin-step.done .ishin-step-no {
+  background: color-mix(in srgb, var(--seat-color) 18%, var(--surface));
+  color: var(--seat-text);
+}
+
+.ishin-step-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.ishin-step-value {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ishin-step-value.empty {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.ishin-ask {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.ishin-ask .muted {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* ---------- 4 つの選択肢 ---------- */
+
+.ishin-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ishin .ishin-choice {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 6px;
+  min-height: 122px;
+  padding: 16px 8px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-align: center;
+  transition: transform 0.12s, border-color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ishin .ishin-choice:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.ishin-choices.can .ishin-choice:active {
+  transform: scale(0.97);
+}
+
+.ishin-choices.can .ishin-choice:not(.answer, .guess):hover {
+  border-color: var(--ink-soft);
+}
+
+.ishin-choices.dim .ishin-choice {
+  opacity: 0.6;
+}
+
+.ishin-choice-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* 自分の答えにしたカード（自分の色） */
+.ishin .ishin-choice.answer {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 9%, var(--surface));
+}
+
+/* 予想にしたカード（ハート色の点線） */
+.ishin .ishin-choice.guess {
+  border-style: dashed;
+  border-color: var(--heart);
+}
+
+.ishin .ishin-choice.answer.guess {
+  border-style: solid;
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 2px var(--surface), inset 0 0 0 3.5px var(--heart);
+}
+
+.ishin-choices.picking-answer .ishin-choice.answer,
+.ishin-choices.picking-guess .ishin-choice.guess {
+  transform: translateY(-2px);
+}
+
+.ishin-badge {
+  position: absolute;
+  top: 7px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+  animation: ishin-pop 0.22s ease-out;
+}
+
+.ishin-badge.answer {
+  left: 7px;
+  background: var(--seat-color);
+  color: var(--surface);
+}
+
+.ishin-badge.guess {
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--heart-soft);
+  color: var(--heart);
+}
+
+.ishin-badge.guess .ishin-heart {
+  width: 11px;
+  height: 11px;
+}
+
+.ishin-badge.guess .ishin-heart path {
+  stroke: var(--heart);
+  fill: var(--heart);
+}
+
+@keyframes ishin-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* ---------- 待つ・相手が答えた ---------- */
+
+.ishin-partner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.ishin-lock {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ishin-mine {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* 小さな答えのカード（自分の答え・予想・見せ合い・一覧） */
+.ishin-mini {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 6px 9px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  text-align: center;
+}
+
+.ishin-mini .ishin-pic {
+  width: 40px;
+  height: 40px;
+}
+
+.ishin-mini-label {
+  max-width: 100%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ishin-mini-cap {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.ishin-mini.answer {
+  border-color: var(--seat-color);
+}
+
+.ishin-mini.guess {
+  border-style: dashed;
+  border-color: var(--seat-color);
+}
+
+/* まだ見えない相手の答え。裏返したカード */
+.ishin-mini.secret {
+  align-content: center;
+  border-style: dashed;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 7px, color-mix(in srgb, var(--seat-color) 10%, transparent) 7px 14px),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--seat-color) 55%, var(--line));
+}
+
+.ishin-secret-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px dashed var(--seat-color);
+  color: var(--seat-text);
+  font-family: var(--font-num);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.ishin-thinking {
+  animation: ishin-breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes ishin-breathe {
+  to {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- 見せ合い ---------- */
+
+.ishin-reveal {
+  display: grid;
+  gap: 12px;
+  padding: 16px 14px 14px;
+  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 4px var(--heart-soft);
+  animation: ishin-rise 0.35s ease-out;
+}
+
+.ishin-reveal-head {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.ishin-reveal-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--heart);
+}
+
+.ishin-reveal .ishin-q-text {
+  font-size: 1.1rem;
+}
+
+/* 1 人の答えと、それを当てようとした相手の予想を左右に並べ、まん中にハート */
+.ishin-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr);
+  align-items: center;
+}
+
+.ishin-link {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+/* 2 枚をつなぐ線 */
+.ishin-link::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  border-top: 2px dashed var(--line);
+}
+
+.ishin-link.hit::before {
+  border-top: 2.5px solid var(--heart);
+}
+
+.ishin-link .ishin-heart {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--heart) 45%, transparent));
+}
+
+.ishin-link .ishin-heart path {
+  stroke-width: 1.6;
+}
+
+.ishin-miss {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.ishin-match.hit .ishin-mini {
+  background: color-mix(in srgb, var(--heart) 7%, var(--surface));
+}
+
+.ishin-reveal .ishin-match .ishin-mini:last-child {
+  animation: ishin-flip 0.45s ease-out backwards;
+}
+
+.ishin-reveal .ishin-match:nth-of-type(2) .ishin-mini:last-child {
+  animation-delay: 0.25s;
+}
+
+.ishin-reveal .ishin-match:nth-of-type(3) .ishin-mini:last-child {
+  animation-delay: 0.65s;
+}
+
+.ishin-reveal .ishin-link .ishin-heart {
+  animation: ishin-beat 0.55s ease-out 0.6s backwards;
+}
+
+.ishin-reveal .ishin-match:nth-of-type(3) .ishin-link .ishin-heart {
+  animation-delay: 1s;
+}
+
+.ishin-gain {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.ishin-gain.hit {
+  color: var(--heart);
+}
+
+.ishin-reveal .ishin-next {
+  justify-self: center;
+  min-width: 60%;
+}
+
+@keyframes ishin-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes ishin-flip {
+  from {
+    opacity: 0;
+    transform: rotateY(80deg);
+  }
+}
+
+@keyframes ishin-beat {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+}
+
+/* ---------- 相性 ---------- */
+
+.ishin-result {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 22px 16px 18px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, var(--heart-soft), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.ishin-result-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ishin-gauge {
+  width: 132px;
+  height: 117px;
+  overflow: visible;
+}
+
+.ishin-gauge .shape {
+  fill: var(--surface);
+  stroke: var(--heart);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.ishin-gauge .level {
+  fill: var(--heart);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: ishin-fill 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.ishin-gauge .shine {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+@keyframes ishin-fill {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.ishin-pct {
+  margin-top: 4px;
+  font-family: var(--font-num);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--heart);
+}
+
+.ishin-pct small {
+  margin-left: 2px;
+  font-size: 1.3rem;
+}
+
+.ishin-tier {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.ishin-tier-text {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.ishin-score {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ---------- これまでの問題・ふたりの答え ---------- */
+
+.ishin-log h3 {
+  margin: 0 0 8px 4px;
+}
+
+.ishin-log ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ishin-log li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.ishin-log-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.ishin-log-no {
+  font-family: var(--font-num);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ishin-log-q {
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ishin-log-head .ishin-pair {
+  padding: 0;
+}
+
+.ishin-log-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.ishin-log-who {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ishin-log-who .token {
+  width: 9px;
+  height: 9px;
+}
+
+.ishin-log-who span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.ishin-log-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ishin-log-pick .ishin-pic {
+  width: 24px;
+  height: 24px;
+}
+
+.ishin-log-pick > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ishin-log-pick.answer > span {
+  font-weight: 700;
+}
+
+.ishin-log-pick.guess {
+  color: var(--ink-soft);
+}
+
+.ishin-log-pick .tag {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.ishin-log-pick .ishin-heart {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
