@@ -1,0 +1,625 @@
+/*
+ * ツボさがし。このファイルは styles.css より先に読み込まれるので、
+ * button や .score の既定値に負けないよう、クラスを 2 つ重ねて指定する。
+ * 背中は肌色ではなく、画面の色になじむ藍色の服の線画にする
+ */
+.tsubo {
+  --shirt: color-mix(in srgb, #6f80c4 12%, var(--surface));
+  --shirt-line: color-mix(in srgb, #6f80c4 55%, var(--muted));
+  --body-line: color-mix(in srgb, var(--muted) 75%, transparent);
+  --hair: color-mix(in srgb, var(--ink-soft) 38%, var(--surface));
+  /* 近さの色。あつい＝赤 → つめたい＝青。deep は線と文字に使う */
+  --hot: #f0604a;
+  --hot-deep: #c2361f;
+  --warm: #f5a23f;
+  --warm-deep: #b5620a;
+  --mild: #d8c04a;
+  --mild-deep: #806c0c;
+  --cold: #5e93e2;
+  --cold-deep: #2b5cb5;
+  /* ほぐれた＝やわらかい緑、こり＝くすんだ赤茶 */
+  --relax: #3fb183;
+  --relax-deep: #1d7a55;
+  --knot: #a4573b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tsubo {
+    --shirt: color-mix(in srgb, #8d9be6 15%, var(--surface));
+    --shirt-line: color-mix(in srgb, #8d9be6 55%, var(--muted));
+    --hot: #f2715c;
+    --hot-deep: #ff9580;
+    --warm: #f2a54a;
+    --warm-deep: #ffbe6e;
+    --mild: #d6c25a;
+    --mild-deep: #f0dc7a;
+    --cold: #5d8fe0;
+    --cold-deep: #93b8ff;
+    --relax: #48bf8f;
+    --relax-deep: #79e0b4;
+    --knot: #e39d80;
+    --pad: 72%;
+    --faded: 0.62;
+  }
+}
+
+/* ---------- 上：2 人の結果と回戦 ---------- */
+
+.tsubo .tsubo-scores {
+  width: 100%;
+}
+
+.tsubo .score {
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.tsubo .score.won {
+  border-color: var(--seat-color);
+  box-shadow: inset 0 0 0 1px var(--seat-color);
+}
+
+.tsubo-score-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tsubo-score-name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tsubo-score-value {
+  display: grid;
+  justify-items: end;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.tsubo .score .tsubo-score-value strong {
+  font-size: 1.05rem;
+}
+
+.tsubo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  width: 100%;
+}
+
+.tsubo-round {
+  font-weight: 700;
+}
+
+.tsubo-tabs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.tsubo-tabs button.on,
+.tsubo-tabs button {
+  min-height: 32px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tsubo-tabs button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+/* ---------- 背中 ---------- */
+
+/* 縦長なので、画面の高さにも収まるようにする（盤の上下の表示のぶん --chrome を引く） */
+.tsubo-back {
+  position: relative;
+  width: min(100%, 420px, calc(max(320px, 100dvh - var(--chrome, 340px)) * 100 / 112));
+  aspect-ratio: 100 / 112;
+  margin: 0 auto;
+}
+
+.tsubo-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tsubo-art * {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tsubo-body .shirt {
+  fill: var(--shirt);
+  stroke: var(--shirt-line);
+  stroke-width: 0.55;
+}
+
+.tsubo-body .seam {
+  fill: none;
+  stroke: var(--shirt-line);
+  stroke-width: 0.4;
+  opacity: 0.6;
+}
+
+.tsubo-body .skin {
+  fill: var(--surface);
+  stroke: var(--body-line);
+  stroke-width: 0.45;
+}
+
+.tsubo-body .arm-edge,
+.tsubo-body .arm {
+  fill: none;
+}
+
+.tsubo-body .arm-edge {
+  stroke: var(--body-line);
+  stroke-width: 6.4;
+}
+
+.tsubo-body .arm {
+  stroke: var(--surface);
+  stroke-width: 5.5;
+}
+
+.tsubo-body .head {
+  fill: var(--hair);
+  stroke: var(--body-line);
+  stroke-width: 0.5;
+}
+
+/* つむじ（うしろ姿の頭だと分かるように） */
+.tsubo-body .swirl {
+  fill: none;
+  stroke: var(--body-line);
+  stroke-width: 0.45;
+}
+
+/* 背骨の上は押さないので、マスのあいだに点線だけ引く */
+.tsubo-body .spine {
+  fill: none;
+  stroke: var(--shirt-line);
+  stroke-width: 0.5;
+  stroke-dasharray: 1.1 1.5;
+  opacity: 0.75;
+}
+
+/* ツボの候補（まだ押していないマス） */
+.tsubo-spot {
+  fill: var(--shirt-line);
+  opacity: 0.4;
+}
+
+.tsubo-back.searching .tsubo-spot,
+.tsubo-back.hiding .tsubo-spot {
+  opacity: 0.6;
+}
+
+/* SVG の g は位置を transform 属性で決めているので、動きは中の g に付ける */
+.tsubo-print,
+.tsubo-loose,
+.tsubo-knot,
+.tsubo-pending {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* 指の跡 */
+.tsubo-print {
+  --lv: var(--cold);
+  --lv-deep: var(--cold-deep);
+}
+
+.tsubo-print .pad {
+  fill: color-mix(in srgb, var(--lv) var(--pad, 42%), transparent);
+  stroke: var(--lv-deep);
+  stroke-width: 0.45;
+}
+
+.tsubo-print .ridge {
+  fill: none;
+  stroke: var(--lv-deep);
+  stroke-width: 0.32;
+  opacity: 0.75;
+}
+
+.tsubo-print.faded {
+  opacity: var(--faded, 0.42);
+}
+
+.tsubo-print.latest {
+  animation: tsubo-press 0.5s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+@keyframes tsubo-press {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+}
+
+.lv-hot {
+  --lv: var(--hot);
+  --lv-deep: var(--hot-deep);
+}
+
+.lv-warm {
+  --lv: var(--warm);
+  --lv-deep: var(--warm-deep);
+}
+
+.lv-mild {
+  --lv: var(--mild);
+  --lv-deep: var(--mild-deep);
+}
+
+.lv-cold {
+  --lv: var(--cold);
+  --lv-deep: var(--cold-deep);
+}
+
+.lv-hit {
+  --lv: var(--relax);
+  --lv-deep: var(--relax-deep);
+}
+
+/* ほぐれたこり */
+.tsubo-loose .ring,
+.tsubo-mini.loose .ring {
+  fill: color-mix(in srgb, var(--relax) 30%, transparent);
+  stroke: var(--relax-deep);
+  stroke-width: 0.5;
+}
+
+.tsubo-loose .check,
+.tsubo-mini.loose .check {
+  fill: none;
+  stroke: var(--relax-deep);
+  stroke-width: 0.75;
+}
+
+.tsubo-loose.latest {
+  animation: tsubo-loosen 0.7s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+@keyframes tsubo-loosen {
+  0% {
+    transform: scale(0.4) rotate(-30deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+.tsubo-loose .burst {
+  fill: none;
+  stroke: var(--relax);
+  stroke-width: 0.6;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tsubo-burst 0.9s ease-out forwards;
+}
+
+@keyframes tsubo-burst {
+  from {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.tsubo-loose .rays {
+  fill: none;
+  stroke: var(--relax-deep);
+  stroke-width: 0.5;
+  animation: tsubo-rays 1.1s ease-out forwards;
+}
+
+@keyframes tsubo-rays {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* こり（結び目） */
+.tsubo-knot path,
+.tsubo-mini.tight path {
+  fill: none;
+  stroke: var(--knot);
+  stroke-width: 0.65;
+}
+
+.tsubo-knot .halo {
+  fill: color-mix(in srgb, var(--knot) 13%, transparent);
+}
+
+/* ほぐしきれなかったこりは、点線の丸で囲む */
+.tsubo-knot.missed .halo {
+  stroke: var(--knot);
+  stroke-width: 0.4;
+  stroke-dasharray: 0.9 0.8;
+}
+
+.tsubo-knot.placing {
+  animation: tsubo-pop 0.3s ease-out;
+}
+
+@keyframes tsubo-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* 押して、サーバの返事を待っている間の指 */
+.tsubo-pending ellipse {
+  fill: color-mix(in srgb, var(--seat-color) 18%, transparent);
+  stroke: var(--seat-color);
+  stroke-width: 0.45;
+  stroke-dasharray: 0.9 0.7;
+  animation: tsubo-wait 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes tsubo-wait {
+  to {
+    opacity: 0.35;
+  }
+}
+
+/* マスのボタン（絵の上に重ねる。見た目は絵の方で出す） */
+.tsubo-grid {
+  position: absolute;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+}
+
+.tsubo-grid button.tsubo-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tsubo-grid button.tsubo-cell:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* 押せるマスは、指を乗せると自分の色の輪が出る */
+.tsubo-grid .tsubo-cell::before {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(80%, 34px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid var(--seat-color);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+.tsubo-grid .tsubo-cell.can:hover::before,
+.tsubo-grid .tsubo-cell.can:focus-visible::before {
+  opacity: 0.55;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.tsubo-grid .tsubo-cell.can:active::before {
+  opacity: 0.9;
+  transform: translate(-50%, -50%) scale(0.85);
+}
+
+/* 押したばかりの近さの吹き出し。しばらくすると消える（下の説明にも残る） */
+.tsubo-bubble {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--lv-deep);
+  color: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+  animation: tsubo-bubble 2.6s ease-out forwards;
+}
+
+.tsubo-bubble.lv-hit {
+  padding: 3px 14px;
+  font-size: 0.95rem;
+  animation-duration: 3.2s;
+}
+
+@keyframes tsubo-bubble {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.8);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -110%) scale(1.05);
+  }
+  20% {
+    transform: translate(-50%, -100%) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%);
+  }
+}
+
+/* ---------- 下：残りのこりと押した回数 ---------- */
+
+.tsubo-meter {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.tsubo-meter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.tsubo-minis {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tsubo-minis > span.off {
+  opacity: 0.28;
+}
+
+.tsubo-mini {
+  display: block;
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+}
+
+.tsubo-mini * {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tsubo-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.tsubo-count strong {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.tsubo-note > span {
+  text-wrap: balance;
+  word-break: auto-phrase;
+}
+
+.tsubo-note .tsubo-warn {
+  color: var(--danger);
+}
+
+.tsubo-note .tsubo-done {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.tsubo-note .tsubo-goal,
+.tsubo-note .tsubo-left {
+  font-weight: 700;
+}
+
+/* 結果の下の「つぎへ」は、背中が画面に収まっていても押せるよう、画面の下にとどめる */
+.tsubo .tsubo-next {
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 3;
+  min-width: 180px;
+  box-shadow: var(--shadow);
+}
+
+/* 近さの色の見本 */
+.tsubo-legend {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.tsubo-legend-title {
+  text-align: center;
+}
+
+.tsubo-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tsubo-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.tsubo-legend li i {
+  width: 12px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--lv) 42%, transparent);
+  border: 1.5px solid var(--lv-deep);
+}
+
+.tsubo-legend li b {
+  color: var(--lv-deep);
+}
