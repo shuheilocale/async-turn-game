@@ -3,12 +3,14 @@ import { Artillery, type Seat } from "@atg/core";
 import { useI18n, type T } from "../i18n/index.tsx";
 import type { BoardProps } from "./index.ts";
 import type { ArtilleryView, Display, ShotPlay } from "./artillery/scene.ts";
+import { gaugeAt, previewOf } from "./artillery/gauge.ts";
 import "./ArtilleryBoard.css";
 
 type State = Artillery.ArtilleryState;
 type Field = Artillery.Field;
 type Shot = Artillery.Shot;
 type Move = Artillery.ArtilleryMove;
+type DriveError = Artillery.DriveError;
 
 /** 盤の絵（Phaser）は、この盤を開いたときに初めて読み込む */
 let sceneModule: Promise<typeof import("./artillery/scene.ts")> | null = null;
@@ -23,12 +25,13 @@ const loadScene = () =>
 const HOLD_MS = 650;
 /** 続けて再生するときの間（ミリ秒） */
 const GAP_MS = 350;
-/** 予想の線に使う、弾の最初のきざみの数（1/3 秒ほど） */
-const PREVIEW_STEPS = 40;
-/** 盤の幅のこの割合だけ指を引くと、強さ 100 */
-const PULL_FULL = 0.42;
-/** 指を引いたとみなす距離（px）。これより短ければ狙いを変えない */
+/** 指を引いたとみなす距離（px）。これより短ければ向きを変えない */
 const PULL_MIN = 8;
+/** 動くボタンを押し続けたとき：最初の 1 本のあと続けて動き出すまでの間と、1 本ごとの間（ミリ秒） */
+const DRIVE_DELAY_MS = 220;
+const DRIVE_EVERY_MS = 85;
+/** 動けなかった理由を出しておく時間（ミリ秒） */
+const BLOCKED_MS = 2200;
 
 /** 再生する 1 発。HUD（体力・残りの弾・風）も、再生中はこれに合わせる */
 interface Clip {
@@ -40,9 +43,21 @@ interface Clip {
   local: boolean;
 }
 
+/** 「撃つ」を押している間。pointer は押している指（キーボードなら "key"） */
+interface Charge {
+  start: number;
+  pointer: number | "key";
+}
+
+/** 動くボタンを押し続けている間 */
+interface Hold {
+  dir: -1 | 1;
+  timeout: number;
+  interval: number;
+}
+
 const fieldOf = (s: Field): Field => ({ terrain: s.terrain, cannons: s.cannons, hp: s.hp });
 const clampAngle = (a: number) => Math.max(0, Math.min(180, Math.round(a)));
-const clampPower = (p: number) => Math.max(0, Math.min(100, Math.round(p)));
 const prefersDark = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
 
 /** それぞれが最後に撃った向き（まだなら外向きの 45 度） */
@@ -50,6 +65,12 @@ function anglesOf(shots: readonly Shot[]): [number, number] {
   const angles: [number, number] = [45, 135];
   for (const shot of shots) angles[shot.seat] = shot.angle;
   return angles;
+}
+
+/** seat が最後に撃った強さ（まだなら null）。ゲージに印を付ける */
+function lastPowerOf(shots: readonly Shot[], seat: Seat | null): number | null {
+  for (let i = shots.length - 1; i >= 0; i--) if (shots[i]!.seat === seat) return shots[i]!.power;
+  return null;
 }
 
 function displayOf(s: State, field: Field, used: number, active: Seat | null, angles = anglesOf(s.shots.slice(0, used))): Display {
@@ -63,11 +84,17 @@ function displayOf(s: State, field: Field, used: number, active: Seat | null, an
   };
 }
 
-/** index 発目（shot）を、撃つ前の場 before から撃って after になった 1 発として再生する準備 */
+/**
+ * index 発目（shot）を、手番の始まりの場 before から動いて撃ち、after になった 1 発として再生する準備。
+ * 自分で撃った手（local）は、もう動いたあとの場を before に渡す（動くところは見せ直さない）
+ */
 function clipOf(s: State, index: number, before: Field, after: Field, local: boolean, aimAngle?: number): Clip {
   const shot = s.shots[index]!;
   const wind = s.winds[index] ?? 0;
-  const flight = Artillery.fly(before, shot.seat, shot, wind, true);
+  // 動いた道のり。前の作りの記録（動いた位置がない）なら動かない
+  const route = local ? [] : Artillery.routeOf(before, shot);
+  const from = local ? before : Artillery.firedFrom(before, shot);
+  const flight = Artillery.fly(from, shot.seat, shot, wind, true);
   const angles = anglesOf(s.shots.slice(0, index));
   if (aimAngle !== undefined) angles[shot.seat] = aimAngle;
   return {
@@ -76,6 +103,7 @@ function clipOf(s: State, index: number, before: Field, after: Field, local: boo
     local,
     play: {
       seat: shot.seat,
+      route,
       angle: shot.angle,
       path: flight.path,
       impact: flight.impact,
@@ -86,20 +114,14 @@ function clipOf(s: State, index: number, before: Field, after: Field, local: boo
   };
 }
 
-/** 直前の 1 発の再生 */
+/** 直前の 1 発の再生（動く → 撃つ → 爆発） */
 const replayOf = (s: State): Clip | null =>
   s.before && s.shots.length > 0 ? clipOf(s, s.shots.length - 1, s.before, fieldOf(s), false) : null;
 
-/** seat が次に撃つときの狙いの初めの値。前に撃った手があればそれ */
-function startAim(s: State, seat: Seat): Move {
-  for (let i = s.shots.length - 1; i >= 0; i--) {
-    const shot = s.shots[i]!;
-    if (shot.seat === seat) return { angle: shot.angle, power: shot.power };
-  }
-  return { angle: seat === 0 ? 45 : 135, power: 62 };
-}
+/** seat が次に撃つときの向きの初めの値。前に撃った向きがあればそれ */
+const startAngle = (s: State, seat: Seat): number => anglesOf(s.shots)[seat];
 
-/** 角度の見せ方：自分の向いている側から測った仰角と、向きの矢印 */
+/** 向きの見せ方：自分の向いている側から測った仰角と、向きの矢印 */
 function angleText(angle: number) {
   const elevation = angle <= 90 ? angle : 180 - angle;
   const arrow = angle < 88 ? "↗" : angle > 92 ? "↖" : "↑";
@@ -108,9 +130,10 @@ function angleText(angle: number) {
 
 /**
  * 地形の上の大砲で撃ち合う盤。絵は Phaser（artillery/scene.ts）で描き、操作・体力・風の表示は React。
- * 自分の番には、盤の上で指を置いて後ろへ引く（大砲を引きしぼる向き）か、スライダーで角度と強さを決めて「撃つ」。
- * 撃つとすぐに同じ計算で弾を飛ばして見せ、同時にサーバへ送る（やり直しはできない）。
- * 相手の手は、開いたとき・届いたときに再生する
+ * 自分の番は「動く → 向きを決める → 長押しで強さを決めて撃つ」。左右の矢印を押している間、大砲が地形にそって動く
+ * （燃料の分だけ）。向きは盤の上を指で引くか、− ＋・スライダーで決める。「撃つ」を押している間ゲージがたまり、
+ * 離した瞬間の強さで撃つ。撃つとすぐに同じ計算で弾を飛ばして見せ、同時にサーバへ送る（やり直しはできない）。
+ * 相手の手は、開いたとき・届いたときに「動く → 撃つ → 爆発」を再生する
  */
 export function ArtilleryBoard({ state, status, you, names, interactive, onSubmit }: BoardProps) {
   const { t } = useI18n();
@@ -123,15 +146,28 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
   const [clip, setClip] = useState<Clip | null>(null);
   const [impacted, setImpacted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [aim, setAim] = useState<Move>(() => startAim(s, you ?? 0));
-  const [pull, setPull] = useState<number | null>(null);
+  const [angle, setAngle] = useState(() => startAngle(s, you ?? 0));
+  /** この手番に動いた量（柱の数、左が負）。撃つときに一緒に送る */
+  const [drive, setDrive] = useState(0);
+  const driveRef = useRef(0);
+  const [dragging, setDragging] = useState(false);
+  const [charge, setCharge] = useState<Charge | null>(null);
+  const chargeRef = useRef<Charge | null>(null);
+  /** 撃った強さ（ゲージに残しておく）。次の手番で消す */
+  const [released, setReleased] = useState<number | null>(null);
+  const [holding, setHolding] = useState<-1 | 1 | null>(null);
+  const hold = useRef<Hold | null>(null);
+  const [blocked, setBlocked] = useState<DriveError | null>(null);
+  /** 指が外れて、撃つのをやめたとき */
+  const [canceled, setCanceled] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const viewEl = useRef<HTMLDivElement>(null);
+  const gauge = useRef<HTMLSpanElement>(null);
   const clipRef = useRef<Clip | null>(null);
   const queue = useRef<Clip[]>([]);
   /** 表示を済ませた（または再生を決めた）弾の数 */
   const shown = useRef(count);
-  const drag = useRef<{ id: number; x: number; y: number; width: number } | null>(null);
+  const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const labels = { direct: t("game.artillery.direct"), out: t("game.artillery.out") };
 
   function startClip(c: Clip | null) {
@@ -198,7 +234,7 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
     if (last && last.seat !== you) enqueue(replayOf(s));
   }, []);
 
-  // 弾の数が変わったら：相手の手なら再生し、狙いを自分の前の手に戻す
+  // 弾の数が変わったら：相手の手なら再生する
   useEffect(() => {
     if (count === shown.current) return;
     const prev = shown.current;
@@ -213,8 +249,14 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
     }
   }, [count]);
 
+  // 手番が替わったら、向きを自分の前の手に戻し、動いた量を消す。撃った強さは、相手が撃つまでゲージに残す
   useEffect(() => {
-    if (you !== null) setAim(startAim(s, you));
+    if (you !== null) setAngle(startAngle(s, you));
+    driveRef.current = 0;
+    setDrive(0);
+    if (s.shots[count - 1]?.seat !== you) setReleased(null);
+    setBlocked(null);
+    setCanceled(false);
   }, [count, you]);
 
   // 再生：相手の手は少し間をおいてから。終わったら次へ（なければ今の場に戻す）
@@ -226,7 +268,7 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
     }
     if (!view) return;
     let alive = true;
-    // 相手の手は、撃つ前の場を少し見せてから撃つ
+    // 相手の手は、撃つ前の場を少し見せてから動いて撃つ
     if (!clip.local) view.show(clip.play.before);
     const timer = setTimeout(
       () => {
@@ -249,15 +291,21 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
 
   const canAim = interactive && you !== null && !finished && !clip && !busy && status.kind === "playing" && status.turn === you;
   const wind = clip ? clip.wind : Artillery.windNow(s);
+  const field = fieldOf(s);
+  // 自分の番に動かした大砲は、送ってサーバから次の場が届くまで、動かした所に置いておく
+  const myTurn = you !== null && status.kind === "playing" && status.turn === you;
+  const placed = myTurn && drive !== 0 ? Artillery.driven(field, you, drive) : field;
+  const fuelUsed = myTurn ? Artillery.drivePath(field, you, drive).fuel : 0;
+  const fuelLeft = Math.max(0, Artillery.FUEL - fuelUsed);
 
   // 止まっている場と狙いを Phaser に伝える
   useEffect(() => {
     if (!view || clip) return;
     const active = status.kind === "playing" ? status.turn : null;
     const angles = anglesOf(s.shots);
-    if (canAim && you !== null) angles[you] = aim.angle;
-    view.show(displayOf(s, fieldOf(s), count, active, angles));
-  }, [view, clip, s, status, canAim]);
+    if (canAim && you !== null) angles[you] = angle;
+    view.show(displayOf(s, placed, count, active, angles));
+  }, [view, clip, s, status, canAim, drive]);
 
   useEffect(() => {
     if (!view || clip) return;
@@ -265,13 +313,92 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
       view.clearAim();
       return;
     }
-    const preview = Artillery.fly(s, you, aim, wind, true).path.slice(0, PREVIEW_STEPS).filter((_, i) => i % 4 === 2);
-    view.aim(you, aim.angle, preview, pull);
-  }, [view, clip, canAim, aim, pull, s, wind]);
+    view.aim(you, angle, previewOf(placed.cannons[you], angle), dragging);
+  }, [view, clip, canAim, angle, dragging, s, drive]);
 
-  async function fire() {
+  // 動けなかった理由は、少しの間だけ出す
+  useEffect(() => {
+    if (!blocked) return;
+    const timer = setTimeout(() => setBlocked(null), BLOCKED_MS);
+    return () => clearTimeout(timer);
+  }, [blocked]);
+
+  // ---------- 動く ----------
+
+  /** 1 本動く。動けなければ理由を出して false */
+  function stepDrive(dir: -1 | 1): boolean {
+    if (!canAim || you === null || chargeRef.current) return false;
+    const next = driveRef.current + dir;
+    const { error } = Artillery.drivePath(field, you, next);
+    if (error) {
+      setBlocked(error);
+      return false;
+    }
+    driveRef.current = next;
+    setDrive(next);
+    setBlocked(null);
+    setCanceled(false);
+    return true;
+  }
+
+  function stopDrive() {
+    const h = hold.current;
+    if (!h) return;
+    clearTimeout(h.timeout);
+    clearInterval(h.interval);
+    hold.current = null;
+    setHolding(null);
+  }
+
+  /** 押している間、1 本ずつ動き続ける（動けなくなったら止まる） */
+  function startDrive(dir: -1 | 1) {
+    stopDrive();
+    if (!stepDrive(dir)) return;
+    const h: Hold = { dir, timeout: 0, interval: 0 };
+    h.timeout = window.setTimeout(() => {
+      h.interval = window.setInterval(() => {
+        if (!latest.current.stepDrive(dir)) latest.current.stopDrive();
+      }, DRIVE_EVERY_MS);
+    }, DRIVE_DELAY_MS);
+    hold.current = h;
+    setHolding(dir);
+  }
+
+  // ---------- 長押しで撃つ ----------
+
+  function startCharge(pointer: Charge["pointer"]) {
+    if (!canAim || chargeRef.current) return;
+    // 押し始めたら、ほかの操作（動く・指で引く）は止める
+    stopDrive();
+    drag.current = null;
+    setDragging(false);
+    const c = { start: performance.now(), pointer };
+    chargeRef.current = c;
+    setCharge(c);
+    setCanceled(false);
+    setBlocked(null);
+  }
+
+  /** 離した：その瞬間の強さで撃つ */
+  function release() {
+    const c = chargeRef.current;
+    if (!c) return;
+    chargeRef.current = null;
+    setCharge(null);
+    fire(gaugeAt(performance.now() - c.start));
+  }
+
+  /** 指が外れた・画面を離れた：撃たずにやめる */
+  function abort() {
+    if (!chargeRef.current) return;
+    chargeRef.current = null;
+    setCharge(null);
+    setCanceled(true);
+  }
+
+  async function fire(power: number) {
     if (!canAim || you === null) return;
-    const move = { angle: clampAngle(aim.angle), power: clampPower(aim.power) };
+    const move: Move = { angle: clampAngle(angle), power, drive: driveRef.current };
     let next: State;
     try {
       next = Artillery.artillery.applyMove(s, move, you);
@@ -280,7 +407,8 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
     }
     // 結果を見てから取り消せないよう、飛ばし始めると同時に送る
     shown.current = count + 1;
-    startClip(clipOf(next, count, fieldOf(s), fieldOf(next), true, move.angle));
+    setReleased(power);
+    startClip(clipOf(next, count, Artillery.driven(field, you, move.drive), fieldOf(next), true, move.angle));
     setBusy(true);
     const ok = await onSubmit(move);
     setBusy(false);
@@ -289,51 +417,121 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
       queue.current = [];
       view?.cancel();
       startClip(null);
+      setReleased(null);
     }
   }
+
+  // window の listener やタイマーからも、いちばん新しい描画の関数を呼べるようにする
+  const latest = useRef({ stepDrive, stopDrive, startCharge, release, abort });
+  latest.current = { stepDrive, stopDrive, startCharge, release, abort };
+
+  // 押している間は、ゲージを毎コマ描き直す（React の描き直しはせず、CSS の値だけ変える）
+  useEffect(() => {
+    const el = gauge.current;
+    if (!el) return;
+    if (!charge) {
+      el.style.setProperty("--power", String((released ?? 0) / 100));
+      return;
+    }
+    let frame = requestAnimationFrame(function tick() {
+      el.style.setProperty("--power", String(gaugeAt(performance.now() - charge.start) / 100));
+      frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [charge, released]);
+
+  // 押している途中で画面を離れたら、撃たずにやめる
+  useEffect(() => {
+    if (!charge) return;
+    const stop = () => latest.current.abort();
+    const hidden = () => document.visibilityState === "hidden" && stop();
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, [charge]);
+
+  // PC：Space を押している間ゲージがたまり、離すと撃つ（文字を打つ所やほかのボタンにいるときは使わない）
+  const keyActive = canAim || charge !== null;
+  useEffect(() => {
+    if (!keyActive) return;
+    const isSpace = (e: globalThis.KeyboardEvent) => e.key === " " || e.code === "Space";
+    const elsewhere = (e: globalThis.KeyboardEvent) => {
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (!el) return false;
+      if (el.closest("input, textarea, select, [contenteditable='true']")) return true;
+      const control = el.closest("button, a");
+      return !!control && !control.classList.contains("artillery-fire");
+    };
+    const down = (e: globalThis.KeyboardEvent) => {
+      if (!isSpace(e) || e.metaKey || e.ctrlKey || e.altKey || elsewhere(e)) return;
+      e.preventDefault();
+      if (!e.repeat) latest.current.startCharge("key");
+    };
+    const up = (e: globalThis.KeyboardEvent) => {
+      if (!isSpace(e) || chargeRef.current?.pointer !== "key") return;
+      e.preventDefault();
+      latest.current.release();
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [keyActive]);
+
+  // 盤を離れるときは、動き続けるタイマーを止める
+  useEffect(() => () => latest.current.stopDrive(), []);
 
   function replayLast() {
     if (clipRef.current) return;
     enqueue(replayOf(s));
   }
 
-  // ---------- 指で引いて狙う ----------
+  // ---------- 指で引いて向きを決める ----------
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    if (!canAim || !e.isPrimary || (e.target as HTMLElement).closest("button")) return;
+    if (!canAim || chargeRef.current || !e.isPrimary || (e.target as HTMLElement).closest("button")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, width: e.currentTarget.getBoundingClientRect().width };
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    // 引いた向きの反対へ撃つ（画面の y は下向きなので、上下も反対にする）
+    // 引いた向きの反対へ撃つ（画面の y は下向きなので、上下も反対にする）。強さは長押しで決めるので、引いた長さは使わない
     const dx = d.x - e.clientX;
     const dy = e.clientY - d.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < PULL_MIN) return;
-    let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    if (angle < 0) angle = dx >= 0 ? 0 : 180;
-    const power = clampPower((Math.min(1, dist / (d.width * PULL_FULL)) * 100));
-    setAim({ angle: clampAngle(angle), power });
-    setPull(power);
+    if (Math.hypot(dx, dy) < PULL_MIN) return;
+    let a = (Math.atan2(dy, dx) * 180) / Math.PI;
+    if (a < 0) a = dx >= 0 ? 0 : 180;
+    setAngle(clampAngle(a));
+    setDragging(true);
   }
 
   function endDrag(e: PointerEvent<HTMLDivElement>) {
     if (drag.current?.id !== e.pointerId) return;
     drag.current = null;
-    setPull(null);
+    setDragging(false);
   }
 
+  /** 砲身を立てる（up なら真上で止める）・向いている側へ寝かせる。90 度より右向きか左向きかで、角度の増やし方が逆になる */
+  const tilt = (a: number, up: boolean, step: number) => {
+    if (up) return a < 90 ? Math.min(90, a + step) : Math.max(90, a - step);
+    return clampAngle(a < 90 || (a === 90 && you === 0) ? a - step : a + step);
+  };
+
+  // ←→ で動く、↑↓ で砲身を立てる・寝かせる（盤の中にフォーカスがあるとき）
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (!canAim) return;
+    if (!canAim || chargeRef.current || (e.target as HTMLElement).closest("input")) return;
     const step = e.shiftKey ? 5 : 1;
-    if (e.key === "ArrowLeft") setAim((a) => ({ ...a, angle: clampAngle(a.angle + step) }));
-    else if (e.key === "ArrowRight") setAim((a) => ({ ...a, angle: clampAngle(a.angle - step) }));
-    else if (e.key === "ArrowUp") setAim((a) => ({ ...a, power: clampPower(a.power + step) }));
-    else if (e.key === "ArrowDown") setAim((a) => ({ ...a, power: clampPower(a.power - step) }));
-    else if (e.key === "Enter") fire();
+    if (e.key === "ArrowLeft") stepDrive(-1);
+    else if (e.key === "ArrowRight") stepDrive(1);
+    else if (e.key === "ArrowUp") setAngle((a) => tilt(a, true, step));
+    else if (e.key === "ArrowDown") setAngle((a) => tilt(a, false, step));
     else return;
     e.preventDefault();
   }
@@ -347,10 +545,43 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
   const turnSeat: Seat | null = clip ? clip.play.seat : status.kind === "playing" ? status.turn : null;
   const nameOf = (seat: Seat) => (seat === you ? t("game.artillery.you") : t("game.artillery.someone", { name: names[seat] }));
   const note = noteText(t, s, status, clip, impacted, canAim, you, names, nameOf);
-  const { elevation, arrow } = angleText(aim.angle);
+  const { elevation, arrow } = angleText(angle);
+  const lastPower = lastPowerOf(s.shots, you);
+  const shownPower = released ?? lastPower;
+  const hint = charge ? t("game.artillery.charging") : canceled ? t("game.artillery.canceled") : blocked ? t(`error.${blocked}`) : null;
+  const preventMenu = (e: { preventDefault(): void }) => e.preventDefault();
+  // 「撃つ」を押している間は、ほかの操作を受けない（2 本目の指で動いたり向きが変わったりしないように）
+  const locked = !canAim || charge !== null;
+  const windIndex = clip ? clip.index : count;
+
+  /** 押している間すすむ、左右の矢印ボタン */
+  const driveButton = (dir: -1 | 1) => (
+    <button
+      type="button"
+      className={`artillery-drive ${holding === dir ? "pressing" : ""}`}
+      aria-label={t(dir < 0 ? "game.artillery.moveLeft" : "game.artillery.moveRight")}
+      disabled={locked}
+      onPointerDown={(e) => {
+        if (e.button !== 0 || !e.isPrimary) return;
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        startDrive(dir);
+      }}
+      onPointerUp={stopDrive}
+      onPointerCancel={stopDrive}
+      onLostPointerCapture={stopDrive}
+      onContextMenu={preventMenu}
+      // キーボードで押したとき（detail が 0）は 1 本だけ
+      onClick={(e) => e.detail === 0 && stepDrive(dir)}
+    >
+      <svg viewBox="0 0 20 20" aria-hidden>
+        <path d={dir < 0 ? "M12 4.5 6.5 10l5.5 5.5" : "m8 4.5 5.5 5.5L8 15.5"} />
+      </svg>
+    </button>
+  );
 
   return (
-    <div className={`artillery-board stack-sm ${you !== null ? `seat${you}` : ""}`}>
+    <div className={`artillery-board stack-sm ${you !== null ? `seat${you}` : ""}`} onKeyDown={onKeyDown}>
       <div
         ref={viewEl}
         className={`artillery-view ${canAim ? "aiming" : ""}`}
@@ -361,7 +592,8 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onKeyDown={onKeyDown}
+        onLostPointerCapture={endDrag}
+        onContextMenu={preventMenu}
       >
         {/* 絵が出るまで（出せないとき）の、地形と大砲だけの簡単な絵 */}
         <LiteView s={s} />
@@ -385,10 +617,11 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
               </span>
             </div>
           ))}
-          <WindGauge wind={wind} t={t} />
+          {/* 風が変わったら（手番ごと）、作り直して目立たせる */}
+          <WindGauge key={windIndex} wind={wind} t={t} />
         </div>
 
-        {count > 0 && !clip && (
+        {count > 0 && !clip && !charge && (
           <button type="button" className="artillery-replay ghost-button" onClick={replayLast}>
             {t("game.artillery.replay")}
           </button>
@@ -396,17 +629,38 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
       </div>
 
       {you !== null && !finished && (
-        <div className="artillery-controls">
-          <div className="artillery-row">
+        <div className={`artillery-controls ${canAim ? "" : "idle"}`}>
+          <div className={`artillery-row artillery-move ${holding !== null ? "active" : ""}`}>
+            <span className="artillery-label">
+              <i aria-hidden>1</i>
+              {t("game.artillery.move")}
+            </span>
+            {driveButton(-1)}
+            <span
+              className={`artillery-fuel ${fuelLeft <= 0 ? "empty" : ""} ${blocked ? "blocked" : ""}`}
+              role="meter"
+              aria-label={t("game.artillery.fuelLeft", { n: Math.round((fuelLeft / Artillery.FUEL) * 100) })}
+              aria-valuemin={0}
+              aria-valuemax={Artillery.FUEL}
+              aria-valuenow={fuelLeft}
+            >
+              <i style={{ width: `${(fuelLeft / Artillery.FUEL) * 100}%` }} />
+              <small aria-hidden>{t("game.artillery.fuel")}</small>
+            </span>
+            {driveButton(1)}
+          </div>
+
+          <div className={`artillery-row artillery-aim ${dragging ? "active" : ""}`}>
             <span className="artillery-label" id="artillery-angle">
+              <i aria-hidden>2</i>
               {t("game.artillery.angle")}
             </span>
             <button
               type="button"
               className="artillery-step"
               aria-label={t("game.artillery.left")}
-              disabled={!canAim}
-              onClick={() => setAim((a) => ({ ...a, angle: clampAngle(a.angle + 1) }))}
+              disabled={locked}
+              onClick={() => setAngle((a) => clampAngle(a + 1))}
             >
               <svg viewBox="0 0 20 20" aria-hidden>
                 <path d="M12.5 5 7.5 10l5 5" />
@@ -417,18 +671,18 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
               type="range"
               min={0}
               max={180}
-              value={180 - aim.angle}
-              disabled={!canAim}
+              value={180 - angle}
+              disabled={locked}
               aria-labelledby="artillery-angle"
               aria-valuetext={`${arrow} ${elevation}°`}
-              onChange={(e) => setAim((a) => ({ ...a, angle: clampAngle(180 - Number(e.target.value)) }))}
+              onChange={(e) => setAngle(clampAngle(180 - Number(e.target.value)))}
             />
             <button
               type="button"
               className="artillery-step"
               aria-label={t("game.artillery.right")}
-              disabled={!canAim}
-              onClick={() => setAim((a) => ({ ...a, angle: clampAngle(a.angle - 1) }))}
+              disabled={locked}
+              onClick={() => setAngle((a) => clampAngle(a - 1))}
             >
               <svg viewBox="0 0 20 20" aria-hidden>
                 <path d="m7.5 5 5 5-5 5" />
@@ -439,51 +693,68 @@ export function ArtilleryBoard({ state, status, you, names, interactive, onSubmi
               {elevation}°
             </output>
           </div>
-          <div className="artillery-row">
-            <span className="artillery-label" id="artillery-power">
-              {t("game.artillery.power")}
-            </span>
+
+          {/* 強さのゲージと「撃つ」（案内ではまとめて光らせる） */}
+          <div className="artillery-power-fire">
+            <div className={`artillery-row artillery-power ${charge ? "active" : ""}`}>
+              <span className="artillery-label">
+                <i aria-hidden>3</i>
+                {t("game.artillery.power")}
+              </span>
+              <span className={`artillery-gauge ${charge ? "charging" : ""}`} ref={gauge} aria-hidden>
+                <i className="fill" />
+                {/* 前回自分が撃った強さの印 */}
+                {lastPower !== null && <b className="last" style={{ left: `${lastPower}%` }} />}
+              </span>
+              {/* 撃った強さ。まだ撃っていなければ前回の強さ */}
+              <output className="artillery-value num" aria-label={shownPower === null ? undefined : t("game.artillery.powerOf", { n: shownPower })}>
+                {charge ? null : released !== null ? (
+                  <b>{released}</b>
+                ) : lastPower !== null ? (
+                  <>
+                    <small>{t("game.artillery.lastPower")}</small>
+                    {lastPower}
+                  </>
+                ) : (
+                  "–"
+                )}
+              </output>
+            </div>
+
             <button
               type="button"
-              className="artillery-step"
-              aria-label={t("game.artillery.weaker")}
-              disabled={!canAim}
-              onClick={() => setAim((a) => ({ ...a, power: clampPower(a.power - 1) }))}
+              className={`primary artillery-fire ${charge ? "charging" : ""}`}
+              disabled={!canAim && !charge}
+              onPointerDown={(e) => {
+                if (e.button !== 0 || !e.isPrimary) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startCharge(e.pointerId);
+              }}
+              onPointerUp={(e) => chargeRef.current?.pointer === e.pointerId && release()}
+              onPointerCancel={(e) => chargeRef.current?.pointer === e.pointerId && abort()}
+              onLostPointerCapture={(e) => chargeRef.current?.pointer === e.pointerId && abort()}
+              onContextMenu={preventMenu}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (!e.repeat) startCharge("key");
+              }}
+              onKeyUp={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (chargeRef.current?.pointer === "key") release();
+              }}
             >
-              <svg viewBox="0 0 20 20" aria-hidden>
-                <path d="M5 10h10" />
-              </svg>
+              <span className="artillery-fire-label">{t(charge ? "game.artillery.release" : "game.artillery.hold")}</span>
+              <span className="artillery-fire-hint">{t(charge ? "game.artillery.releaseHint" : "game.artillery.holdHint")}</span>
             </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={aim.power}
-              disabled={!canAim}
-              aria-labelledby="artillery-power"
-              onChange={(e) => setAim((a) => ({ ...a, power: clampPower(Number(e.target.value)) }))}
-            />
-            <button
-              type="button"
-              className="artillery-step"
-              aria-label={t("game.artillery.stronger")}
-              disabled={!canAim}
-              onClick={() => setAim((a) => ({ ...a, power: clampPower(a.power + 1) }))}
-            >
-              <svg viewBox="0 0 20 20" aria-hidden>
-                <path d="M5 10h10M10 5v10" />
-              </svg>
-            </button>
-            <output className="artillery-value num">{aim.power}</output>
           </div>
-          <button type="button" className="primary artillery-fire" onClick={fire} disabled={!canAim}>
-            {t("game.artillery.fire")}
-          </button>
         </div>
       )}
 
       <p className="board-note">
-        {note.main && <span>{note.main}</span>}
+        {(hint ?? note.main) && <span className={hint && !charge ? "artillery-alert" : ""}>{hint ?? note.main}</span>}
         {note.sub && <span className="muted">{note.sub}</span>}
         {failed && <span className="muted">{t("game.artillery.noScene")}</span>}
       </p>
@@ -496,29 +767,40 @@ function windText(t: T, wind: number): string {
   return t(wind > 0 ? "game.artillery.windRight" : "game.artillery.windLeft", { n: Math.abs(wind) });
 }
 
-/** 風の向きと強さ：旗と矢印と数字 */
+/** 風の向きと強さ：旗と、強さに合わせてのびる矢印と、数字と、5 つの目盛り */
 function WindGauge({ wind, t }: { wind: number; t: T }) {
   const strength = Math.abs(wind) / Artillery.WIND_MAX;
   const dir = wind < 0 ? -1 : 1;
-  const len = 6 + strength * 22;
+  const len = 10 + strength * 34;
+  const level = wind === 0 ? "calm" : Math.abs(wind) <= 3 ? "weak" : Math.abs(wind) <= 6 ? "mid" : "strong";
   return (
-    <div className="artillery-wind" aria-label={windText(t, wind)}>
-      <svg viewBox="-20 -9 40 18" aria-hidden className={wind === 0 ? "calm" : ""}>
-        {wind === 0 ? (
-          <circle cx="0" cy="0" r="3" />
-        ) : (
-          <g transform={`scale(${dir} 1)`}>
-            <path d={`M${-len / 2} 0H${len / 2}`} />
-            <path d={`M${len / 2 - 5} -4.5 ${len / 2} 0 ${len / 2 - 5} 4.5`} />
-          </g>
-        )}
-      </svg>
-      <span className="artillery-wind-label">
+    <div className={`artillery-wind ${level}`} aria-label={windText(t, wind)} role="img">
+      <span className="artillery-wind-head">
         <svg viewBox="0 0 16 16" aria-hidden className={`artillery-flag ${wind === 0 ? "calm" : wind < 0 ? "left" : "right"}`}>
           <path d="M3 15V1.5" className="pole" />
           <path d="M3.5 2h9l-2.2 3 2.2 3h-9z" className="cloth" />
         </svg>
-        {wind === 0 ? t("game.artillery.calm") : <b className="num">{Math.abs(wind)}</b>}
+        {t("game.artillery.wind")}
+      </span>
+      <span className="artillery-wind-body">
+        {wind === 0 ? (
+          <span className="artillery-wind-calm">{t("game.artillery.calm")}</span>
+        ) : (
+          <>
+            <svg viewBox="-24 -9 48 18" aria-hidden className="artillery-wind-arrow">
+              <g transform={`scale(${dir} 1)`}>
+                <path d={`M${-len / 2} 0H${len / 2}`} />
+                <path d={`M${len / 2 - 6} -5.5 ${len / 2} 0 ${len / 2 - 6} 5.5`} />
+              </g>
+            </svg>
+            <b className="num">{Math.abs(wind)}</b>
+          </>
+        )}
+      </span>
+      <span className="artillery-wind-bars" aria-hidden>
+        {Array.from({ length: 5 }, (_, i) => (
+          <i key={i} className={Math.abs(wind) > i * 2 ? "on" : ""} />
+        ))}
       </span>
     </div>
   );
@@ -563,8 +845,9 @@ function noteText(
   };
   if (clip) {
     const shot = s.shots[clip.index];
+    const moved = clip.play.route.length > 1;
     return {
-      main: t("game.artillery.fired", { who: nameOf(clip.play.seat) }),
+      main: t(moved ? "game.artillery.movedFired" : "game.artillery.fired", { who: nameOf(clip.play.seat) }),
       sub: impacted ? result(shot, clip.play.impact) : null,
     };
   }

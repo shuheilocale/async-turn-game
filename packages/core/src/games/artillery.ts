@@ -2,9 +2,11 @@ import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Rng
 
 /**
  * たまうちバトル：横長の地形の左右に 1 台ずつ置いた大砲で、交互に 1 発ずつ撃ち合う。
- * 手は角度と強さ。弾は重力と風（手番ごとに変わる）で飛び、地形か大砲に当たると爆発して、
+ * 手は動く量と角度と強さ。撃つ前に、燃料（毎回同じ量）の分だけ大砲を左右に動かせる。上り坂ほど燃料を使い、
+ * 急な段は登れない。弾は重力と風（手番ごとに大きく変わる）で飛び、地形か大砲に当たると爆発して、
  * 円の中の地形をけずり、近くの大砲には距離に応じたダメージを与える。足もとがけずれた大砲は下に落ちる。
  * 先に相手の体力を 0 にした方の勝ち。1 人 10 発ずつ撃って決まらなければ、体力の多い方の勝ち。
+ * 動ける・風が毎回変わる・強さは画面のボタンを押している長さで決める、の 3 つで、同じ手を撃ち続けても当たらない。
  *
  * 弾の飛び方・爆発はここ（サーバの applyMove）で計算する。画面も同じ関数で弾の軌跡を出して動かす。
  * 固定の時間きざみで、乱数は使わない。三角関数も四則演算だけで計算するので、
@@ -31,8 +33,24 @@ export const GRAVITY = 30;
 export const MAX_SPEED = 78;
 /** 風の強さの上限（±）。正なら右向き */
 export const WIND_MAX = 10;
-/** 風 1 あたりの横向きの加速度（単位 / 秒²）。風 10 で重力の 6 分の 1 */
-export const WIND_ACC = 0.5;
+/** 同じ人の次の手番では、風がこれ以上変わる */
+export const WIND_SHIFT = 4;
+/**
+ * 風 1 あたりの横向きの加速度（単位 / 秒²）。風 10 で重力の 4 分の 1 ほど。
+ * 45 度で相手まで届く弾なら、風が 4 違うと落ちる所が 12 ほど（爆風の届く距離の 4 分の 3）ずれる
+ */
+export const WIND_ACC = 0.8;
+
+/** 1 回の手番で使える燃料。平らな所なら柱 12 本ぶん。毎回この量に戻る */
+export const FUEL = 12;
+/** 上り坂で余分に使う燃料。柱 1 本進むごとに 1 ＋ 上った高さ × これ */
+export const CLIMB_COST = 1.5;
+/** 柱 1 本で登れる高さ（大砲が乗る高さの差）。これより急な段は登れない（下りはどれだけでも行ける） */
+export const MAX_CLIMB = 2;
+/** 左右の端から、これだけ内側までしか動けない（大砲の中心の柱） */
+export const EDGE = 6;
+/** 2 台の大砲の中心は、これより近づけない */
+export const MIN_GAP = 14;
 
 /** 爆発でけずれる円の半径 */
 export const CRATER_R = 7;
@@ -62,7 +80,15 @@ export interface ArtilleryMove {
   angle: number;
   /** 強さ（0〜100 の整数） */
   power: number;
+  /** 撃つ前に動く量（柱の数、整数）。左が負。前の作りの画面から届いた手にはないので、parseMove で 0 にする */
+  drive: number;
 }
+
+/** 弾の飛び方を決めるのは角度と強さだけ（弾の記録 Shot もそのまま渡せる） */
+export type Aim = Pick<ArtilleryMove, "angle" | "power">;
+
+/** 動けなかった理由（IllegalMoveError のコード） */
+export type DriveError = "artillery_fuel" | "artillery_steep" | "artillery_edge" | "artillery_blocked";
 
 /** 撃つたびに変わるもの */
 export interface Field {
@@ -77,6 +103,12 @@ export interface Shot {
   seat: Seat;
   angle: number;
   power: number;
+  /**
+   * 動く前と、動いて撃った位置。相手の画面で「動いて、撃って、爆発する」を再生するのに使う。
+   * 動けるようになる前の作りの記録にはない（動かずに撃ったものとして扱う）
+   */
+  from?: Cannon;
+  to?: Cannon;
   /** 爆発した場所（0.01 きざみ）。左右の端から外へ出たら null */
   impact: [number, number] | null;
   /** それぞれの大砲が受けたダメージ */
@@ -90,7 +122,7 @@ export interface ArtilleryState extends Field {
   winds: number[];
   shots: Shot[];
   turn: Seat;
-  /** 直前の 1 発を撃つ前の場。相手の画面で「飛んでいって爆発するまで」を再生するのに使う */
+  /** 直前の 1 発の手番が始まったとき（動く前）の場。相手の画面で「動いて、飛んでいって爆発するまで」を再生するのに使う */
   before: Field | null;
 }
 
@@ -172,7 +204,7 @@ function hits(field: Field, x: number, y: number): boolean {
  * seat の大砲から move で撃った弾の飛び方。重力と風を、固定の時間きざみで足していく。
  * 当たったきざみでは、前の位置との間を 2 分探索で詰めて、当たった場所を決める
  */
-export function fly(field: Field, seat: Seat, move: ArtilleryMove, wind: number, record = false): Flight {
+export function fly(field: Field, seat: Seat, move: Aim, wind: number, record = false): Flight {
   const cannon = field.cannons[seat];
   let [x, y] = muzzle(cannon, move.angle);
   const speed = (move.power / 100) * MAX_SPEED;
@@ -209,6 +241,63 @@ export function fly(field: Field, seat: Seat, move: ArtilleryMove, wind: number,
     if (record) path.push([x, y]);
   }
   return { path, impact: null, steps: MAX_STEPS };
+}
+
+/** seat の大砲だけを c に置きかえた場 */
+function withCannon(field: Field, seat: Seat, c: Cannon): Field {
+  const cannons: [Cannon, Cannon] = seat === 0 ? [c, field.cannons[1]] : [field.cannons[0], c];
+  return { terrain: field.terrain, cannons, hp: field.hp };
+}
+
+/**
+ * seat の大砲を drive 本（左が負）動かすときの道のり。path は 1 本ごとの位置で、最初は今の位置。
+ * 動けない所（端・相手の近く・急な段・燃料切れ）があれば、その手前で止めて理由を error に入れる。
+ * 足もとの高さは supportY で決め、上るときは 1 本ごとに 1 ＋ 上った高さ × CLIMB_COST の燃料を使う。
+ * 高さの差と燃料は 0.01 きざみにそろえて足していくので、どの端末でも同じ所で止まる
+ */
+export function drivePath(field: Field, seat: Seat, drive: number): { path: Cannon[]; fuel: number; error: DriveError | null } {
+  const rival = field.cannons[other(seat)];
+  const dir = drive < 0 ? -1 : 1;
+  let at = field.cannons[seat];
+  let fuel = 0;
+  const path: Cannon[] = [at];
+  for (let i = 0; i < Math.abs(drive); i++) {
+    const x = at.x + dir;
+    const col = Math.floor(x);
+    if (col < EDGE || col > COLS - 1 - EDGE) return { path, fuel, error: "artillery_edge" };
+    if (Math.abs(x - rival.x) < MIN_GAP) return { path, fuel, error: "artillery_blocked" };
+    const y = supportY(field.terrain, x);
+    const rise = Math.max(0, round2(y - at.y));
+    if (rise > MAX_CLIMB) return { path, fuel, error: "artillery_steep" };
+    const used = round2(fuel + 1 + rise * CLIMB_COST);
+    if (used > FUEL) return { path, fuel, error: "artillery_fuel" };
+    at = { x, y };
+    fuel = used;
+    path.push(at);
+  }
+  return { path, fuel, error: null };
+}
+
+/** seat の大砲を drive 本動かした場。動けない所があれば、その手前まで */
+export function driven(field: Field, seat: Seat, drive: number): Field {
+  const { path } = drivePath(field, seat, drive);
+  return withCannon(field, seat, path[path.length - 1]!);
+}
+
+/** seat が今の手番で動ける範囲（左が負）。道はひとつながりなので、両はしの間ならどこへでも行ける */
+export function reach(field: Field, seat: Seat): [number, number] {
+  return [1 - drivePath(field, seat, -FUEL).path.length, drivePath(field, seat, FUEL).path.length - 1];
+}
+
+/** 手番の始まりの場 before から、記録 shot の大砲が動いた道のり（1 本ごとの位置。最初は動く前）。前の作りの記録なら動かない */
+export function routeOf(before: Field, shot: Shot): Cannon[] {
+  if (!shot.from || !shot.to || shot.to.x === shot.from.x) return [before.cannons[shot.seat]];
+  return drivePath(before, shot.seat, Math.round(shot.to.x - shot.from.x)).path;
+}
+
+/** 記録 shot を撃ったときの場（手番の始まりの場 before から、大砲を撃った位置へ動かしたもの） */
+export function firedFrom(before: Field, shot: Shot): Field {
+  return withCannon(before, shot.seat, routeOf(before, shot).at(-1)!);
 }
 
 /** 大砲が point の爆発から受けるダメージ。砲身の付け根からの距離に比例して減り、BLAST_R より遠ければ 0 */
@@ -297,20 +386,25 @@ function makeField(rng: Rng): Pick<Field, "terrain" | "cannons"> {
   };
 }
 
-/** 手番ごとの風。少しずつ変わるよう、前の手番の風から ±4 の間で動かす */
+/**
+ * 手番ごとの風。毎回 -10〜+10 からほぼ新しく選ぶ。同じ人の前の手番（2 つ前）の風からは
+ * WIND_SHIFT 以上離れた値の中から選ぶので、前と同じ手のままでは当たらない
+ */
 function makeWinds(rng: Rng): number[] {
   const winds: number[] = [];
-  let w = Math.round((rng() * 2 - 1) * 6) || 0;
   for (let i = 0; i < SHOTS * 2; i++) {
-    winds.push(w);
-    w = clamp(w + (Math.round((rng() * 2 - 1) * 4) || 0), -WIND_MAX, WIND_MAX);
+    const prev = winds[i - 2];
+    const choices: number[] = [];
+    for (let w = -WIND_MAX; w <= WIND_MAX; w++) if (prev === undefined || Math.abs(w - prev) >= WIND_SHIFT) choices.push(w);
+    winds.push(choices[Math.floor(rng() * choices.length)]!);
   }
   return winds;
 }
 
 /**
- * seat がいちばん当たりそうな手（ずれなし）。角度と強さを粗く試してから、よかった手のまわりを細かく試す。
- * 相手へのダメージが大きく、自分へのダメージが小さい手を選ぶ。damage はその手で相手に与えるダメージ
+ * seat が今の位置から撃って、いちばん当たりそうな手（ずれなし・動かない）。角度と強さを粗く試してから、
+ * よかった手のまわりを細かく試す。相手へのダメージが大きく、自分へのダメージが小さい手を選ぶ。
+ * damage はその手で相手に与えるダメージ。風は今の手番のもの（画面に出ている風）だけを使う
  */
 export function aim(state: ArtilleryState, seat: Seat): { move: ArtilleryMove; damage: number } {
   const wind = windNow(state);
@@ -319,10 +413,10 @@ export function aim(state: ArtilleryState, seat: Seat): { move: ArtilleryMove; d
   const [tx, ty] = pivot(target);
   // e は自分の向いている側から測った仰角
   const angleOf = (e: number) => (seat === 0 ? e : 180 - e);
-  let best = { move: { angle: angleOf(45), power: 70 }, score: -Infinity, damage: 0 };
+  let best = { move: { angle: angleOf(45), power: 70, drive: 0 }, score: -Infinity, damage: 0 };
   const consider = (e: number, power: number) => {
     if (e < 0 || e > 180 || power < 0 || power > 100) return;
-    const move = { angle: angleOf(e), power };
+    const move = { angle: angleOf(e), power, drive: 0 };
     const { impact } = fly(state, seat, move, wind);
     if (!impact) return;
     const hit = damageAt(target, impact);
@@ -336,6 +430,11 @@ export function aim(state: ArtilleryState, seat: Seat): { move: ArtilleryMove; d
   for (let de = -4; de <= 4; de++) for (let dp = -3; dp <= 3; dp++) consider(e0 + de, p0 + dp);
   return { move: best.move, damage: best.damage };
 }
+
+/** コンピュータが撃つ前に動く手番の割合 */
+const BOT_DRIVE = 0.6;
+/** コンピュータがゲージを離すときの強さのずれ（±） */
+const BOT_RELEASE = 4;
 
 export const artillery: GameDefinition<ArtilleryState, ArtilleryMove> = {
   id: "artillery",
@@ -364,13 +463,20 @@ export const artillery: GameDefinition<ArtilleryState, ArtilleryMove> = {
   applyMove(state, move, seat) {
     if (artillery.status(state).kind === "finished") throw new IllegalMoveError("game_over");
     if (seat !== state.turn) throw new IllegalMoveError("not_your_turn");
-    const field: Field = { terrain: state.terrain, cannons: state.cannons, hp: state.hp };
+    const start: Field = { terrain: state.terrain, cannons: state.cannons, hp: state.hp };
+    // まず動く。前の作りの画面からの手には drive がないので、動かない手として扱う
+    const { path, error } = drivePath(start, seat, move.drive ?? 0);
+    if (error) throw new IllegalMoveError(error);
+    const to = path[path.length - 1]!;
+    const field = withCannon(start, seat, to);
     const { impact } = fly(field, seat, move, windNow(state));
     const result = impact ? blast(field, impact) : { field, damage: [0, 0] as [number, number] };
     const shot: Shot = {
       seat,
       angle: move.angle,
       power: move.power,
+      from: start.cannons[seat],
+      to,
       impact: impact && [round2(impact[0]), round2(impact[1])],
       damage: result.damage,
     };
@@ -379,33 +485,44 @@ export const artillery: GameDefinition<ArtilleryState, ArtilleryMove> = {
       ...result.field,
       shots: [...state.shots, shot],
       turn: other(seat),
-      before: field,
+      before: start,
     };
   },
 
   parseMove(raw) {
     const m = raw as Partial<Record<keyof ArtilleryMove, unknown>> | null;
     if (!m || typeof m !== "object") return null;
-    const { angle, power } = m;
-    if (!Number.isInteger(angle) || !Number.isInteger(power)) return null;
+    // drive がない手は、動けるようになる前の作りの画面から届いた手。動かない手として読む
+    const { angle, power, drive = 0 } = m;
+    if (!Number.isInteger(angle) || !Number.isInteger(power) || !Number.isInteger(drive)) return null;
     const a = angle as number;
     const p = power as number;
-    if (a < 0 || a > 180 || p < 0 || p > 100) return null;
-    return { angle: a, power: p };
+    const d = drive as number;
+    // 燃料が足りるか・登れるかは applyMove で確かめる（ここでは形だけ）
+    if (a < 0 || a > 180 || p < 0 || p > 100 || Math.abs(d) > COLS) return null;
+    return { angle: a, power: p, drive: d || 0 };
   },
 
   botMove(view, seat, rng) {
     const s = view as ArtilleryState;
     const st = artillery.status(s);
     if (st.kind !== "playing" || st.turn !== seat) return null;
-    const { move } = aim(s, seat);
-    // 人間らしく少しずらす。撃つたびに慣れて、ずれが小さくなる
+    // ときどき（BOT_DRIVE の割合の手番で）、動ける範囲のどこかへ動いてから撃つ
+    const [lo, hi] = reach(s, seat);
+    let drive = 0;
+    if (hi > lo && rng() < BOT_DRIVE) {
+      drive = lo + Math.floor(rng() * (hi - lo));
+      if (drive >= 0) drive++;
+    }
+    const { move } = aim({ ...s, ...driven(s, seat, drive) }, seat);
+    // 人間らしく少しずらす。撃つたびに慣れて、ずれが小さくなる。強さには、ゲージを離す瞬間のずれも足す
     const fired = s.shots.filter((shot) => shot.seat === seat).length;
-    const k = Math.max(0.3, 1 - 0.15 * fired);
-    const jitter = (spread: number) => Math.round((rng() + rng() - 1) * spread * k) || 0;
+    const k = Math.max(0.35, 1 - 0.13 * fired);
+    const jitter = (spread: number) => (rng() + rng() - 1) * spread;
     return {
-      angle: clamp(move.angle + jitter(6), 0, 180),
-      power: clamp(move.power + jitter(22), 0, 100),
+      angle: clamp(Math.round(move.angle + jitter(6 * k)) || 0, 0, 180),
+      power: clamp(Math.round(move.power + jitter(16 * k) + jitter(BOT_RELEASE)) || 0, 0, 100),
+      drive,
     };
   },
 };

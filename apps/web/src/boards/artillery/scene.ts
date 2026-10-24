@@ -33,9 +33,9 @@ import {
 
 /*
  * たまうちバトルの盤を Phaser で描く。盤（ArtilleryBoard）から dynamic import で読み込むので、
- * ほかの画面の読み込みは重くならない。操作（指で引く・スライダー）は盤の React 側で受け、
+ * ほかの画面の読み込みは重くならない。操作（動く・指で引く・長押し）は盤の React 側で受け、
  * ここは見せるだけ（Phaser の入力は使わず、ページのスクロールをじゃましない）。
- * 弾の軌跡は @atg/core の fly で、サーバと同じ計算をしたものを受け取る
+ * 動く道のりと弾の軌跡は @atg/core の drivePath・fly で、サーバと同じ計算をしたものを受け取る
  */
 
 type Field = Artillery.Field;
@@ -57,6 +57,8 @@ export interface Display {
 /** 再生する 1 発 */
 export interface ShotPlay {
   seat: Seat;
+  /** 撃つ前に動いた道のり（1 本ごとの位置。最初は動く前）。動かなかったら 1 つだけ（か空） */
+  route: Artillery.Cannon[];
   angle: number;
   /** STEP 秒ごとの弾の位置 */
   path: [number, number][];
@@ -72,9 +74,10 @@ export interface Labels {
 }
 
 export interface ArtilleryView {
+  /** 止まっている場を見せる。大砲が柱 1〜2 本だけ動いたときは、地形にそって滑らせる */
   show(d: Display): void;
-  /** 狙いを見せる。preview は予想の線（最初の少しだけ）。pull は指で引いている強さ（引いていなければ null） */
-  aim(seat: Seat, angle: number, preview: Point[], pull: number | null): void;
+  /** 狙いを見せる。preview は向きだけが分かる短い線。dragging は盤の上を指で引いているか */
+  aim(seat: Seat, angle: number, preview: Point[], dragging: boolean): void;
   clearAim(): void;
   /** 1 発を再生する。爆発したときに onImpact を呼ぶ。終わったら（取り消されても）resolve */
   play(shot: ShotPlay, onImpact?: () => void): Promise<void>;
@@ -95,6 +98,10 @@ const FLIGHT_ZOOM = 1.08;
 const DEPTH = { stars: 0.03, orb: 0.06, far: 0.18, cloudFar: 0.28, near: 0.45, cloudNear: 0.65 };
 /** 旗の布を何本の線で折るか */
 const FLAG_SEGMENTS = 8;
+/** 再生で、大砲が柱 1 本進むのにかける時間（ms） */
+const DRIVE_MS = 75;
+/** 自分で動かしているとき、柱 1 本ぶん滑らせる時間（ms）。押し続けたときの 1 本の間より少し短く */
+const GLIDE_MS = 70;
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -107,6 +114,8 @@ interface CannonView {
   angle: number;
   dead: boolean;
   smoke: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** 滑らせている動き（自分で動かしているとき） */
+  glide: Phaser.Tweens.Tween | null;
 }
 
 interface Cloud {
@@ -394,7 +403,7 @@ class ArtilleryScene extends Phaser.Scene {
       alpha: { start: 0.5, end: 0 },
       gravityY: -20,
     });
-    return { root, body, barrel, angle: seat === 0 ? 45 : 135, dead: false, smoke };
+    return { root, body, barrel, angle: seat === 0 ? 45 : 135, dead: false, smoke, glide: null };
   }
 
   // ---------- 止まっている場 ----------
@@ -421,16 +430,27 @@ class ArtilleryScene extends Phaser.Scene {
       this.placeCannon(seat as Seat, c, d.field.hp[seat]! <= 0);
     });
     this.placeFlag(d.field);
-    this.setMarker(d.active);
+    this.setMarker(d.active, d.active === null ? undefined : d.field.cannons[d.active]);
     this.trailGfx.clear();
     this.shell.setVisible(false);
     this.shellGlow.setVisible(false);
     this.edgeGfx.clear();
   }
 
+  /** 大砲を置く。柱 1〜2 本だけ横に動いたときは、少しの時間で滑らせて、車輪の下に土ぼこりを立てる */
   private placeCannon(seat: Seat, c: Artillery.Cannon, dead: boolean) {
     const v = this.cannons[seat]!;
-    v.root.setPosition(toX(c.x), toY(c.y));
+    const x = toX(c.x);
+    const y = toY(c.y);
+    const dx = Math.abs(x - v.root.x);
+    v.glide?.stop();
+    v.glide = null;
+    if (dx > 0.5 && dx <= 2.5 * S && this.ready) {
+      v.glide = this.tweens.add({ targets: v.root, x, y, duration: GLIDE_MS, ease: "Linear" });
+      this.fx.dust.explode(2, v.root.x, v.root.y);
+    } else {
+      v.root.setPosition(x, y);
+    }
     this.setBarrel(seat, v.angle);
     this.setDead(seat, dead);
   }
@@ -460,10 +480,14 @@ class ArtilleryScene extends Phaser.Scene {
     this.setBarrel(seat, v.angle);
   }
 
-  private setMarker(active: Seat | null) {
+  /** 撃つ番の大砲の上の目印。大砲が動いたら、ついていく */
+  private setMarker(active: Seat | null, c?: Artillery.Cannon) {
     const v = active === null ? null : this.cannons[active]!;
-    const at = v ? `${active}:${v.root.x}:${v.root.y}:${this.pal.dark}` : "";
+    const x = c ? toX(c.x) : (v?.root.x ?? 0);
+    const y = c ? toY(c.y) : (v?.root.y ?? 0);
+    const at = v ? `${active}:${x}:${y}:${this.pal.dark}` : "";
     if (at === this.markerAt) return;
+    const moving = v !== null && this.markerAt.startsWith(`${active}:`) && this.marker.visible;
     this.markerAt = at;
     this.tweens.killTweensOf(this.marker);
     if (!v || active === null) {
@@ -472,8 +496,13 @@ class ArtilleryScene extends Phaser.Scene {
     }
     this.marker.setVisible(true);
     this.marker.setFillStyle(Phaser.Display.Color.HexStringToColor(this.pal.seat[active][1]).color);
-    this.marker.setPosition(v.root.x, v.root.y - 60);
-    // 上下にゆっくり揺らす
+    // 動いている間は揺らさずについていく。止まったら上下にゆっくり揺らす
+    if (moving) {
+      this.tweens.add({ targets: this.marker, x, y: y - 60, duration: GLIDE_MS, ease: "Linear" });
+      this.tweens.add({ targets: this.marker, y: "+=6", delay: GLIDE_MS + 240, duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      return;
+    }
+    this.marker.setPosition(x, y - 60);
     this.tweens.add({ targets: this.marker, y: "+=6", duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
@@ -533,13 +562,13 @@ class ArtilleryScene extends Phaser.Scene {
 
   // ---------- 狙う ----------
 
-  aim(seat: Seat, angle: number, preview: readonly Point[], pull: number | null) {
+  aim(seat: Seat, angle: number, preview: readonly Point[], dragging: boolean) {
     if (this.running) return;
     this.setBarrel(seat, angle);
     const g = this.aimGfx;
     g.clear();
     const color = Phaser.Display.Color.HexStringToColor(this.pal.seat[seat][1]).color;
-    // 予想の線：最初の少しだけ、だんだん薄く
+    // 向きの線：砲口からまっすぐ少しだけ、だんだん薄く（強さは撃つまで決まらないので、落ちる先は見せない）
     preview.forEach(([x, y], i) => {
       const k = 1 - i / preview.length;
       g.fillStyle(0xffffff, 0.85 * k);
@@ -547,12 +576,12 @@ class ArtilleryScene extends Phaser.Scene {
       g.fillStyle(color, 0.9 * k);
       g.fillCircle(toX(x), toY(y), 2.2);
     });
-    // 指で引いている間は、大砲の後ろへのびるゴムひも
-    if (pull !== null) {
+    // 指で引いている間は、大砲の後ろへのびるゴムひも（長さは向きの目印だけで、強さには関係ない）
+    if (dragging) {
       const v = this.cannons[seat]!;
       const px = v.root.x;
       const py = v.root.y - Artillery.PIVOT_H * S;
-      const back = 18 + pull * 0.9;
+      const back = 52;
       const ex = px - Math.cos(rad(angle)) * back;
       const ey = py + Math.sin(rad(angle)) * back;
       g.lineStyle(3, color, 0.55);
@@ -573,18 +602,27 @@ class ArtilleryScene extends Phaser.Scene {
   play(shot: ShotPlay, onImpact?: () => void): Promise<void> {
     this.finish();
     this.show(shot.before);
+    // 再生は撃つ前の場から始める（滑らせている途中なら、そこで止めて置き直す）
+    shot.before.field.cannons.forEach((c, seat) => {
+      const v = this.cannons[seat]!;
+      v.glide?.stop();
+      v.glide = null;
+      v.root.setPosition(toX(c.x), toY(c.y));
+    });
     this.aimGfx.clear();
     this.setMarker(null);
     return new Promise((resolve) => {
       const v = this.cannons[shot.seat]!;
-      // 砲身を撃つ向きへ回してから撃つ（自分で撃ったときはもう向いている）
+      // まず動いた道のりを進み（自分で撃ったときはもう動いている）、砲身を撃つ向きへ回してから撃つ
+      const steps = Math.max(0, shot.route.length - 1);
+      const driveMs = steps * DRIVE_MS;
       const turn = Math.abs(v.angle - shot.angle);
       const turnMs = turn < 1 ? 0 : Math.min(650, 250 + turn * 6);
       const run: Running = {
         shot,
         onImpact,
         resolve,
-        start: this.clock + turnMs + 120,
+        start: this.clock + driveMs + (steps > 0 ? 160 : 0) + turnMs + 120,
         // 長く飛ぶ弾は少し速めて、待ち時間を 3.5 秒ほどまでにする
         stepMs: (Artillery.STEP * 1000) / Math.max(1, shot.path.length / 420),
         fired: false,
@@ -594,12 +632,37 @@ class ArtilleryScene extends Phaser.Scene {
         tweens: [],
       };
       this.running = run;
+      if (steps > 0) {
+        // 柱 1 本ずつ、地形にそって進む。進んでいる間は車輪の下に土ぼこりを立てる
+        const at = { k: 0 };
+        let dusted = 0;
+        run.tweens.push(
+          this.tweens.add({
+            targets: at,
+            k: steps,
+            duration: driveMs,
+            ease: "Linear",
+            onUpdate: () => {
+              const i = Math.min(steps - 1, Math.floor(at.k));
+              const a = shot.route[i]!;
+              const b = shot.route[i + 1]!;
+              const t = at.k - i;
+              v.root.setPosition(toX(lerp(a.x, b.x, t)), toY(lerp(a.y, b.y, t)));
+              if (at.k >= dusted) {
+                dusted += 2;
+                this.fx.dust.explode(2, v.root.x, v.root.y);
+              }
+            },
+          }),
+        );
+      }
       if (turnMs > 0) {
         const from = { a: v.angle };
         run.tweens.push(
           this.tweens.add({
             targets: from,
             a: shot.angle,
+            delay: driveMs + (steps > 0 ? 160 : 0),
             duration: turnMs,
             ease: "Sine.easeInOut",
             onUpdate: () => this.setBarrel(shot.seat, from.a),
@@ -612,6 +675,8 @@ class ArtilleryScene extends Phaser.Scene {
   /** 撃ち出す：砲口の光と煙、砲身の反動 */
   private fire(run: Running) {
     const { shot } = run;
+    const end = shot.route[shot.route.length - 1];
+    if (end) this.cannons[shot.seat]!.root.setPosition(toX(end.x), toY(end.y));
     this.setBarrel(shot.seat, shot.angle);
     const [mx, my] = shot.path[0]!;
     const x = toX(mx);
