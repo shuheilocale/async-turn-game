@@ -80,7 +80,7 @@ export const boards: Record<string, BoardUI> = {
   fading: { Board: FadingBoard, length: "short" },
   gobble: { Board: GobbleBoard, length: "short" },
   nim: { Board: NimBoard, length: "short" },
-  chain: { Board: ChainBoard, length: "short" },
+  chain: { Board: ChainBoard, length: "short", category: "mind" },
   tateyoko: { Board: TateyokoBoard, length: "short" },
   bridge: { Board: BridgeBoard, length: "short" },
   korokoro: { Board: KorokoroBoard, length: "short" },
