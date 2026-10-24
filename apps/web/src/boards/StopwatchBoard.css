@@ -1,0 +1,709 @@
+/*
+ * ぴったりストップ。styles.css より先に読み込まれるので、共通の部品（button など）を
+ * 変えるときは .sw を頭に付けて優先させる
+ */
+.sw {
+  --face: #fbfcfe;
+  --face-line: #c3cad7;
+  --metal: #b7c0cf;
+  --metal-line: #8590a3;
+  --fog: rgb(226 231 240 / 0.96);
+  --fog-soft: rgb(226 231 240 / 0.6);
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  width: min(100%, 420px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .sw {
+    --face: #11151f;
+    --face-line: #3a4357;
+    --metal: #4a5468;
+    --metal-line: #6b768c;
+    --fog: rgb(46 53 70 / 0.97);
+    --fog-soft: rgb(46 53 70 / 0.6);
+  }
+}
+
+/* ---------- 勝ち数と 3 回戦の印 ---------- */
+
+.sw-strip {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.sw-strip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.sw-side {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.sw-side.seat1 {
+  justify-items: end;
+  text-align: right;
+}
+
+.sw-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.sw-side.seat1 .sw-who {
+  flex-direction: row-reverse;
+}
+
+.sw-who > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sw-who .token {
+  width: 10px;
+  height: 10px;
+}
+
+.sw-wins {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--seat-text);
+}
+
+.sw-side.seat1 .sw-wins {
+  flex-direction: row-reverse;
+}
+
+.sw-wins strong {
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.sw-pips {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sw-pip {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sw-pip.later {
+  border-style: dashed;
+}
+
+.sw-pip.now {
+  border-color: var(--seat-color);
+  color: var(--seat-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 20%, transparent);
+}
+
+.sw-pip.won {
+  border-color: var(--seat-color);
+  background: var(--seat-color);
+  color: #fff;
+}
+
+.sw-pip.draw {
+  background: var(--surface-2);
+}
+
+.sw-sum {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sw-sum .num {
+  font-size: 0.78rem;
+  color: var(--seat-text);
+}
+
+/* ---------- 出題の秒数を選ぶ ---------- */
+
+.sw-stage {
+  width: 100%;
+}
+
+.sw-picker {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px 10px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.sw-picker-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+  color: var(--seat-text);
+}
+
+.sw-picker-value strong {
+  font-size: 3.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-picker-value span {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.sw-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.sw .sw-steps button {
+  min-height: 52px;
+  padding: 0;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  touch-action: manipulation;
+}
+
+.sw-picker input[type="range"] {
+  width: 100%;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--seat-color);
+}
+
+.sw-range-ends {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: -6px;
+}
+
+.sw .sw-random {
+  min-height: 36px;
+  padding: 4px 12px;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- ストップウォッチ ---------- */
+
+.sw-face {
+  position: relative;
+  width: min(100%, 248px);
+  aspect-ratio: 240 / 262;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sw-face svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sw-crown {
+  fill: var(--metal);
+  stroke: var(--metal-line);
+  stroke-width: 1.5;
+}
+
+.sw-body {
+  fill: var(--surface);
+  stroke: var(--seat-color);
+  stroke-width: 9;
+}
+
+.sw-dial {
+  fill: var(--face);
+  stroke: var(--face-line);
+  stroke-width: 1.5;
+}
+
+.sw-tick {
+  stroke: var(--face-line);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.sw-tick.long {
+  stroke: var(--muted);
+  stroke-width: 2.5;
+}
+
+/* 文字盤の中（円の内側 r=96 と同じ位置） */
+.sw-screen {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 19.08%;
+  aspect-ratio: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  border-radius: 50%;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.sw-target {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sw-digits {
+  font-size: 2.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--ink);
+  transition:
+    filter 0.5s ease-in,
+    opacity 0.5s ease-in;
+}
+
+.sw-label {
+  min-height: 1.2em;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sw-face.running .sw-label {
+  color: var(--seat-text);
+}
+
+.sw-face.running .sw-label::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  vertical-align: 1px;
+}
+
+.sw-face.result .sw-digits,
+.sw-face.result .sw-label {
+  color: var(--seat-text);
+}
+
+/* 止めたら、霧はすぐ晴らす */
+.sw-face.result .sw-digits,
+.sw-face.result .sw-fog {
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+}
+
+.sw-face.dim .sw-digits {
+  opacity: 0.35;
+}
+
+/*
+ * 霧。1.5 秒ほどで数字の上にかかって、見えなくする。霧は動かさない
+ * （動きがあると、それを手がかりに時間を数えられてしまうので）
+ */
+.sw-fog {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(closest-side at 32% 42%, var(--fog) 0 55%, transparent 100%),
+    radial-gradient(closest-side at 68% 58%, var(--fog) 0 55%, transparent 100%),
+    radial-gradient(closest-side at 50% 50%, var(--fog-soft) 0 80%, var(--fog) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in;
+}
+
+.sw-face.fog .sw-fog,
+.sw-face.lost .sw-fog {
+  opacity: 1;
+}
+
+.sw-face.fog .sw-digits,
+.sw-face.lost .sw-digits {
+  filter: blur(14px);
+  opacity: 0.15;
+}
+
+.sw-fog-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 14%;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  animation: sw-fade-in 0.5s ease-in both;
+}
+
+.sw-face.lost .sw-fog-text {
+  color: var(--danger);
+}
+
+/* 霧の上でも、目標とラベルは見えるように前に出す */
+.sw-face.fog .sw-target,
+.sw-face.fog .sw-label {
+  position: relative;
+  z-index: 1;
+}
+
+.sw-face.fog .sw-label {
+  transform: translateY(2.2em);
+}
+
+.sw-face.fog .sw-target {
+  transform: translateY(-2.2em);
+}
+
+@keyframes sw-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- ボタン（スタートとストップは同じ場所） ---------- */
+
+.sw .sw-button {
+  display: grid;
+  place-items: center;
+  gap: 0;
+  width: min(100%, 320px);
+  min-height: 64px;
+  padding: 10px 20px;
+  border: 2px solid var(--seat-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--seat-color) 12%, var(--surface));
+  line-height: 1.3;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    transform 0.08s,
+    background 0.15s;
+}
+
+.sw .sw-button.big {
+  min-height: 92px;
+}
+
+.sw .sw-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.sw-button-label {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--seat-text);
+}
+
+.sw-button.big .sw-button-label {
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+}
+
+.sw-button-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sw .sw-button.stop {
+  background: var(--seat-color);
+}
+
+.sw .sw-button.stop .sw-button-label,
+.sw .sw-button.stop .sw-button-hint {
+  color: #fff;
+}
+
+.sw .sw-change {
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.sw-warn {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* 失敗扱いになったお知らせ */
+.sw-notice {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.sw-lock::before {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 4px;
+  vertical-align: -0.08em;
+  background: currentColor;
+  /* 錠前の形 */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2h.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.6 0h3.8V5a1.9 1.9 0 0 0-3.8 0z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2h.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.6 0h3.8V5a1.9 1.9 0 0 0-3.8 0z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* 出題した自分の記録は相手に伏せてある、という印 */
+.sw-mine {
+  width: min(100%, 340px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px dashed var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 7%, var(--surface));
+  color: var(--seat-text);
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ---------- 回戦の結果 ---------- */
+
+.sw-card {
+  width: 100%;
+  padding: 12px 14px 10px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.sw-card.fresh {
+  border-color: var(--ink-soft);
+}
+
+.sw-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  line-height: 1.35;
+}
+
+.sw-card-head strong {
+  font-size: 0.95rem;
+}
+
+.sw-card-target {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sw-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2px 0 4px;
+  overflow: visible;
+}
+
+.sw-axis {
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.sw-grid {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.sw-zero {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.sw-axis-label {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+
+.sw-axis-label.num {
+  font-family: var(--font-num);
+  font-size: 9px;
+}
+
+.sw-mark {
+  animation: sw-mark-in 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.sw-mark.seat1 {
+  animation-delay: 0.12s;
+}
+
+@keyframes sw-mark-in {
+  from {
+    transform: translateX(var(--dx));
+    opacity: 0;
+  }
+}
+
+.sw-mark path {
+  fill: var(--seat-color);
+}
+
+.sw-mark .sw-out {
+  fill: none;
+  stroke: var(--seat-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.sw-mark text {
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--seat-text);
+}
+
+.sw-rows {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.sw-rows li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 4.6em auto;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+.sw-rows .token {
+  width: 10px;
+  height: 10px;
+}
+
+.sw-row-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sw-row-time {
+  font-size: 0.8rem;
+}
+
+.sw-row-diff {
+  font-size: 0.8rem;
+  text-align: right;
+  color: var(--seat-text);
+}
+
+.sw-row-tag {
+  display: flex;
+  gap: 4px;
+  min-width: 2.6em;
+  justify-content: flex-end;
+}
+
+.sw-rows li.won .sw-row-name,
+.sw-rows li.won .sw-row-diff {
+  font-weight: 700;
+}
+
+.sw-won,
+.sw-perfect {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.sw-won {
+  background: var(--seat-color);
+  color: #fff;
+}
+
+.sw-perfect {
+  background: color-mix(in srgb, var(--seat-color) 16%, transparent);
+  color: var(--seat-text);
+}
+
+.sw-card-draw {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.sw-history {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.sw-history h3 {
+  margin: 4px 0 0;
+}
+
+.sw-final strong {
+  font-size: 1rem;
+}
