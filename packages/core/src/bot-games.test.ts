@@ -65,7 +65,7 @@ const everyMove: Record<string, unknown[]> = {
   korokoro: range(16).map((to) => ({ to })),
 };
 const fullInfo = Object.keys(everyMove);
-const hidden = ["hitblow", "auction", "bluff", "pour", "balloon", "stopwatch", "freehand"];
+const hidden = ["hitblow", "auction", "bluff", "pour", "pourhard", "balloon", "stopwatch", "freehand"];
 
 const keys = (moves: unknown[]) => moves.map((m) => JSON.stringify(m)).sort();
 
