@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { botMove, getGame, IllegalMoveError, type GameStatus, type Seat } from "@atg/core";
 import { boards } from "../boards/index.ts";
-import { useI18n, type T } from "../i18n/index.tsx";
+import { botName, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import { navigate } from "../router.ts";
 import { savedName } from "../storage.ts";
@@ -70,7 +70,7 @@ export function Learn({ gameType }: { gameType: string }) {
   if (!def || !ui || state === undefined || !status) return <p className="message">{t("play.noBoard")}</p>;
 
   const names: Record<Seat, string> = withBot
-    ? { 0: savedName.get() || t("play.you"), 1: t("learn.bot") }
+    ? { 0: savedName.get() || t("play.you"), 1: botName(t) }
     : { 0: t(`game.${gameType}.seat0`), 1: t(`game.${gameType}.seat1`) };
   const view = def.viewState ? def.viewState(state, you, status.kind === "finished") : state;
 

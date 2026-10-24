@@ -52,9 +52,16 @@ export function translator(lang: Lang): T {
   return (key, vars) => {
     let text = dict[key] ?? (ja as Record<string, string>)[key] ?? key;
     for (const [name, v] of Object.entries(vars ?? {})) text = text.replaceAll(`{${name}}`, String(v));
-    return text;
+    // コンピュータの名前（botName）には、日本語の「〇〇さん」の「さん」を付けない。目印の文字は残さない
+    return text.replace(new RegExp(`${BOT_MARK}([^${BOT_MARK}]*)${BOT_MARK}さん`, "g"), "$1").replaceAll(BOT_MARK, "");
   };
 }
+
+/** お試しのコンピュータの名前を囲む目印（画面には出ない文字） */
+const BOT_MARK = "\u2063";
+
+/** お試しのコンピュータの名前。文言に入れても「コンピュータさん」にならない */
+export const botName = (t: T) => `${BOT_MARK}${t("learn.bot")}${BOT_MARK}`;
 
 /** サーバから届いた言語の文字列を、画面が対応している言語にする。対応していなければ null */
 export const asLang = (raw: string | null | undefined): Lang | null =>
