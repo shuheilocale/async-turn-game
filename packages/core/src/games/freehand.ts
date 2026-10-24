@@ -126,16 +126,16 @@ const SIZE_ZERO = 25;
 /** 閉じた形で、描き終わりのこの割合の中で始点にいちばん近い所までを使う（少し行き過ぎて閉じたぶんを切る） */
 const TAIL = 0.25;
 
-const dist = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+export const dist = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-function pathLength(points: readonly Point[]) {
+export function pathLength(points: readonly Point[]) {
   let total = 0;
   for (let i = 1; i < points.length; i++) total += dist(points[i - 1]!, points[i]!);
   return total;
 }
 
 /** 線にそって等間隔に n 点を並べ直す（始点と終点を含む） */
-function resample(points: readonly Point[], n: number): Point[] {
+export function resample(points: readonly Point[], n: number): Point[] {
   const cum = [0];
   for (let i = 1; i < points.length; i++) cum.push(cum[i - 1]! + dist(points[i - 1]!, points[i]!));
   const total = cum.at(-1)!;
@@ -215,7 +215,7 @@ const templateCache: Partial<Record<Shape, Template[]>> = {};
 const templates = (shape: Shape): Template[] =>
   (templateCache[shape] ??= OUTLINES[shape]().map((o) => makeTemplate(o.points, o.closed)));
 
-function centroid(points: readonly Point[]): Point {
+export function centroid(points: readonly Point[]): Point {
   let x = 0;
   let y = 0;
   for (const p of points) {
@@ -241,7 +241,7 @@ function trimOvershoot(path: Point[]): Point[] {
 }
 
 /** 0〜1 になめらかにつなぐ（lo 以下で 0、hi 以上で 1） */
-function smoothstep(lo: number, hi: number, v: number) {
+export function smoothstep(lo: number, hi: number, v: number) {
   const t = Math.min(1, Math.max(0, (v - lo) / (hi - lo)));
   return t * t * (3 - 2 * t);
 }

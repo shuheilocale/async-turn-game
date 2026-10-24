@@ -21,6 +21,7 @@ import { shopping } from "./games/shopping.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { oekaki } from "./games/oekaki.ts";
+import { heart } from "./games/heart.ts";
 import { stack } from "./games/stack.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
@@ -55,6 +56,7 @@ export * as Shopping from "./games/shopping.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
 export * as Oekaki from "./games/oekaki.ts";
+export * as Heart from "./games/heart.ts";
 export * as Stack from "./games/stack.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
@@ -97,6 +99,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [sotto.id]: sotto,
   [treasure.id]: treasure,
   [oekaki.id]: oekaki,
+  [heart.id]: heart,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

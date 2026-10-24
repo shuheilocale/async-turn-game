@@ -36,6 +36,7 @@
 | そっと出し | `sotto` | 協力ゲーム（相手の手札は見えない） |
 | 宝と岩 | `treasure` | 協力ゲーム（宝と岩は片方にしか見えない） |
 | おえかきクイズ | `oekaki` | 協力ゲーム（描いた絵を見て、お題を 4 つから当てる。お題は描く人にしか見えない） |
+| はんぶんこハート | `heart` | 協力ゲーム（2 人で半分ずつ描いて 1 つのハートにする。先に描いた半分は、もう 1 人が描き終えるまで隠れている） |
 
 公開中: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev （Cloudflare Workers + D1）
 
