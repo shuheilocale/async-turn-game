@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { GameStatus, GameView, Seat } from "@atg/core";
 import { api } from "../api.ts";
 import { boards, CATEGORIES, categoryOf, type Category } from "../boards/index.ts";
-import { errorText, useI18n, type T } from "../i18n/index.tsx";
+import { coopText, errorText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
 import { lineIdToken, lineSession } from "../line.ts";
 import { navigate } from "../router.ts";
@@ -226,7 +226,7 @@ const isMyTurn = (v: GameView) => v.status.kind === "playing" && v.status.turn =
 
 function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boolean } {
   if (status.kind === "finished") {
-    const label = status.coop ? t(status.coop === "cleared" ? "badge.cleared" : "badge.failed") : t("badge.finished");
+    const label = status.coop ? coopText(t, v.gameType, status.coop, "badge") : t("badge.finished");
     return { label, hot: false };
   }
   if (v.waitingForOpponent) return { label: t("badge.waiting"), hot: false };

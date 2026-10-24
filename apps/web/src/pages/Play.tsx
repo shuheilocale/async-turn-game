@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameView, Seat } from "@atg/core";
 import { api, ApiRequestError } from "../api.ts";
 import { boards } from "../boards/index.ts";
-import { asLang, errorText, translator, useI18n, type T } from "../i18n/index.tsx";
+import { asLang, coopText, errorText, translator, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import { followGame, lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
@@ -374,7 +374,7 @@ function StatusBanner({
     const w = view.status.winner;
     const coop = view.status.coop;
     text = coop
-      ? t(coop === "cleared" ? "status.cleared" : "status.failed")
+      ? coopText(t, view.gameType, coop)
       :
       w === null
         ? t("status.draw")

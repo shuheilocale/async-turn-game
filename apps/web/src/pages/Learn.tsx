@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { botMove, getGame, IllegalMoveError, type GameStatus, type Seat } from "@atg/core";
 import { boards } from "../boards/index.ts";
-import { botName, useI18n, type T } from "../i18n/index.tsx";
+import { botName, coopText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import { navigate } from "../router.ts";
 import { savedName } from "../storage.ts";
@@ -185,7 +185,7 @@ function bannerText(
   gameType: string,
 ): string {
   if (status.kind === "finished") {
-    if (status.coop) return t(status.coop === "cleared" ? "status.cleared" : "status.failed");
+    if (status.coop) return coopText(t, gameType, status.coop);
     if (status.winner === null) return t("status.draw");
     if (withBot && status.winner === 0) return t("status.youWin");
     return t("status.winner", { name: names[status.winner], seat: t(`game.${gameType}.seat${status.winner}`) });

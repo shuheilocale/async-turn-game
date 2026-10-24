@@ -98,6 +98,15 @@ export function useI18n() {
   return ctx;
 }
 
+/**
+ * 協力ゲームの終わりの文言（帯の一文か、一覧のバッジ）。ゲームが game.<ID>.status.cleared など
+ * 自分の言い方を持っていればそれを使う（相性を見るゲームで「失敗」と出さないため）
+ */
+export function coopText(t: T, gameType: string, coop: "cleared" | "failed", place: "status" | "badge" = "status"): string {
+  const own = t(`game.${gameType}.${place}.${coop}`);
+  return own.startsWith("game.") ? t(`${place}.${coop}`) : own;
+}
+
 /** API のエラーコードを今の言語の文にする */
 export function errorText(t: T, err: unknown): string {
   const code = (err as { code?: string }).code;

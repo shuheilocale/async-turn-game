@@ -1,5 +1,5 @@
 import type { GameView, Seat } from "@atg/core";
-import type { T } from "./i18n/index.tsx";
+import { coopText, type T } from "./i18n/index.tsx";
 import { miniAppUrl, type Card } from "./line.ts";
 import { snapshotOf, snapshotToFlex } from "./snapshot.ts";
 
@@ -44,7 +44,7 @@ export function progressCard(t: T, v: GameView, what: string): Card {
     const w = v.status.winner;
     const coop = v.status.coop;
     const result = coop
-      ? t(coop === "cleared" ? "status.cleared" : "status.failed")
+      ? coopText(t, v.gameType, coop)
       : w === null
         ? t("status.draw")
         : t("status.winner", { name: names[w], seat: t(`game.${v.gameType}.seat${w}`) });
