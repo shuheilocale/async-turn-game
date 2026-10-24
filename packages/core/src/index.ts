@@ -15,6 +15,7 @@ import { bluff } from "./games/bluff.ts";
 import { sotto } from "./games/sotto.ts";
 import { treasure } from "./games/treasure.ts";
 import { stack } from "./games/stack.ts";
+import { artillery } from "./games/artillery.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
 import { stopwatch } from "./games/stopwatch.ts";
@@ -39,6 +40,7 @@ export * as Bluff from "./games/bluff.ts";
 export * as Sotto from "./games/sotto.ts";
 export * as Treasure from "./games/treasure.ts";
 export * as Stack from "./games/stack.ts";
+export * as Artillery from "./games/artillery.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
 export * as Stopwatch from "./games/stopwatch.ts";
@@ -54,6 +56,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [bridge.id]: bridge,
   [korokoro.id]: korokoro,
   [stack.id]: stack,
+  [artillery.id]: artillery,
   [pour.id]: pour,
   [pourHard.id]: pourHard,
   [balloon.id]: balloon,

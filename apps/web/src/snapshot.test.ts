@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { botMove, getGame, type Seat } from "@atg/core";
 import { snapshotOf, snapshotToFlex } from "./snapshot.ts";
 
-const DRAWN = ["tictactoe", "fading", "gobble", "nim", "tateyoko", "bridge", "korokoro", "connect4", "boxes", "othello"];
+const DRAWN = ["tictactoe", "fading", "gobble", "nim", "tateyoko", "bridge", "korokoro", "connect4", "boxes", "othello", "artillery"];
 
 /** コンピュータ同士で n 手進めた局面 */
 function played(gameType: string, n: number) {
