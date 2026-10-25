@@ -3,13 +3,13 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Arena, softDot, type Theme } from "./arena.ts";
 import { bodyOf, lerpBody, NEUTRAL_STATS, type BodyDims } from "./body.ts";
 import { Effects, Trail } from "./effects.ts";
-import { clamp, damp, easings } from "./math.ts";
+import { clamp, damp, easings, smoothstep } from "./math.ts";
 import { basePoseOf, buildExchange, distOf, powerOf, sampleTrack, type Exchange, type Impact, type Position, type Side } from "./moves.ts";
 import { addPose, lerpPose, mirrorPose, newPose, P, type Pose } from "./pose.ts";
 import { createKit, FighterRig, NO_CUES, type Kit, type RigCues } from "./rig.ts";
 import { breathRate, breathWave, fatigueOf, idleDelta, rhythmOf, tiredPose } from "./stances.ts";
 import { StageFx } from "./fx.ts";
-import { LASER_REACH, performOf, ROCKET_RETURN } from "./special.ts";
+import { LASER_REACH, performOf, ROCKET_RETURN, SHOT_FLIGHT } from "./special.ts";
 import type { Fx } from "./track.ts";
 import type { FighterLook, FighterStageProps, StageEvent, StyleId } from "./types.ts";
 
@@ -627,6 +627,23 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         effects.flash(hand, "#fff4c9", color, 0.6);
         break;
       }
+      case "fluff": {
+        // もふっ：胸のまわりに、やわらかい綿のような粒がふわっと広がる
+        const at = a.rig.worldOf("chest", tvA);
+        const n = options.reduceMotion ? 5 : 10;
+        for (let i = 0; i < n; i++) {
+          const p = tvC.copy(at).add(tvB.set(rnd(0.4), rnd(0.4), rnd(0.4)));
+          sfx.spawn("smoke", p, tvB.set(rnd(0.6), 0.2 + Math.random() * 0.3, rnd(0.6)), {
+            color: i % 3 ? "#ffffff" : glowColor.set(color).lerp(white, 0.6).getStyle(),
+            size: 0.11 + Math.random() * 0.08,
+            life: 0.55 + Math.random() * 0.25,
+            grow: 1.1,
+            spin: rnd(2),
+            alpha: 0.9,
+          });
+        }
+        break;
+      }
       default:
         break;
     }
@@ -758,6 +775,77 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         sfx.spawn("smoke", hands, tvC.set(rnd(0.15), 0.35, rnd(0.15)), { color: theme.dark ? "#cdd2dc" : "#eef0f4", size: 0.1, life: 0.8, grow: 1.6, alpha: 0.7, sway: 0.3 });
         break;
       }
+      case "water": {
+        // 放水：筒先から相手の胸へ水の線を走らせ、届いたところでしぶきを飛ばす。かわされたら横を抜け、防がれたら手前で散る
+        const def = actors[f.target];
+        const from = a.rig.propTip(tvB);
+        const to = def.rig.worldOf("chest", waterTo).add(tvC.set(0, 0.06, 0));
+        const dir = towardFoe(f, tvA);
+        const pass = f.result === "dodged" || f.result === "whiff";
+        if (pass) to.addScaledVector(tvC.set(-dir.z, 0.15, dir.x), 0.32).addScaledVector(dir, 0.9);
+        else if (f.result === "blocked") to.lerp(from, 0.08);
+        const reach = clamp((p.t - f.at) / SHOT_FLIGHT.water, 0, 1);
+        const k = Math.min(1, u * 10, (1 - u) * 6);
+        sfx.showWater(from, to, reach, k, p.t);
+        if (reach >= 1 && !pass && every(0.022)) {
+          const back = tvC.copy(dir).multiplyScalar(-0.8 - Math.random() * 0.6).add(tvA.set(rnd(1.6), 0.6 + Math.random() * 1.0, rnd(1.6)));
+          sfx.spawn("orb", to, back, { color: Math.random() < 0.6 ? "#e2f4ff" : "#7cc6ff", size: 0.06 + Math.random() * 0.06, life: 0.5, gravity: 4, additive: false });
+        }
+        break;
+      }
+      case "vinyl": {
+        // スクラッチ：手の下で光るレコードを、こすりに合わせて前後に回す
+        const hand = a.rig.strikePoint("hand", boneSide(a, f.side), tvB).add(tvC.set(0, -0.07, 0));
+        const angle = p.t * 2.2 + Math.sin(p.t * 26) * 0.9;
+        sfx.showVinyl(hand, angle, env, glowColor.set(color).lerp(white, 0.35).getStyle());
+        break;
+      }
+      case "chart": {
+        // 光るグラフ：積み立ては自分の顔の前に上向きのグラフ、空売りは相手の顔の前に下向きのグラフ
+        const up = (f.dir ?? 1) > 0;
+        const owner = up ? a : actors[f.target];
+        const at = owner.rig.worldOf("head", tvB).add(tvC.set(0, 0.08, 0)).addScaledVector(towardFoe(f, tvA), up ? 0.36 : -0.3);
+        sfx.showChart(at, clamp(u * 2.4, 0, 1), up ? 1 : -1, env, theme.dark ? glowColor.set(color).lerp(white, 0.3).getStyle() : color);
+        if (u > 0.4 && every(0.12)) sfx.spawn("star", tvC.copy(at).add(tvA.set(rnd(0.4), rnd(0.2), rnd(0.1))), tvA.set(0, up ? 0.3 : -0.3, 0), { color: "#ffffff", size: 0.06, life: 0.4 });
+        break;
+      }
+      case "coinrain": {
+        // 配当：頭の上から金色のコインが降ってきて、光りながら落ちる
+        if (!every(0.05)) break;
+        const head = a.rig.worldOf("head", tvB);
+        const at = tvC.set(head.x + rnd(0.6), head.y + 0.45 + Math.random() * 0.25, head.z + rnd(0.6));
+        sfx.spawn("coin", at, tvA.set(rnd(0.2), -0.3, rnd(0.2)), { color: "#f2c14e", size: 0.085 + Math.random() * 0.04, life: 0.9, gravity: 2.4, spin: rnd(8), additive: false });
+        if (Math.random() < 0.3) sfx.spawn("star", at, tvA.set(0, -0.2, 0), { color: "#fff3c4", size: 0.07, life: 0.4 });
+        break;
+      }
+      case "zanshin": {
+        const hip = a.rig.worldOf("hip", tvB);
+        sfx.showFloorRing(hip, u, env, glowColor.set(color).lerp(white, 0.4).getStyle());
+        break;
+      }
+      case "lift": {
+        // 汗：額から、小さな水色の粒が横へ飛ぶ
+        if (!every(0.1)) break;
+        const at = a.rig.worldOf("head", tvB).addScaledVector(towardFoe(f, tvA), 0.08).add(tvC.set(0, 0.06, 0));
+        sfx.spawn("orb", at, tvC.set(rnd(1.2), 0.4 + Math.random() * 0.3, rnd(1.2)), { color: "#bfe6ff", size: 0.035, life: 0.5, gravity: 3, additive: false });
+        break;
+      }
+      case "roar": {
+        // ほえる声の波：口から相手のほうへ、弧が広がりながら進む
+        if (!every(0.08)) break;
+        const dir = towardFoe(f, tvA);
+        const from = a.rig.worldOf("head", tvB).addScaledVector(dir, 0.16).add(tvC.set(0, -0.02, 0));
+        const sx = tvC.copy(actors[f.target].world).applyMatrix4(camera.matrixWorldInverse).x - laserTo.copy(a.world).applyMatrix4(camera.matrixWorldInverse).x;
+        sfx.spawn("wave", from, tvC.copy(dir).multiplyScalar(1.5).add(tvA.set(0, 0.1, 0)), {
+          color: Math.random() < 0.6 ? color : theme.dark ? "#ffffff" : "#2a2f3c",
+          size: 0.24,
+          life: 0.6,
+          grow: 3.0,
+          rot: sx >= 0 ? 0 : Math.PI,
+          additive: false,
+        });
+        break;
+      }
       case "dust": {
         // 足もとの土ぼこり（後ろへ流れる）
         if (!every(0.035)) break;
@@ -777,6 +865,7 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     }
   }
   const laserTo = new THREE.Vector3();
+  const waterTo = new THREE.Vector3();
 
   /** 攻防の効果のうち、体の見た目を変えるもの（消える・手を飛ばす・ウインク・包帯など）と、続く効果 */
   function cuesOf(a: Actor, dt: number): RigCues {
@@ -810,6 +899,27 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
           break;
         case "tray":
           c.tray = boneSide(a, f.side);
+          break;
+        case "phones":
+          c.phones = true;
+          break;
+        case "tail":
+          c.tail = Math.min(1, u * 6, (1 - u) * 5);
+          break;
+        case "chomp":
+          // 口を大きく開けてから、かぷっと閉じ、軽く 2 回かむ
+          c.jaw = u < 0.4 ? smoothstep(u / 0.4) : u < 0.48 ? 0 : 0.4 * Math.abs(Math.sin((u - 0.48) * 14));
+          break;
+        case "lift":
+          c.lift = Math.min(1, u * 6, (1 - u) * 6);
+          sustainFx(f, i, u, dt);
+          break;
+        case "roar":
+          c.jaw = Math.min(1, u * 8, (1 - u) * 6);
+          sustainFx(f, i, u, dt);
+          break;
+        case "fluff":
+          // 一度きり（startFx で出す）
           break;
         case "ghost":
           // 一度きり（startFx で出す）
@@ -957,7 +1067,9 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         }
       const n = NORMAL;
       const near = playing ? 1 - 0.1 * Math.min(1, playing.t * 2) : 1;
-      const d = (ground ? 3.5 : position === "clinch" ? 3.6 : 3.95) * near * wide;
+      // 竹刀を構える人がいて間合いが広いときは、2 人とも入るように引く
+      const spread = position === "standing" ? Math.min(1.6, 1 + Math.max(0, dist - 1.2) * 0.6) : 1;
+      const d = (ground ? 3.5 : position === "clinch" ? 3.6 : 3.95) * near * wide * spread;
       const h = ground ? 1.25 : 0.42;
       wantLook.set(mid.x, ground ? 0.42 : 0.98, mid.z);
       // 攻防の当たった場所へ少し寄る
@@ -1054,6 +1166,10 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     sfx.showRings(tv, [0, 0], 0, "#fff");
     sfx.showAura(tv, 0, "#fff");
     sfx.showLaser(tv, tv, 0, 0, "#fff");
+    sfx.showWater(tv, tv, 0, 0, 0);
+    sfx.showChart(tv, 0, 1, 0, "#fff");
+    sfx.showVinyl(tv, 0, 0, "#fff");
+    sfx.showFloorRing(tv, 0, 0, "#fff");
     for (const a of actors) {
       if (!a.rig.root.visible) continue;
       updateActor(a, dt);

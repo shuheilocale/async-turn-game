@@ -6,6 +6,7 @@ import {
   aim,
   chestPoint,
   face,
+  hold2,
   reachHand,
   shift,
   targetsOf,
@@ -31,10 +32,14 @@ export const isSelf = (k: ActionKind) => k === "heal" || k === "vanish";
 
 /**
  * 飛ばすもの：マジシャンはトランプ、ロボットはロケットパンチ、忍者は手裏剣、サラリーマンは名刺、
- * タピオカ店員はタピオカの粒、ほかは光の玉
+ * タピオカ店員はタピオカの粒、消防士は放水（筒先から水の線）、投資家は金色のコイン、ほかは光の玉
  */
 export function shotOf(style: StyleId | null): ShotKind {
   switch (style) {
+    case "firefighter":
+      return "water";
+    case "investor":
+      return "coins";
     case "magician":
       return "cards";
     case "robot":
@@ -50,7 +55,7 @@ export function shotOf(style: StyleId | null): ShotKind {
   }
 }
 /** 手を離れてから相手に届くまで */
-export const SHOT_FLIGHT: Record<ShotKind, number> = { cards: 0.2, rocket: 0.24, orb: 0.3, shuriken: 0.2, meishi: 0.2, pearls: 0.26, ice: 0.26 };
+export const SHOT_FLIGHT: Record<ShotKind, number> = { cards: 0.2, rocket: 0.24, orb: 0.3, shuriken: 0.2, meishi: 0.2, pearls: 0.26, ice: 0.26, coins: 0.24, water: 0.18 };
 
 /**
  * タピオカ店員の飛ばす技は 2 つ（タピオカ弾・氷多め）あり、どちらも projectile で来る。
@@ -61,14 +66,55 @@ export const iceShot = (style: StyleId | null, strike: Pick<StageStrike, "kind" 
 /** ロケットパンチが腕に戻るまで */
 export const ROCKET_RETURN = 0.3;
 
-export type PerformKind = "idol" | "rapper" | "gamer" | "magician" | "laser" | "horn" | "tie" | "shaker" | "seal" | "pose";
+/**
+ * 相手には何もせず、自分を強めるだけの技か（DJ のフロアを沸かす・投資家の積み立て）。
+ * 見せる技が 2 つあるバックボーンで、どちらかを見分けるのに使う。強化・弱体が付いていなければ、
+ * 当たって（hit）ダメージがないときを自分を強める技とみなす（外れた・防がれたのは相手へ向けた技）
+ */
+export function boostsSelf(s?: Pick<StageStrike, "by" | "damage" | "effects" | "result">): boolean {
+  if (!s) return false;
+  const fx = s.effects ?? [];
+  if (fx.length) return fx.every((e) => e.who === s.by && e.dir > 0);
+  return s.damage <= 0 && s.result === "hit";
+}
+
+export type PerformKind =
+  | "idol"
+  | "rapper"
+  | "gamer"
+  | "magician"
+  | "laser"
+  | "horn"
+  | "tie"
+  | "shaker"
+  | "seal"
+  | "pose"
+  | "zanshin"
+  | "beckon"
+  | "scratch"
+  | "hype"
+  | "chartUp"
+  | "chartDown"
+  | "roar";
 /**
  * 見せる技の形：アイドルはウインク、ラッパーは指さし、ゲーマーは指の動き、マジシャンは手のひらの光、
  * ロボットはレーザー、トゥクトゥク運転手はクラクション、サラリーマンはネクタイを締める、
- * タピオカ店員はシェイカーを振る、忍者は印を結ぶ、ほかは決めポーズ
+ * タピオカ店員はシェイカーを振る、忍者は印を結ぶ、剣道家は残心、ルチャドールは観客をあおる、
+ * DJ はスクラッチ（self = 自分を強める技ならフロアを沸かす）、投資家は空売り（self なら積み立て）、
+ * 恐竜の着ぐるみはほえる、ほかは決めポーズ
  */
-export function performOf(style: StyleId | null): PerformKind {
+export function performOf(style: StyleId | null, self = false): PerformKind {
   switch (style) {
+    case "kendo":
+      return "zanshin";
+    case "luchador":
+      return "beckon";
+    case "dj":
+      return self ? "hype" : "scratch";
+    case "investor":
+      return self ? "chartUp" : "chartDown";
+    case "dino":
+      return "roar";
     case "idol":
     case "rapper":
     case "gamer":
@@ -89,10 +135,21 @@ export function performOf(style: StyleId | null): PerformKind {
   }
 }
 
-export type HealKind = "nurse" | "robot" | "chef" | "drink" | "glow";
-/** 回復の形：看護師は手当て、ロボットは再起動、料理人は味見、タピオカ店員はカップから飲む、ほかはやわらかい光 */
+export type HealKind = "nurse" | "robot" | "chef" | "drink" | "helmet" | "dividend" | "glow";
+/**
+ * 回復の形：看護師は手当て、ロボットは再起動、料理人は味見、タピオカ店員はカップから飲む、
+ * 消防士はヘルメットを上げて汗をぬぐう、投資家は配当（コインが降る）、ほかはやわらかい光
+ */
 export const healOf = (style: StyleId | null): HealKind =>
-  style === "nurse" || style === "robot" || style === "chef" ? style : style === "bubbletea" ? "drink" : "glow";
+  style === "nurse" || style === "robot" || style === "chef"
+    ? style
+    : style === "bubbletea"
+      ? "drink"
+      : style === "firefighter"
+        ? "helmet"
+        : style === "investor"
+          ? "dividend"
+          : "glow";
 
 /** ロボットのレーザーが、目から出て相手に届くまで */
 export const LASER_REACH = 0.1;
@@ -126,6 +183,8 @@ export function specialTrack(kind: SpecialKind, c: AttackCtx, groundPunch: () =>
       if (kind === "swing") return b;
       const shot = shotOf(style);
       const at = Math.max(0.02, b.impact - 0.12);
+      // 放水は、寝たままでも水の線を相手へ走らせる
+      if (shot === "water") return { ...b, fx: [{ type: "water", at, until: b.impact + 0.35, side: 1 }] };
       return { ...b, fx: shotFx(shot, at, b.impact) };
     }
     return groundSpecial(kind, c);
@@ -141,6 +200,8 @@ export function specialTrack(kind: SpecialKind, c: AttackCtx, groundPunch: () =>
           { type: "form", at: 0.04, until: b.track.end, form: 1 },
           { type: "held", at: 0.04, until: b.track.end, side: 0 },
         ];
+      // 投資家は、タブレットを電卓に持ちかえて軽くたたく
+      if (propOf(style) === "tablet") b.fx = [{ type: "form", at: 0.04, until: b.track.end, form: 1 }];
       return b;
     }
     case "perform":
@@ -169,8 +230,28 @@ function projectileTrack(c: AttackCtx): Built {
   const t = (v: number) => v * sp;
   const shot = shotOf(att.style);
   const target = aim(T.body, result, -1);
-  if (shot === "cards" || shot === "meishi") {
-    // 右手はステッキ（カバン）を持ったまま、左手を右の肩へ引き、体をひねり戻しながら手首を返してトランプ（名刺）を放つ
+  if (shot === "water") {
+    // 足をふんばって腰を落とし、筒先を相手へ向けて放水する。水の勢いで少しずつ押し戻される
+    const aimAt = add(target, [0, 0.12, 0]);
+    const brace = (k: KeyEdit, push: number) => {
+      shift(k.d, -0.06 * push);
+      k.d.hip[1] -= 0.05;
+      k.d.spine[0] += 0.1;
+      face(k.d);
+      k.d.foot[0][2] += 0.04;
+      const grip = chestPoint(k.d, dims, [-0.04, dims.shoulderY - 0.3, 0.42]);
+      hold2(k, grip, sub(aimAt, grip));
+    };
+    tb.at(t(0.16), 1, (k) => brace(k, 0), "out");
+    tb.at(t(0.3), 1, (k) => brace(k, 0.3));
+    tb.at(t(0.95), 1, (k) => brace(k, 1));
+    tb.at(t(1.15), 0);
+    const at = t(0.28);
+    return { track: tb.build(), impact: at + SHOT_FLIGHT.water, fx: [{ type: "water", at, until: t(0.98), side: 1 }] };
+  }
+  if (shot === "cards" || shot === "meishi" || shot === "coins") {
+    // 右手はステッキ（カバン・タブレット）を持ったまま、左手を右の肩へ引き、体をひねり戻しながら手首を返して
+    // トランプ（名刺・コイン）を放つ
     tb.at(t(0.15), 1, (k) => {
       k.d.hipRot[1] -= 0.22;
       k.d.chest[1] -= 0.16;
@@ -327,6 +408,8 @@ function swingTrack(c: AttackCtx): Built {
   const t = (v: number) => v * sp;
   const prop = propOf(att.style);
   const len = PROP_LENGTH[prop];
+  // 投資家の電卓は、肩の高さから小さく軽くたたく
+  const light = prop === "tablet" ? 1 : 0;
   // 手首の曲げ（振りかぶる・当てる・振り抜く）。ステッキは前腕の向きに、ほかは親指の側に伸びる
   // フライパン・ペンライトは手首を小指の側へ倒して、前腕の先へ向ける
   const wrist: [V3, V3, V3] =
@@ -349,14 +432,14 @@ function swingTrack(c: AttackCtx): Built {
           ];
   // 振りかぶる：右手を頭の後ろへ上げ、体を右へひねって少し反る
   tb.at(t(0.22), 1, (k) => {
-    k.d.hipRot[1] -= 0.22;
-    k.d.spine[0] -= 0.08;
-    k.d.chest[0] -= 0.1;
+    k.d.hipRot[1] -= 0.22 * (1 - 0.6 * light);
+    k.d.spine[0] -= 0.08 * (1 - light);
+    k.d.chest[0] -= 0.1 * (1 - light);
     k.d.hip[1] -= 0.02;
     k.d.elbow[1] = [-0.7, 0.7, -0.4];
     k.d.fist[1] = wrist[0];
     face(k.d);
-    k.hand(1, chestPoint(k.d, dims, [-0.15, dims.shoulderY + 0.33, -0.1]));
+    k.hand(1, chestPoint(k.d, dims, [-0.15, dims.shoulderY + 0.33 - 0.22 * light, -0.1 + 0.18 * light]));
   }, "out");
   const tgt = aim(T.head, result, -1);
   // 持ち物があれば、腕を相手の頭へ向けて伸ばし、持ち物の先を頭に当てる（手は届かなくてよい）
@@ -395,7 +478,7 @@ function performTrack(c: AttackCtx): Built {
   const dims = att.d;
   const tb = new TrackBuilder(att.base, dims);
   const T = targetsOf(def, dist);
-  const kind = performOf(att.style);
+  const kind = performOf(att.style, boostsSelf(c.strike));
   switch (kind) {
     case "idol": {
       // 軽くかがんでから、首をかしげてウインク。左手（見ている人の側）は目の横でピース、ペンライトの右手は腰に
@@ -624,6 +707,194 @@ function performTrack(c: AttackCtx): Built {
       tb.at(1.02, 0);
       return { track: tb.build(), impact: 0.5, fx: [{ type: "wisp", at: 0.22, until: 0.9 }] };
     }
+    case "zanshin": {
+      // 残心：一歩下がって構え直し、剣先を相手ののどにつけたまま、静かに息をととのえて気を張る（足もとに光の輪）
+      const ready = (k: KeyEdit, hold: number) => {
+        shift(k.d, -0.1);
+        k.d.hip[1] -= 0.01;
+        face(k.d, -0.02);
+        k.d.breath = hold;
+        k.d.shrug = [0.012 * hold, 0.012 * hold];
+        const grip = chestPoint(k.d, dims, [0, dims.shoulderY - 0.36, 0.34]);
+        hold2(k, grip, sub(add(T.chin, [0, 0.02, 0]), grip));
+      };
+      tb.at(0.3, 1, (k) => ready(k, 0), "inOut");
+      tb.at(0.7, 1, (k) => ready(k, 1));
+      tb.at(1.0, 1, (k) => ready(k, 0.6));
+      tb.at(1.25, 0);
+      return { track: tb.build(), impact: 0.6, fx: [{ type: "zanshin", at: 0.35, until: 1.15 }] };
+    }
+    case "beckon": {
+      // 観客をあおる：観客（見ている人）のほうへ胸を向け、両腕を V の字に大きく広げて、手招きをくり返す
+      const open = (k: KeyEdit, curl: number) => {
+        k.d.hipRot[1] = k.d.hipRot[1] * 0.4 - 0.75;
+        k.d.chest[1] -= 0.25;
+        k.d.chest[0] -= 0.14;
+        k.d.hip[1] += 0.01 * curl;
+        face(k.d, -0.12);
+        k.d.neck[1] -= 0.4;
+        k.d.elbow = [
+          [1, -0.2, -0.3],
+          [-1, -0.2, -0.3],
+        ];
+        k.d.fist = [
+          [1.1 * curl, 0.8, 0],
+          [1.1 * curl, -0.8, 0],
+        ];
+        k.hand(0, chestPoint(k.d, dims, [0.46, dims.shoulderY + 0.3, 0.12 + 0.05 * curl]));
+        k.hand(1, chestPoint(k.d, dims, [-0.46, dims.shoulderY + 0.3, 0.12 + 0.05 * curl]));
+      };
+      tb.at(0.28, 1, (k) => open(k, 0), "outBack");
+      for (let i = 0; i < 3; i++) {
+        tb.at(0.4 + i * 0.18, 1, (k) => open(k, 1));
+        tb.at(0.49 + i * 0.18, 1, (k) => open(k, 0));
+      }
+      tb.at(1.2, 0);
+      return {
+        track: tb.build(),
+        impact: 0.6,
+        fx: [
+          { type: "sparkle", at: 0.3, until: 0.5 },
+          { type: "sparkle", at: 0.78, until: 0.95 },
+        ],
+      };
+    }
+    case "scratch": {
+      // スクラッチ：左手でヘッドホンを耳に当て、右手で腰の前のレコードを前後にこする（光るレコードと音符）
+      const rub = (k: KeyEdit, j: number) => {
+        k.d.spine[0] += 0.12;
+        k.d.hip[1] -= 0.03;
+        face(k.d, 0.22);
+        k.d.elbow = [
+          [0.7, 0.4, -0.3],
+          [-0.6, -1, -0.2],
+        ];
+        k.d.fist[1] = [-1.2, 0, 0];
+        k.hand(0, add(headOf(k, dims), [0.11, -0.04, 0.02]));
+        k.hand(1, chestPoint(k.d, dims, [-0.1 + 0.05 * j, -0.06, 0.32 + 0.02 * j]));
+      };
+      tb.at(0.18, 1, (k) => rub(k, 0));
+      for (let i = 0; i < 8; i++) tb.at(0.26 + i * 0.085, 1, (k) => rub(k, i % 2 ? 1 : -1), "inOut");
+      tb.at(1.0, 1, (k) => rub(k, 0));
+      tb.at(1.2, 0);
+      return {
+        track: tb.build(),
+        impact: 0.62,
+        fx: [
+          { type: "phones", at: 0.1, until: 1.1 },
+          { type: "vinyl", at: 0.2, until: 1.05, side: 1 },
+          { type: "notes", at: 0.3, until: 1.05 },
+        ],
+      };
+    }
+    case "hype": {
+      // フロアを沸かす：観客のほうへ胸を向け、両手を上げてビートに合わせて交互に突き上げる（音符ときらめき）
+      const pump = (k: KeyEdit, j: number) => {
+        k.d.hip[1] -= 0.03 * Math.abs(j);
+        k.d.hipRot[1] = k.d.hipRot[1] * 0.4 - 0.6;
+        k.d.chest[1] -= 0.2;
+        k.d.chest[0] -= 0.1;
+        face(k.d, -0.12);
+        k.d.neck[1] -= 0.3;
+        k.d.elbow = [
+          [0.8, 0.6, -0.2],
+          [-0.8, 0.6, -0.2],
+        ];
+        k.d.fist = [
+          [-0.3, 0.4, 0],
+          [-0.3, -0.4, 0],
+        ];
+        k.hand(0, chestPoint(k.d, dims, [0.32, dims.shoulderY + 0.3 + 0.1 * Math.max(0, j), 0.08]));
+        k.hand(1, chestPoint(k.d, dims, [-0.32, dims.shoulderY + 0.3 + 0.1 * Math.max(0, -j), 0.08]));
+      };
+      tb.at(0.2, 1, (k) => pump(k, 0), "outBack");
+      for (let i = 0; i < 4; i++) tb.at(0.32 + i * 0.17, 1, (k) => pump(k, i % 2 ? -1 : 1), "inOut");
+      tb.at(1.12, 0);
+      return {
+        track: tb.build(),
+        impact: 0.6,
+        fx: [
+          { type: "notes", at: 0.25, until: 1.05 },
+          { type: "sparkle", at: 0.3, until: 0.5 },
+          { type: "sparkle", at: 0.8, until: 0.95 },
+        ],
+      };
+    }
+    case "chartUp":
+    case "chartDown": {
+      // タブレットに目を落とし、左手で画面を 2 回たたく。積み立ては上向きのグラフを自分の上に、
+      // 空売りはタブレットを相手へ突き出して下向きのグラフを相手の上に見せる（左手で眼鏡を押し上げる）
+      const up = kind === "chartUp";
+      const look = (k: KeyEdit, tap: number) => {
+        face(k.d, 0.35);
+        k.d.spine[0] += 0.05;
+        k.d.elbow = [
+          [0.6, -1, -0.3],
+          [-0.5, -1, -0.3],
+        ];
+        const tab = chestPoint(k.d, dims, [-0.05, dims.shoulderY - 0.3, 0.3]);
+        k.hand(1, tab);
+        k.hand(0, add(tab, [0.12, 0.04 + 0.04 * tap, 0.03]));
+      };
+      tb.at(0.2, 1, (k) => look(k, 1));
+      tb.at(0.3, 1, (k) => look(k, 0));
+      tb.at(0.4, 1, (k) => look(k, 1));
+      tb.at(0.5, 1, (k) => look(k, 0));
+      const show = (k: KeyEdit) => {
+        if (up) {
+          face(k.d, -0.05);
+          k.d.chest[0] -= 0.05;
+          k.hand(1, chestPoint(k.d, dims, [-0.06, dims.shoulderY - 0.1, 0.34]));
+          k.hand(0, chestPoint(k.d, dims, [0.3, dims.shoulderY - 0.25, 0.12]));
+          return;
+        }
+        shift(k.d, 0.05);
+        k.d.hipRot[1] += 0.15;
+        face(k.d, 0);
+        k.d.elbow[1] = [-0.5, -1, -0.2];
+        armToward(k, dims, 1, add(T.head, [0, -0.18, 0]), 0.88);
+        k.d.elbow[0] = [1, -0.4, -0.2];
+        k.hand(0, add(headOf(k, dims), [0.05, -0.03, 0.12]));
+      };
+      tb.at(0.72, 1, show, "outBack");
+      tb.at(1.05, 1, show);
+      tb.at(1.3, 0);
+      return {
+        track: tb.build(),
+        impact: 0.78,
+        fx: [{ type: "chart", at: 0.62, until: 1.25, dir: up ? 1 : -1 }, ...(up ? [{ type: "sparkle" as const, at: 0.85, until: 1.0 }] : [])],
+      };
+    }
+    case "roar": {
+      // ガオー：両手を高く上げてつめを立て、前へ乗り出して口を大きく開け、ほえる（声の波）
+      tb.at(0.18, 1, (k) => {
+        k.d.hip[1] -= 0.04;
+        k.d.spine[0] -= 0.06;
+      }, "in");
+      // 顔が見えるよう、手は頭の両わきの少し下に広げ、胸を少し見ている人のほうへ向ける
+      const roar = (k: KeyEdit, shake: number) => {
+        shift(k.d, 0.04);
+        k.d.hipRot[1] -= 0.3;
+        k.d.spine[0] += 0.18;
+        k.d.chest[0] += 0.08;
+        face(k.d, -0.15);
+        k.d.neck[2] += 0.05 * shake;
+        k.d.elbow = [
+          [1, 0.2, -0.4],
+          [-1, 0.2, -0.4],
+        ];
+        k.d.fist = [
+          [1.2, 0.3, 0],
+          [1.2, -0.3, 0],
+        ];
+        k.hand(0, chestPoint(k.d, dims, [0.4, dims.shoulderY + 0.08, 0.12]));
+        k.hand(1, chestPoint(k.d, dims, [-0.4, dims.shoulderY + 0.08, 0.12]));
+      };
+      tb.at(0.34, 1, (k) => roar(k, 0), "outBack");
+      for (let i = 0; i < 4; i++) tb.at(0.46 + i * 0.12, 1, (k) => roar(k, i % 2 ? 1 : -1));
+      tb.at(1.2, 0);
+      return { track: tb.build(), impact: 0.55, fx: [{ type: "roar", at: 0.34, until: 1.05 }] };
+    }
     case "pose": {
       // かがんでから、両手を上げて胸を張る決めポーズ
       tb.at(0.16, 1, (k) => (k.d.hip[1] -= 0.04));
@@ -770,6 +1041,74 @@ function healTrack(c: AttackCtx): Built {
         ],
       };
     }
+    case "helmet": {
+      // ひと息：筒先を右の腰へ下ろし、左手でヘルメットを少し持ち上げて、手の甲で額の汗をぬぐう
+      const rest = (k: KeyEdit) => {
+        const hip = k.d.hip;
+        k.d.elbow[1] = [-0.3, -1, -0.2];
+        k.hand(1, [hip[0] - 0.2, hip[1] + 0.06, hip[2] + 0.16]);
+      };
+      const brim = (k: KeyEdit, lift: number) => {
+        rest(k);
+        face(k.d, -0.08);
+        k.d.elbow[0] = [1, 0.6, -0.2];
+        k.d.fist[0] = [0.3, 1.0, 0];
+        k.hand(0, add(headOf(k, dims), [0.06, 0.13 + 0.06 * lift, 0.13]));
+      };
+      const wipe = (k: KeyEdit, x: number) => {
+        rest(k);
+        face(k.d, -0.12);
+        k.d.elbow[0] = [1, 0.3, -0.3];
+        k.d.fist[0] = [0, 1.3, 0];
+        k.hand(0, add(headOf(k, dims), [x, 0.07, 0.15]));
+      };
+      tb.at(0.22, 1, (k) => brim(k, 0));
+      tb.at(0.38, 1, (k) => brim(k, 1));
+      tb.at(0.54, 1, (k) => wipe(k, -0.06));
+      tb.at(0.7, 1, (k) => wipe(k, 0.1));
+      tb.at(0.86, 1, (k) => {
+        brim(k, 0);
+        k.d.breath = 1;
+        k.d.shrug = [0.02, 0.02];
+      });
+      tb.at(1.08, 1, (k) => {
+        rest(k);
+        face(k.d, 0.1);
+        k.d.shrug = [-0.01, -0.01];
+      });
+      tb.at(1.3, 0);
+      return {
+        track: tb.build(),
+        impact: 0.8,
+        fx: [
+          { type: "lift", at: 0.3, until: 0.92 },
+          { type: "heal", at: 0.34, until: 1.22 },
+        ],
+      };
+    }
+    case "dividend": {
+      // 配当：タブレットを胸の前に持ったまま、左の手のひらを上へ向けて差し出す。上から金色のコインが降ってきて光る
+      const take = (k: KeyEdit, up: number) => {
+        face(k.d, -0.12 - 0.06 * up);
+        k.d.chest[0] -= 0.04;
+        k.d.elbow[0] = [0.8, -0.6, -0.3];
+        k.d.fist[0] = [-0.4, 1.4, 0];
+        k.hand(0, chestPoint(k.d, dims, [0.16, dims.shoulderY - 0.22 + 0.04 * up, 0.3]));
+      };
+      tb.at(0.25, 1, (k) => take(k, 0));
+      tb.at(0.7, 1, (k) => take(k, 1));
+      tb.at(1.0, 1, (k) => take(k, 0.5));
+      tb.at(1.25, 0);
+      return {
+        track: tb.build(),
+        impact: 0.8,
+        fx: [
+          { type: "coinrain", at: 0.2, until: 1.1 },
+          { type: "heal", at: 0.42, until: 1.2 },
+          { type: "sparkle", at: 0.88, until: 1.0 },
+        ],
+      };
+    }
     case "glow": {
       // 両手を胸に当て、深く息を吸う
       const calm = (k: KeyEdit) => {
@@ -872,9 +1211,11 @@ function groundSpecial(kind: SpecialKind, c: AttackCtx): Built {
     const fx: FxLocal[] = [{ type: "heal", at: 0.2, until: 1.0 }];
     if (h === "nurse") fx.push({ type: "bandage", at: 0.4, until: UNTIL_END, side: 0 });
     if (h === "robot") fx.push({ type: "reboot", at: 0.2, until: 0.9 });
+    if (h === "helmet") fx.push({ type: "lift", at: 0.25, until: 0.8 });
+    if (h === "dividend") fx.push({ type: "coinrain", at: 0.2, until: 0.9 });
     return { track: tb.build(), impact: 0.6, fx };
   }
-  const p = performOf(c.att.style);
+  const p = performOf(c.att.style, boostsSelf(c.strike));
   const TYPES: Record<PerformKind, FxLocal["type"]> = {
     idol: "hearts",
     rapper: "notes",
@@ -886,8 +1227,15 @@ function groundSpecial(kind: SpecialKind, c: AttackCtx): Built {
     shaker: "shake",
     seal: "wisp",
     pose: "sparkle",
+    zanshin: "zanshin",
+    beckon: "sparkle",
+    scratch: "vinyl",
+    hype: "notes",
+    chartUp: "chart",
+    chartDown: "chart",
+    roar: "roar",
   };
-  const fx: FxLocal[] = [{ type: TYPES[p], at: 0.25, until: 0.85, side: 0 }];
+  const fx: FxLocal[] = [{ type: TYPES[p], at: 0.25, until: 0.85, side: p === "scratch" ? 1 : 0, ...(p === "chartUp" || p === "chartDown" ? { dir: p === "chartUp" ? 1 : -1 } : {}) }];
   if (p === "idol") fx.push({ type: "wink", at: 0.25, until: 0.8 });
   if (p === "shaker") fx.push({ type: "form", at: 0.2, until: 0.9, form: 2 });
   return { track: tb.build(), impact: 0.5, fx };

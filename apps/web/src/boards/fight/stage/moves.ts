@@ -3,15 +3,16 @@ import { add, clamp, type V3 } from "./math.ts";
 import { edit, headCenter, P, pack, type Pose, type PoseDesc } from "./pose.ts";
 import { clinchPose, downPose, groundBottomPose, groundTopPose, handRoot, stanceOf, withHands } from "./stances.ts";
 import { isDefense, isGrapple, mergeStrikes } from "./ground.ts";
-import { propOf } from "./outfit.ts";
+import { PROP_LENGTH, propOf } from "./outfit.ts";
 import { afterimageDodge, iceShot, isSelf, isSpecial, mechanical, sidestep, specialTrack, stretchTime, UNTIL_END, vanishTrack, VANISH_GONE } from "./special.ts";
+import { kendoCutOf, signatureTrack } from "./signature.ts";
 import {
   aim,
-  bagShield,
+  awayOf,
   blockHigh,
-  bow,
   chestPoint,
   face,
+  guardOf,
   reachFoot,
   reachHand,
   shift,
@@ -22,13 +23,14 @@ import {
   type AttackCtx,
   type Built,
   type Fx,
+  type FxLocal,
   type KeyEdit,
   type Result,
   type Side,
   type Track,
   type Zone,
 } from "./track.ts";
-import type { ActionKind, FighterStats, StageEvent, StageStrike } from "./types.ts";
+import type { ActionKind, FighterStats, StageEvent, StageStrike, StyleId } from "./types.ts";
 
 export { mergeStrikes };
 export { sampleTrack, shiftPose } from "./track.ts";
@@ -41,8 +43,13 @@ export type { Built, Fx, Key, Side, Track, Zone } from "./track.ts";
  */
 
 
-/** 技の当たる場所 */
-export function zoneOf(kind: ActionKind): Zone {
+/**
+ * 技の当たる場所。style（と strike）を渡すと、バックボーンごとの決め技の当たる場所にする
+ * （ルチャドールのチョップは胸、恐竜のしっぽは胴を払う、剣道家の胴・小手は胴と手首）
+ */
+export function zoneOf(kind: ActionKind, style: StyleId | null = null, strike?: Pick<StageStrike, "by" | "effects">): Zone {
+  if ((style === "luchador" && kind === "hook") || (style === "dino" && kind === "swing")) return "body";
+  if (style === "kendo" && kind === "swing" && kendoCutOf(strike) !== "men") return "body";
   switch (kind) {
     case "kick_mid":
     case "knee":
@@ -521,8 +528,8 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       return { track: tb.build(), impact: t(0.5) };
     }
     case "block": {
-      // サラリーマンはカバンを盾にする
-      const shield = att.style === "salaryman" ? bagShield : blockHigh;
+      // サラリーマンはカバン、剣道家は竹刀、消防士は防火服、DJ はヘッドホン、恐竜はおなかで受ける
+      const shield = guardOf(att.style);
       tb.at(t(0.12), 1, (k) => shield(k, k.d, dims), "out");
       tb.at(t(0.55), 1, (k) => shield(k, k.d, dims));
       tb.at(t(0.75), 0);
@@ -530,8 +537,8 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
     }
     case "dodge":
     default: {
-      // サラリーマンはお辞儀をするようにかわす
-      const away = att.style === "salaryman" ? bow : slip;
+      // サラリーマンはお辞儀をするように、投資家はすっと身を引いてかわす
+      const away = awayOf(att.style);
       tb.at(t(0.14), 1, (k) => away(k.d, 1), "out");
       tb.at(t(0.45), 1, (k) => away(k.d, 0.9));
       tb.at(t(0.65), 0);
@@ -653,22 +660,46 @@ function clinchAttack(kind: ActionKind, c: AttackCtx): Built {
   return standingAttack(kind, c);
 }
 
+/**
+ * 受けるあいだに出す効果（start から end 秒。impact は当たる瞬間）：タピオカ店員はトレイ、DJ はヘッドホンを耳に、
+ * 恐竜はもふっとした綿
+ */
+export function guardFx(style: StyleId | null, end: number, impact: number): FxLocal[] {
+  switch (style) {
+    case "bubbletea":
+      return [{ type: "tray", at: 0, until: end, side: 0 }];
+    case "dj":
+      return [{ type: "phones", at: 0, until: end }];
+    case "dino":
+      return [{ type: "fluff", at: impact, until: impact + 0.1 }];
+    default:
+      return [];
+  }
+}
+
 export function attackTrack(kind: ActionKind, c: AttackCtx): Built {
   const style = c.att.style;
   // 忍者の立ったままのかわしは、残像を残して横へ跳ぶ（分身）
   if (style === "ninja" && kind === "dodge" && c.position === "standing") return afterimageDodge(c);
-  const b = isSpecial(kind)
-    ? specialTrack(kind, c, () => groundAttack("straight", c))
-    : c.position === "ground"
-      ? groundAttack(kind, c)
-      : c.position === "clinch"
-        ? clinchAttack(kind, c)
-        : standingAttack(kind, c);
-  // トゥクトゥク運転手の突進と、スタントマンの跳び蹴りの着地は、足もとに土ぼこりを立てる
-  // タピオカ店員はトレイを盾にして防ぐ
-  if (style === "bubbletea" && kind === "block" && c.position !== "ground") b.fx = [...(b.fx ?? []), { type: "tray", at: 0, until: b.track.end, side: 0 }];
-  if (c.position === "standing" && ((style === "tuktuk" && (kind === "push" || kind === "takedown")) || (style === "stuntman" && kind === "spin_kick")))
-    b.fx = [...(b.fx ?? []), style === "tuktuk" ? { type: "dust", at: 0.04, until: b.impact + 0.08 } : { type: "dust", at: b.track.end * 0.82, until: b.track.end * 0.9 }];
+  // バックボーンごとの決め技（剣道の面・ルチャのドロップキックなど）
+  const sig = signatureTrack(kind, c);
+  const b =
+    sig ??
+    (isSpecial(kind)
+      ? specialTrack(kind, c, () => groundAttack("straight", c))
+      : c.position === "ground"
+        ? groundAttack(kind, c)
+        : c.position === "clinch"
+          ? clinchAttack(kind, c)
+          : standingAttack(kind, c));
+  // トゥクトゥク運転手の突進・消防士の体当たりと、スタントマンの跳び蹴りの着地は、足もとに土ぼこりを立てる
+  // タピオカ店員はトレイを、DJ はヘッドホンを使って防ぐ
+  if (kind === "block" && c.position !== "ground") b.fx = [...(b.fx ?? []), ...guardFx(style, b.track.end, b.impact)];
+  const rush = (style === "tuktuk" && (kind === "push" || kind === "takedown")) || (style === "firefighter" && kind === "push");
+  if (c.position === "standing" && (rush || (style === "stuntman" && kind === "spin_kick")))
+    b.fx = [...(b.fx ?? []), rush ? { type: "dust", at: 0.04, until: b.impact + 0.08 } : { type: "dust", at: b.track.end * 0.82, until: b.track.end * 0.9 }];
+  // DJ のビートドロップは、当たる瞬間に音符をはじけさせる
+  if (style === "dj" && kind === "straight" && c.position !== "ground") b.fx = [...(b.fx ?? []), { type: "notes", at: b.impact, until: b.impact + 0.35 }];
   // ロボットは一定の速さでカクッと動き、太極拳はゆっくり大きく動く
   if (c.att.style === "robot") return mechanical(b);
   if (c.att.style === "taichi" && !isSelf(kind) && kind !== "perform") return stretchTime(b, 1.25);
@@ -679,6 +710,8 @@ export function attackTrack(kind: ActionKind, c: AttackCtx): Built {
 
 interface ReactCtx {
   me: Side;
+  /** 攻めた人のバックボーン（かつがれる・丸め込まれるなど、相手の技に合わせた動きに使う） */
+  foe?: StyleId | null;
   /** 攻めた技 */
   kind: ActionKind;
   zone: Zone;
@@ -765,8 +798,7 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
         kk.d.hip[1] -= 0.12;
         kk.d.hipRot[0] += 0.5;
         kk.d.foot[1][2] -= 0.2;
-      } else if (me.style === "salaryman") bagShield(kk, kk.d, dims);
-      else blockHigh(kk, kk.d, dims);
+      } else guardOf(me.style)(kk, kk.d, dims);
     };
     tb.at(T(0), 1, block, "out");
     tb.at(T(0.08), 1, (kk) => {
@@ -788,8 +820,8 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
       }
       // 忍者は残像を残して横へ跳ぶ（残像は buildExchange で出す）
       if (me.style === "ninja") sidestep(kk, 1);
-      // サラリーマンはお辞儀をするように頭を下げてかわす
-      else if (me.style === "salaryman" && zone !== "legs") bow(kk.d, 1);
+      // サラリーマンはお辞儀をするように頭を下げて、投資家はすっと身を引いてかわす
+      else if ((me.style === "salaryman" && zone !== "legs") || me.style === "investor") awayOf(me.style)(kk.d, 1);
       else if (zone === "head") slip(kk.d, 1);
       else if (kind === "projectile") {
         // 飛んでくるものは、横へ身をかわす
@@ -807,6 +839,7 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
     return { track: tb.build(), offset: 0 };
   }
   // 当たった（hit）・返された（countered は攻めた人の側で使う）
+  if (c.after && kind === "throw" && c.foe === "firefighter" && c.position === "standing") return carried(c, tb);
   if (c.after && (kind === "takedown" || kind === "throw")) {
     // 倒される：浮いて、あお向けに落ちる
     tb.at(T(-0.05), 0);
@@ -959,6 +992,57 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
   }
   tb.at(T(0.62), 1, (kk) => shift(kk.d, -0.02));
   tb.at(T(0.82), 0);
+  return { track: tb.build(), offset: 0 };
+}
+
+/**
+ * 消防士にかつがれる：腰を取られて肩にかつぎ上げられ（体を前へ折って相手の背中側へ、脚は相手の前に垂れる）、
+ * しばらく運ばれてから、肩から下ろされてあお向けに落ちる。
+ * かつぐ人は、こちらから 0.65 m のところ（こちらの足もとから見て）まで踏み込んで立つ
+ */
+function carried(c: ReactCtx, tb: TrackBuilder): { track: Track; offset: number } {
+  const T = (v: number) => c.lead + v;
+  const at = 0.65;
+  const carry = (kk: KeyEdit, bob: number) => {
+    kk.d.hip = [0.08, 1.48 + 0.02 * bob, at];
+    kk.d.hipRot = [1.45, 0.3, 0.08];
+    kk.d.spine = [0.25, 0, 0];
+    kk.d.chest = [0.1, 0, 0];
+    kk.d.neck = [0.3, 0, 0];
+    kk.d.foot = [
+      [0.14, 0.92 - 0.02 * bob, at - 0.34],
+      [-0.02, 0.88, at - 0.3],
+    ];
+    kk.d.footRot = [
+      [0.6, 0, 0],
+      [0.6, 0, 0],
+    ];
+    kk.d.knee = [
+      [0.1, 0, -1],
+      [-0.1, 0, -1],
+    ];
+    kk.d.elbow = [
+      [0.4, -1, 0],
+      [-0.4, -1, 0],
+    ];
+    kk.hand(0, [0.3, 0.98 + 0.03 * bob, at + 0.18]);
+    kk.hand(1, [-0.06, 0.92, at + 0.22]);
+  };
+  tb.at(T(-0.05), 0);
+  tb.at(T(0.04), 1, (kk) => {
+    kk.d.hip[2] += 0.05;
+    kk.d.spine[0] += 0.3;
+    kk.d.hipRot[0] += 0.3;
+  }, "out");
+  tb.at(T(0.12), 1, (kk) => carry(kk, 0), "inOut");
+  tb.at(T(0.3), 1, (kk) => carry(kk, 1), "inOut");
+  tb.at(T(0.44), 1, (kk) => carry(kk, 0), "inOut");
+  tb.pose(T(0.66), 1, c.after!, "in");
+  tb.at(T(0.78), 1, (kk) => {
+    kk.d.hip[1] += 0.03;
+    kk.d.neck[0] -= 0.25;
+  }, "out", c.after!);
+  tb.pose(T(0.95), 1, c.after!);
   return { track: tb.build(), offset: 0 };
 }
 
@@ -1210,8 +1294,12 @@ export interface Limb {
 /** 技を出す手足。軌跡（残像）を見せるのに使う。組み技・守りの技・飛ばす技・見せる技などはなし */
 export function limbOf(kind: ActionKind, position: Position, impact: number, style: Side["style"] = null): Limb | null {
   const at = (part: Limb["part"], side: 0 | 1, lead = 0.16): Limb => ({ part, side, from: Math.max(0, impact - lead), to: impact + 0.06 });
-  if (kind === "swing") return position === "ground" ? at("hand", 1, 0.12) : propOf(style) === "none" ? at("hand", 1, 0.2) : at("prop", 1, 0.2);
+  // 恐竜はしっぽの先（prop の位置として rig.ts が返す）
+  if (kind === "swing") return position === "ground" ? at("hand", 1, 0.12) : propOf(style) === "none" && style !== "dino" ? at("hand", 1, 0.2) : at("prop", 1, 0.2);
   if (isSpecial(kind)) return null;
+  // 剣道家の突きは竹刀の先、ルチャドールのチョップは右の手刀
+  if (position === "standing" && style === "kendo" && kind === "straight") return at("prop", 1, 0.14);
+  if (position === "standing" && style === "luchador" && kind === "hook") return at("hand", 1, 0.14);
   if (position === "ground") return kind === "submission" || kind === "throw" || kind === "takedown" || isDefense(kind) ? null : at("hand", 1, 0.12);
   switch (kind) {
     case "jab":
@@ -1280,7 +1368,9 @@ export function distOf(position: Position, sides?: [Side, Side]): number {
   const reach = sides ? (armLength(sides[0].d) + armLength(sides[1].d)) / 2 : 0.56;
   const base = 1.12 + (reach - 0.56) * 1.2;
   if (!sides) return base;
-  const front = (s: Side) => Math.max(handRoot(s.base, s.d, 0)[2], handRoot(s.base, s.d, 1)[2], 0);
+  // 竹刀を前へ構える人は、剣先が相手に届かないところまで離れる（剣先は手より前に出る）
+  const tip = (s: Side) => (s.style === "kendo" ? PROP_LENGTH.shinai * 0.72 : 0);
+  const front = (s: Side) => Math.max(handRoot(s.base, s.d, 0)[2], handRoot(s.base, s.d, 1)[2], 0) + tip(s);
   return Math.max(base, front(sides[0]) + front(sides[1]) + 0.14);
 }
 
@@ -1329,7 +1419,7 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
     if (shown.has(s)) return;
     const a = s.by;
     const d: 0 | 1 = a === 0 ? 1 : 0;
-    const zone = zoneOf(s.kind);
+    const zone = zoneOf(s.kind, sides[a].style, s);
     // 当たると位置関係が変わる組み技（このあとの位置へ、技の流れのまま移る）
     let after: { att: Pose; def: Pose } | null = null;
     let nextPos: Position | null = null;
@@ -1351,6 +1441,7 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
       onTop: position === "ground" && top === a,
       result: s.result,
       after,
+      strike: s,
     });
     // 組み合いの中では、突きは短いアッパーに、蹴りはひざになる（clinchAttack と同じ置きかえ）
     const eff: ActionKind =
@@ -1424,6 +1515,7 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
         const lead = s.result === "hit" ? 0.03 : 0.16;
         const re = reactionTrack({
           me: sides[d],
+          foe: sides[a].style,
           kind: s.kind,
           zone,
           result: s.result,
@@ -1437,9 +1529,10 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
         // 忍者がかわしたときは、跳ぶ前の場所に残像を残す（分身）
         if (s.result === "dodged" && sides[d].style === "ninja" && position !== "ground")
           fx.push({ type: "ghost", at: impactAt - lead + 0.01, until: impactAt - lead + 0.45, who: d, target: a, result: s.result });
-        // タピオカ店員は、上・胴への技をトレイで受ける
-        if (s.result === "blocked" && sides[d].style === "bubbletea" && position !== "ground" && (zone === "head" || (zone === "body" && !s.kind.startsWith("kick"))))
-          fx.push({ type: "tray", at: impactAt - lead, until: impactAt - lead + re.track.end, side: 0, who: d, target: a, result: s.result });
+        // 上・胴への技を受けるとき：タピオカ店員はトレイ、DJ はヘッドホン、恐竜はもふっとした綿
+        if (s.result === "blocked" && position !== "ground" && (zone === "head" || (zone === "body" && !s.kind.startsWith("kick"))))
+          for (const f of guardFx(sides[d].style, re.track.end, lead))
+            fx.push({ ...f, at: impactAt - lead + f.at, until: impactAt - lead + f.until, who: d, target: a, result: s.result });
         next = Math.max(next, impactAt - lead + re.track.end - 0.15);
         impacts.push({ at: impactAt, target: d, by: a, zone, result: s.result, damage: s.damage, kind: s.kind });
       }

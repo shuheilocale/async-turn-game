@@ -1,5 +1,6 @@
 import { legLength, type BodyDims } from "./body.ts";
-import { add, clamp, lerp, smoothstep, wobble, type V3 } from "./math.ts";
+import { add, clamp, lerp, norm, scale, smoothstep, sub, wobble, type V3 } from "./math.ts";
+import { TWO_HAND_GAP } from "./outfit.ts";
 import { chestFrame, headCenter, newPose, P, pack, toChest, unpack, type Pose, type PoseDesc } from "./pose.ts";
 import type { StyleId } from "./types.ts";
 
@@ -887,6 +888,197 @@ export function stanceOf(style: StyleId | null, d: BodyDims): Pose {
         },
         d,
       );
+    case "kendo": {
+      // 中段の構え：右足を前に、左のかかとを少し上げて、まっすぐ相手に向く。左手は柄の端をへその前に、
+      // 右手はその前（鍔の下）。剣先は相手ののどへ向ける
+      const pommel: V3 = [0.0, leg * 0.97 + 0.15, 0.21];
+      const dir = norm(sub([0, leg * 0.97 + 0.5, 1.15], pommel));
+      return build(
+        {
+          lead: [0.1, -0.13],
+          rear: [-0.09, 0.15],
+          leadLift: 0.02,
+          leadHeel: 0.4,
+          leadYaw: -0.05,
+          rearYaw: 0.0,
+          crouch: 0.03,
+          hipYaw: 0.05,
+          spinePitch: -0.02,
+          chestPitch: 0.0,
+          chin: 0.02,
+          hands: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          handsAbs: [pommel, add(pommel, scale(dir, TWO_HAND_GAP))],
+          elbows: [
+            [0.4, -1, -0.3],
+            [-0.4, -1, -0.3],
+          ],
+          fists: [
+            [0.3, 0.6, 0],
+            [0.3, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    }
+    case "luchador":
+      // 胸を張り、両手を開いて胸の高さに広げる（いつでもつかみに行ける）
+      return build(
+        {
+          lead: [0.12, 0.15],
+          rear: [-0.14, -0.15],
+          rearLift: 0.015,
+          rearHeel: 0.3,
+          leadYaw: -0.15,
+          rearYaw: -0.5,
+          crouch: 0.07,
+          hipYaw: -0.25,
+          hipPitch: 0.04,
+          spinePitch: -0.04,
+          chestPitch: -0.1,
+          chin: 0.02,
+          hands: [
+            [0.22, -0.24, 0.18],
+            [-0.22, -0.26, 0.13],
+          ],
+          elbows: [
+            [0.9, -0.6, -0.2],
+            [-0.9, -0.6, -0.2],
+          ],
+          fists: [
+            [0.2, 0.9, 0],
+            [0.2, -0.9, 0],
+          ],
+        },
+        d,
+      );
+    case "firefighter": {
+      // 足を広く、腰を落としてどっしり立つ。筒先は右の腰の前で、両手で前へ向けて持つ（左手は後ろのホース）
+      const front: V3 = [-0.07, leg * 0.98 + 0.15, 0.36];
+      const dir = norm([0.04, -0.18, 1]);
+      return build(
+        {
+          lead: [0.16, 0.19],
+          rear: [-0.17, -0.18],
+          rearHeel: 0.15,
+          leadYaw: -0.25,
+          rearYaw: -0.7,
+          crouch: 0.09,
+          hipYaw: -0.3,
+          hipPitch: 0.06,
+          spinePitch: 0.06,
+          chestPitch: 0.02,
+          chin: 0.05,
+          hands: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          handsAbs: [sub(front, scale(dir, TWO_HAND_GAP)), front],
+          elbows: [
+            [0.3, -1, -0.4],
+            [-0.6, -1, -0.3],
+          ],
+          fists: [
+            [0.2, 0.6, 0],
+            [0.2, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    }
+    case "dj":
+      // 楽に立ち、ひざでリズムをとる。両手は胸の前で軽く握る
+      return build(
+        {
+          lead: [0.1, 0.1],
+          rear: [-0.12, -0.08],
+          leadYaw: -0.1,
+          rearYaw: -0.45,
+          crouch: 0.05,
+          hipYaw: -0.25,
+          hipRoll: 0.02,
+          spinePitch: 0.03,
+          chin: 0.06,
+          hands: [
+            [0.1, -0.28, 0.17],
+            [-0.12, -0.31, 0.13],
+          ],
+          elbows: [
+            [0.6, -1, -0.2],
+            [-0.6, -1, -0.2],
+          ],
+          fists: [
+            [0.2, 0.6, 0],
+            [0.2, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    case "investor":
+      // 背すじを伸ばして落ち着いて立つ。右手のタブレットをみぞおちの前に持ち、左手は体の横に下ろす
+      return build(
+        {
+          lead: [0.09, 0.06],
+          rear: [-0.1, -0.05],
+          leadYaw: 0.0,
+          rearYaw: -0.35,
+          crouch: 0.02,
+          hipYaw: -0.15,
+          hipPitch: -0.02,
+          spinePitch: -0.03,
+          chestPitch: -0.02,
+          chin: 0.03,
+          hands: [
+            [0, 0, 0],
+            [-0.05, -0.42, 0.2],
+          ],
+          handsAbs: [[0.23, leg * 0.97 + 0.02, 0.02], null],
+          elbows: [
+            [0.3, -1, -0.4],
+            [-0.5, -1, -0.3],
+          ],
+          fists: [
+            [0, 0.3, 0],
+            [0.2, 1.3, 0],
+          ],
+        },
+        d,
+      );
+    case "dino":
+      // 恐竜らしく、両手を胸の前で小さく構え（ひじを引き、手首を下へ）、つま先を外へ開いてどっしり立つ
+      return build(
+        {
+          lead: [0.13, 0.07],
+          rear: [-0.13, -0.06],
+          leadYaw: 0.25,
+          rearYaw: -0.25,
+          crouch: 0.07,
+          hipYaw: -0.1,
+          hipPitch: 0.06,
+          spinePitch: 0.05,
+          chestPitch: -0.03,
+          chin: 0.05,
+          hands: [
+            [0.12, -0.26, 0.17],
+            [-0.12, -0.26, 0.17],
+          ],
+          elbows: [
+            [0.5, -1, -0.7],
+            [-0.5, -1, -0.7],
+          ],
+          fists: [
+            [1.0, 0.3, 0],
+            [1.0, -0.3, 0],
+          ],
+          knees: [
+            [0.5, 0, 1],
+            [-0.5, 0, 1],
+          ],
+        },
+        d,
+      );
     default:
       // まだ決まっていない人（シルエット）。肩幅に立ち、軽くこぶしを上げる
       return build(
@@ -963,6 +1155,12 @@ export function clinchPose(style: StyleId | null, d: BodyDims, dist: number, mir
   const p = pack(desc);
   // 相手の首の後ろと、肩に手をかける（相手の頭はこちらと反対の側にある）
   const neckY = legLength(d) * 0.94 + d.pelvisUp + d.abdomen + d.chestH + 0.02;
+  // 剣道家は鍔迫り合い：両手を胸の前に寄せ、竹刀を立てて押し合う
+  if (style === "kendo")
+    return withHands(p, d, [
+      [0.0, neckY - 0.42, 0.24],
+      [0.0, neckY - 0.42 + TWO_HAND_GAP * 0.92, 0.29],
+    ]);
   const ox = -h * 0.08;
   return withHands(p, d, [
     [ox + 0.08, neckY - 0.03, dist - 0.1],
@@ -1204,6 +1402,21 @@ export function rhythmOf(style: StyleId | null, speed: number) {
     case "bubbletea":
       // 店の音楽くらいのリズム
       return 0.9;
+    case "kendo":
+      // すり足の前後（ゆっくり）
+      return 0.42;
+    case "luchador":
+      return 1.5 * quick;
+    case "firefighter":
+      return 0.38;
+    case "dj":
+      // 120 BPM のビート
+      return 2.0;
+    case "investor":
+      return 0.28;
+    case "dino":
+      // のしのし（左右へ 1 歩ずつ）
+      return 0.55;
     default:
       return 0.4;
   }
@@ -1212,6 +1425,12 @@ export function rhythmOf(style: StyleId | null, speed: number) {
 /** サラリーマンがネクタイを直している途中か（0〜1 の進み、直していなければ 0）。7 秒ごとに 1.4 秒 */
 export function tieFix(t: number) {
   const u = ((((t + 3) % 7) + 7) % 7) / 1.4;
+  return u > 0 && u < 1 ? u : 0;
+}
+
+/** 投資家が眼鏡を押し上げている途中か（0〜1 の進み、押し上げていなければ 0）。6.5 秒ごとに 1.1 秒 */
+export function glassesFix(t: number) {
+  const u = ((((t + 1.5) % 6.5) + 6.5) % 6.5) / 1.1;
   return u > 0 && u < 1 ? u : 0;
 }
 
@@ -1559,6 +1778,77 @@ export function idleDelta(
       inc(out, P.hip + 1, 0.006 * Math.abs(Math.sin(beat)) * e);
       inc(out, P.neck + 2, -0.05 * s * e);
       addV(out, P.hand + 3, 0.012 * Math.cos(beat * 2) * e, 0.006 * Math.sin(beat) * e, 0.012 * Math.sin(beat * 2) * e);
+      break;
+    }
+    case "kendo": {
+      // すり足：前の右足から出て、後ろの左足を引きつける。剣先は小さく上下して相手の気配を探る
+      inc(out, P.hip + 2, 0.03 * s * e);
+      inc(out, P.foot + 3 + 2, 0.04 * Math.sin(beat + 0.5) * e);
+      inc(out, P.foot + 2, 0.04 * Math.sin(beat - 0.5) * e);
+      inc(out, P.hip + 1, -0.004 * (c + 1) * e);
+      addV(out, P.hand + 3, 0, 0.008 * Math.sin(beat * 2.3) * e, 0.006 * Math.sin(beat * 2.3) * e);
+      break;
+    }
+    case "luchador": {
+      // 胸を張ったまま、つま先で軽く弾む。開いた手を握ったり開いたりして、観客にも見せる
+      const hop = Math.abs(Math.sin(beat / 2 + Math.PI / 2)) * 2 - 1;
+      inc(out, P.hip + 1, 0.014 * hop * e);
+      for (const i of [0, 1]) {
+        inc(out, P.foot + i * 3 + 1, 0.007 * (hop + 1) * e);
+        inc(out, P.footRot + i * 3, 0.07 * (hop + 1) * e);
+      }
+      inc(out, P.chest, -0.025 * Math.max(0, Math.sin(beat / 2)) * e);
+      inc(out, P.chest + 1, 0.05 * Math.sin(beat / 4) * e);
+      for (const i of [0, 1]) inc(out, P.fist + i * 3, 0.35 * Math.max(0, Math.sin(beat / 2 + i * 1.5)) * e);
+      break;
+    }
+    case "firefighter": {
+      // どっしりと重心を左右に移す。ときどき筒先を握り直す
+      inc(out, P.hip, 0.01 * s * e);
+      inc(out, P.hipRot + 1, 0.03 * s * e);
+      inc(out, P.hip + 1, -0.004 * (c + 1) * e);
+      const grip = Math.max(0, Math.sin(t * 0.8)) ** 12;
+      addV(out, P.hand + 3, 0, 0.02 * grip * e, 0.015 * grip * e);
+      addV(out, P.hand, 0, 0.02 * grip * e, 0.015 * grip * e);
+      break;
+    }
+    case "dj": {
+      // ビートに合わせてひざで弾み、首でリズムをとる。肩は 2 拍で交互に上げる
+      const bounce = Math.abs(Math.sin(beat));
+      inc(out, P.hip + 1, -0.014 * bounce * e);
+      inc(out, P.neck, 0.1 * bounce * e);
+      const half = Math.sin(beat / 2);
+      inc(out, P.shrug, 0.016 * Math.max(0, half) * e);
+      inc(out, P.shrug + 1, 0.016 * Math.max(0, -half) * e);
+      inc(out, P.chest + 1, 0.06 * half * e);
+      inc(out, P.hip, 0.01 * half * e);
+      for (const i of [0, 1]) addV(out, P.hand + i * 3, 0, -0.015 * bounce * e, 0.012 * Math.sin(beat + i * Math.PI) * e);
+      break;
+    }
+    case "investor": {
+      // 静かに立ち、ときどきタブレットに目を落とす。ときどき左手で眼鏡を押し上げる
+      inc(out, P.hip, 0.005 * s * e);
+      inc(out, P.neck, 0.12 * Math.max(0, Math.sin(t * 0.55 + 1)) ** 6 * e);
+      const fix = energy > 0.5 ? glassesFix(t) : 0;
+      if (fix > 0) {
+        const up = Math.sin(Math.PI * fix) ** 0.5;
+        addV(out, P.hand, -0.13 * up, 0.5 * up, 0.12 * up);
+        inc(out, P.elbow, 0.4 * up);
+        inc(out, P.fist, 0.8 * up);
+        inc(out, P.neck, -0.06 * up);
+      }
+      break;
+    }
+    case "dino": {
+      // のしのし：左右へ大きく体重を移し、浮いた足で床を踏む。体ごと左右へ揺れる
+      inc(out, P.hip, 0.028 * s * e);
+      inc(out, P.hipRot + 2, -0.06 * s * e);
+      inc(out, P.chest + 2, 0.04 * s * e);
+      inc(out, P.chest + 1, 0.06 * s * e);
+      inc(out, P.hip + 1, -0.01 * Math.abs(s) * e);
+      inc(out, P.foot + 1, 0.035 * Math.max(0, -s) ** 2 * e);
+      inc(out, P.foot + 3 + 1, 0.035 * Math.max(0, s) ** 2 * e);
+      inc(out, P.neck + 2, -0.05 * s * e);
       break;
     }
     default: {

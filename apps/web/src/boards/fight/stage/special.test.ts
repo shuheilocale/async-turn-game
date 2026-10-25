@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bodyOf, NEUTRAL_STATS } from "./body.ts";
 import { basePoseOf, buildExchange, distOf, type ExchangeCtx, type Position, type Side } from "./moves.ts";
 import { newPose, P } from "./pose.ts";
-import { healOf, performOf, ROCKET_RETURN, SHOT_FLIGHT, shotOf, VANISH_GONE } from "./special.ts";
+import { boostsSelf, healOf, performOf, ROCKET_RETURN, SHOT_FLIGHT, shotOf, VANISH_GONE } from "./special.ts";
 import type { ActionKind, StageEvent, StageStrike, StyleId } from "./types.ts";
 
 function ctxOf(styles: [StyleId, StyleId], position: Position = "standing"): ExchangeCtx {
@@ -290,5 +290,84 @@ describe("忍者・トゥクトゥク運転手・スタントマン・サラリ�
     const fall = ex.clips.filter((c) => c.who === 0).at(-1)!;
     expect(fall.track.keys.length).toBeGreaterThan(5);
     expect(fall.track.keys[fall.track.keys.length - 1]!.pose[P.hip + 1]!).toBeLessThan(0.2);
+  });
+});
+
+describe("剣道家・ルチャドール・消防士・DJ・投資家・恐竜の着ぐるみ", () => {
+  const types = (ex: ReturnType<typeof play>) => ex.fx.map((f) => f.type);
+  const self = (stat: "power" | "guard" | "speed" | "stamina") => ({ effects: [{ who: 0 as const, stat, dir: 1 as const }], damage: 0 });
+  const foe = (stat: "power" | "guard" | "speed" | "stamina") => ({ effects: [{ who: 1 as const, stat, dir: -1 as const }] });
+
+  it("飛ばすもの・見せる技・回復の形が、その人らしいものになる", () => {
+    expect(shotOf("firefighter")).toBe("water");
+    expect(shotOf("investor")).toBe("coins");
+    expect(performOf("kendo")).toBe("zanshin");
+    expect(performOf("luchador")).toBe("beckon");
+    expect(performOf("dino")).toBe("roar");
+    expect(performOf("dj")).toBe("scratch");
+    expect(performOf("dj", true)).toBe("hype");
+    expect(performOf("investor")).toBe("chartDown");
+    expect(performOf("investor", true)).toBe("chartUp");
+    expect(healOf("firefighter")).toBe("helmet");
+    expect(healOf("investor")).toBe("dividend");
+    for (const s of ["water", "coins"] as const) expect(SHOT_FLIGHT[s]).toBeGreaterThan(0);
+  });
+
+  it("見せる技が 2 つある人は、自分を強めるだけの技（強化が自分だけ）を見分ける。外れた技は相手へ向けた技", () => {
+    expect(boostsSelf({ by: 0, damage: 0, result: "hit", effects: [{ who: 0, stat: "power", dir: 1 }] })).toBe(true);
+    expect(boostsSelf({ by: 1, damage: 0, result: "hit", effects: [{ who: 1, stat: "speed", dir: 1 }] })).toBe(true);
+    expect(boostsSelf({ by: 0, damage: 0, result: "hit", effects: [{ who: 1, stat: "power", dir: -1 }] })).toBe(false);
+    expect(boostsSelf({ by: 0, damage: 6, result: "hit" })).toBe(false);
+    expect(boostsSelf({ by: 0, damage: 0, result: "hit" })).toBe(true);
+    expect(boostsSelf({ by: 0, damage: 0, result: "dodged" })).toBe(false);
+    expect(boostsSelf(undefined)).toBe(false);
+  });
+
+  it("消防士の放水は、筒先から水の線を走らせ（飛ぶものは出さない）、線が届いた瞬間に当たる。寝技でも水を出す", () => {
+    const ex = play(["firefighter", "judo"], [one(0, "projectile")]);
+    const water = ex.fx.find((f) => f.type === "water")!;
+    expect(water).toBeDefined();
+    expect(ex.fx.some((f) => f.type === "shot")).toBe(false);
+    expect(ex.impacts[0]!.at).toBeCloseTo(water.at + SHOT_FLIGHT.water);
+    expect(water.until).toBeGreaterThan(ex.impacts[0]!.at);
+    expect(types(play(["firefighter", "judo"], [one(0, "projectile")], "ground"))).toContain("water");
+  });
+
+  it("投資家はタブレットを持たない左手でコインを投げ、振る技では電卓に持ちかえる", () => {
+    expect(play(["investor", "judo"], [one(0, "projectile")]).fx.find((f) => f.type === "shot")).toMatchObject({ shot: "coins", side: 0 });
+    expect(play(["investor", "judo"], [one(0, "swing")]).fx.find((f) => f.type === "form")?.form).toBe(1);
+  });
+
+  it("DJ のスクラッチはヘッドホンを耳に当てて光るレコードと音符、フロアを沸かすは音符ときらめき", () => {
+    const scratch = types(play(["dj", "judo"], [one(0, "perform", "hit", { damage: 6 })]));
+    expect(scratch).toEqual(expect.arrayContaining(["phones", "vinyl", "notes"]));
+    const hype = types(play(["dj", "judo"], [one(0, "perform", "hit", self("power"))]));
+    expect(hype).toEqual(expect.arrayContaining(["notes", "sparkle"]));
+    expect(hype).not.toContain("vinyl");
+    // ビートドロップ（straight）は、当たる瞬間に音符をはじけさせる
+    const drop = play(["dj", "judo"], [one(0, "straight")]);
+    expect(drop.fx.find((f) => f.type === "notes")!.at).toBeCloseTo(drop.impacts[0]!.at);
+  });
+
+  it("投資家の積み立ては上向きのグラフ、空売り（外れたときも）は下向きのグラフ", () => {
+    const chart = (s: Partial<StageStrike>, result: StageStrike["result"] = "hit") => play(["investor", "judo"], [one(0, "perform", result, s)]).fx.find((f) => f.type === "chart")!;
+    expect(chart(self("stamina")).dir).toBe(1);
+    expect(chart(foe("power")).dir).toBe(-1);
+    expect(chart({ damage: 0 }, "dodged").dir).toBe(-1);
+  });
+
+  it("剣道家の残心は足もとの光の輪、ルチャドールはきらめき、恐竜はほえる声の波", () => {
+    expect(types(play(["kendo", "judo"], [one(0, "perform", "hit", self("guard"))]))).toContain("zanshin");
+    expect(types(play(["luchador", "judo"], [one(0, "perform")]))).toContain("sparkle");
+    expect(types(play(["dino", "judo"], [one(0, "perform")]))).toContain("roar");
+  });
+
+  it("消防士はヘルメットを上げて汗をぬぐい、投資家は配当のコインが降る。どちらも回復の光", () => {
+    const ff = types(play(["firefighter", "judo"], [one(0, "heal", "hit", { heal: 8, damage: 0 })]));
+    expect(ff).toEqual(expect.arrayContaining(["lift", "heal"]));
+    const inv = types(play(["investor", "judo"], [one(0, "heal", "hit", { heal: 8, damage: 0 })]));
+    expect(inv).toEqual(expect.arrayContaining(["coinrain", "heal"]));
+    // 寝技の中でも同じ効果を出す
+    expect(types(play(["investor", "judo"], [one(0, "heal", "hit", { heal: 8 })], "ground"))).toContain("coinrain");
   });
 });
