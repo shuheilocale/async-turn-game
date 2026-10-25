@@ -50,6 +50,9 @@ describe("1 回の攻防の段取り", () => {
     ["magician", "robot"],
     ["chef", "idol"],
     ["taichi", "nurse"],
+    ["ninja", "tuktuk"],
+    ["stuntman", "salaryman"],
+    ["bubbletea", "robot"],
   ];
   for (const styles of pairs)
     it(`${styles.join("・")}：どの技・結果・位置関係でも、壊れない動きを作る`, { timeout: 20000 }, () => {

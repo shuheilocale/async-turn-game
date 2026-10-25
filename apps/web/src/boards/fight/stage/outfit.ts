@@ -7,9 +7,10 @@ import type { StyleId } from "./types.ts";
 export interface Outfit {
   /**
    * 上半身：裸 / 道着 / テコンドーの道着（V 字の襟）/ シングレット /
-   * パーカー / 中国風の上着（結びボタン）/ 燕尾服 / スクラブ / ステージ衣装の上着 / 大きめの T シャツ / コックコート
+   * パーカー / 中国風の上着（結びボタン）/ 燕尾服 / スクラブ / ステージ衣装の上着 / 大きめの T シャツ / コックコート /
+   * 忍び装束（道着と同じ作りで、袖口をしぼる）/ 開襟シャツ / スタントスーツ / スーツの上着（白いシャツとネクタイ）
    */
-  top: "none" | "gi" | "dobok" | "singlet" | "hoodie" | "tunic" | "tailcoat" | "scrub" | "jacket" | "tee" | "chef";
+  top: "none" | "gi" | "dobok" | "singlet" | "hoodie" | "tunic" | "tailcoat" | "scrub" | "jacket" | "tee" | "chef" | "shinobi" | "shirt" | "stunt" | "suit";
   /** 袖の長さ（0 = 半袖くらい、1 = 手首まで） */
   sleeve: number;
   /** 上腕を袖で覆う割合（1 = ひじまで。半袖は 0.5 くらい） */
@@ -35,8 +36,8 @@ export interface Outfit {
   sheen: number;
   /** 手：素手のこぶし / ボクシングのグローブ / オープンフィンガーグローブ / 白い手袋 */
   hands: "fist" | "gloves" | "mma" | "white";
-  /** 足：はだし / ボクシングシューズ / レスリングシューズ / スニーカー / 革靴 / 布の靴 */
-  feet: "bare" | "boots" | "shoes" | "sneakers" | "dress" | "slip";
+  /** 足：はだし / ボクシングシューズ / レスリングシューズ / スニーカー / 革靴 / 布の靴 / 足袋 / サンダル（足の甲が見える） */
+  feet: "bare" | "boots" | "shoes" | "sneakers" | "dress" | "slip" | "tabi" | "sandals";
   /** 腰：なし / 帯 / カポエラの紐（コルダン） */
   belt: "none" | "belt" | "cord";
   /** ムエタイの腕の飾り布（プラジアット） */
@@ -47,22 +48,33 @@ export interface Outfit {
   shins: boolean;
   /** 髪：短髪 / 坊主 / まげ / なし（帽子の中） */
   hair: "short" | "buzz" | "topknot" | "none";
-  /** 頭：シルクハット / コック帽 / うしろ向きのキャップ / スイムキャップとゴーグル / ヘッドセット / ヘッドセットのマイク */
-  head: "none" | "tophat" | "toque" | "cap" | "swim" | "headset" | "mic";
-  /** 首：蝶ネクタイ / 太いチェーン / スカーフ */
-  neck: "none" | "bowtie" | "chain" | "scarf";
+  /**
+   * 頭：シルクハット / コック帽 / うしろ向きのキャップ / スイムキャップとゴーグル / ヘッドセット / ヘッドセットのマイク /
+   * 忍びの頭巾と口元の布 / バンダナ
+   */
+  head: "none" | "tophat" | "toque" | "cap" | "swim" | "headset" | "mic" | "hood" | "bandana";
+  /** 首：蝶ネクタイ / 太いチェーン / スカーフ / 首にかけたタオル / ネクタイ */
+  neck: "none" | "bowtie" | "chain" | "scarf" | "towel" | "tie";
   /** 持ち物（右手に持つ）。振る技（swing）で振る */
   prop: Prop;
   /** マント（燕尾服のすそも付ける） */
   cape: boolean;
-  /** エプロン */
+  /** エプロン（腰から下）と、胸まで覆う胸当て */
   apron: boolean;
+  bib: boolean;
+  /** 手甲（前腕を覆う布。その人の色） */
+  bracers: boolean;
+  /** ひじ・ひざのプロテクター */
+  pads: boolean;
+  /** 背中に負った刀 */
+  sword: boolean;
   /** 全身が金属の板（肌を見せない） */
   robot: boolean;
 }
 
-export type Cloth = "white" | "ivory" | "charcoal" | "black" | "silk" | "seat";
-export type Prop = "none" | "cane" | "pan" | "penlight";
+export type Cloth = "white" | "ivory" | "charcoal" | "black" | "silk" | "navy" | "seat";
+/** 持ち物：ステッキ / フライパン / ペンライト / カバン / ストローの刺さった大きなカップ */
+export type Prop = "none" | "cane" | "pan" | "penlight" | "bag" | "cup";
 
 const base: Outfit = {
   top: "none",
@@ -90,6 +102,10 @@ const base: Outfit = {
   prop: "none",
   cape: false,
   apron: false,
+  bib: false,
+  bracers: false,
+  pads: false,
+  sword: false,
   robot: false,
 };
 
@@ -140,13 +156,34 @@ export function outfitOf(style: StyleId | null): Outfit {
       return { ...base, top: "chef", sleeve: 0.75, cuff: 1.12, hem: 0.2, loose: 1.14, bottom: "pants", legLen: 1, flare: 1.08, cloth: "white", pants: "charcoal", feet: "dress", head: "toque", neck: "scarf", prop: "pan", apron: true };
     case "robot":
       return { ...base, bottom: "trunks", legLen: 0, hair: "none", robot: true };
+    case "ninja":
+      // 黒い忍び装束。袖口と裾をしぼり、帯と手甲はその人の色。頭巾と口元の布、足袋、背中に刀
+      return { ...base, top: "shinobi", sleeve: 0.9, cuff: 0.86, bottom: "pants", legLen: 0.95, flare: 0.78, baggy: 1.3, cloth: "black", pants: "black", belt: "belt", feet: "tabi", hair: "none", head: "hood", bracers: true, sword: true };
+    case "tuktuk":
+      // その人の色の半袖の開襟シャツ（すそは出す）、少し短いズボン、首にタオル、サンダル
+      return { ...base, top: "shirt", sleeve: 0, upper: 0.55, cuff: 1.16, hem: 0.12, loose: 1.12, bottom: "pants", legLen: 0.8, flare: 1.08, baggy: 1.24, cloth: "seat", pants: "charcoal", feet: "sandals", neck: "towel" };
+    case "stuntman":
+      // 黒いスタントスーツ（その人の色のライン）、指の出る手袋、ひじ・ひざのプロテクター
+      return { ...base, top: "stunt", sleeve: 1, cuff: 0.94, hem: 0.0, loose: 1.03, bottom: "pants", legLen: 1, flare: 0.96, baggy: 1.1, cloth: "black", pants: "black", sheen: 0.3, hands: "mma", feet: "shoes", pads: true };
+    case "salaryman":
+      // スーツの上着とズボン、白いシャツ、その人の色のネクタイ、革靴。右手にカバン
+      return { ...base, top: "suit", sleeve: 1, cuff: 1.0, hem: 0.12, loose: 1.06, bottom: "pants", legLen: 1, flare: 1.02, baggy: 1.16, cloth: "navy", pants: "navy", sheen: 0.15, feet: "dress", neck: "tie", prop: "bag" };
+    case "bubbletea":
+      // 白い T シャツに、その人の色の胸当てエプロンとバンダナ。右手にストローの刺さった大きなカップ
+      return { ...base, top: "tee", sleeve: 0, upper: 0.55, cuff: 1.12, hem: 0.04, loose: 1.1, bottom: "pants", legLen: 1, flare: 1.06, baggy: 1.2, cloth: "white", pants: "charcoal", feet: "sneakers", head: "bandana", prop: "cup", apron: true, bib: true };
     default:
       return { ...base, bottom: "mma", legLen: 0.45, flare: 1.15 };
   }
 }
 
-/** 持ち物の長さ（握るところから先まで、m）。振る技で手をどこまで出すかに使う */
-export const PROP_LENGTH: Record<Prop, number> = { none: 0, cane: 0.9, pan: 0.42, penlight: 0.26 };
+/**
+ * 持ち物の長さ（握るところから先まで、m）。振る技で手をどこまで出すかに使う。
+ * カップは、振る技で持ちかえる太いストローの長さ
+ */
+export const PROP_LENGTH: Record<Prop, number> = { none: 0, cane: 0.9, pan: 0.42, penlight: 0.26, bag: 0.36, cup: 0.5 };
+
+/** 前腕の向きに続けて持つ（下へ垂らす）持ち物。ほかは親指の側へ伸ばして持つ */
+export const hangsDown = (p: Prop) => p === "cane" || p === "bag";
 
 /** その人が右手に持っているもの */
 export const propOf = (style: StyleId | null): Prop => outfitOf(style).prop;

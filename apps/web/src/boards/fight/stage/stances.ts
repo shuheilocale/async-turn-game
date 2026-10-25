@@ -730,6 +730,163 @@ export function stanceOf(style: StyleId | null, d: BodyDims): Pose {
         },
         d,
       );
+    case "ninja":
+      // 腰を深く落として低く構える。前の手は手刀にして前へ、後ろの手は胸の前に引く
+      return build(
+        {
+          lead: [0.13, 0.27],
+          rear: [-0.15, -0.25],
+          rearLift: 0.02,
+          rearHeel: 0.4,
+          leadYaw: -0.2,
+          rearYaw: -0.75,
+          crouch: 0.2,
+          hipYaw: -0.55,
+          hipPitch: 0.3,
+          spinePitch: 0.12,
+          chestPitch: 0.04,
+          chin: 0.06,
+          hands: [
+            [0.1, -0.22, 0.3],
+            [-0.05, -0.33, 0.12],
+          ],
+          elbows: [
+            [0.4, -1, -0.2],
+            [-0.5, -1, -0.2],
+          ],
+          fists: [
+            [0.1, 1.3, 0],
+            [0.3, -0.9, 0],
+          ],
+          knees: [
+            [0.45, 0, 1],
+            [-0.35, 0, 1],
+          ],
+        },
+        d,
+      );
+    case "tuktuk":
+      // ハンドルを握るように、両手を胸の下の前へ出す（手の甲が上）。少し前へ乗り出す
+      return build(
+        {
+          lead: [0.12, 0.09],
+          rear: [-0.12, -0.07],
+          leadYaw: -0.05,
+          rearYaw: -0.4,
+          crouch: 0.05,
+          hipYaw: -0.12,
+          hipPitch: 0.06,
+          spinePitch: 0.1,
+          chestPitch: 0.04,
+          chin: 0.08,
+          hands: [
+            [0.2, -0.4, 0.28],
+            [-0.2, -0.4, 0.28],
+          ],
+          elbows: [
+            [1, -0.6, -0.2],
+            [-1, -0.6, -0.2],
+          ],
+          fists: [
+            [0.4, 1.2, 0],
+            [0.4, -1.2, 0],
+          ],
+        },
+        d,
+      );
+    case "stuntman":
+      // つま先で軽く立ち、ひざに余裕を持たせる。手は胸の前で軽く握る
+      return build(
+        {
+          lead: [0.12, 0.19],
+          rear: [-0.14, -0.19],
+          leadLift: 0.012,
+          rearLift: 0.03,
+          leadHeel: 0.25,
+          rearHeel: 0.45,
+          leadYaw: -0.3,
+          rearYaw: -0.7,
+          crouch: 0.08,
+          hipYaw: -0.4,
+          hipPitch: 0.08,
+          spinePitch: 0.08,
+          chestPitch: 0.04,
+          chin: 0.08,
+          hands: [
+            [0.12, -0.2, 0.22],
+            [-0.12, -0.22, 0.14],
+          ],
+          elbows: [
+            [0.5, -1, -0.2],
+            [-0.5, -1, -0.2],
+          ],
+          fists: [
+            [0.2, 0.6, 0],
+            [0.2, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    case "salaryman":
+      // 背すじを伸ばしてまっすぐ立つ。右手にカバンを下げ、左手は軽く握ってみぞおちの前に
+      return build(
+        {
+          lead: [0.1, 0.07],
+          rear: [-0.1, -0.05],
+          leadYaw: 0.05,
+          rearYaw: -0.35,
+          crouch: 0.02,
+          hipYaw: -0.2,
+          hipPitch: -0.02,
+          spinePitch: -0.04,
+          chestPitch: -0.03,
+          chin: 0.0,
+          hands: [
+            [0.07, -0.33, 0.2],
+            [0, 0, 0],
+          ],
+          handsAbs: [null, [-0.24, leg * 0.98, 0.02]],
+          elbows: [
+            [0.6, -1, -0.3],
+            [-0.3, -1, -0.3],
+          ],
+          fists: [
+            [0.2, 0.9, 0],
+            [0, -0.2, 0],
+          ],
+        },
+        d,
+      );
+    case "bubbletea":
+      // カップを胸の前に見せるように持ち、左手は腰に当てる。足は軽く開いて楽に立つ
+      return build(
+        {
+          lead: [0.1, 0.08],
+          rear: [-0.11, -0.06],
+          leadYaw: 0.15,
+          rearYaw: -0.4,
+          crouch: 0.03,
+          hipYaw: -0.2,
+          hipRoll: 0.03,
+          spinePitch: 0.0,
+          chestPitch: -0.02,
+          chin: 0.03,
+          hands: [
+            [0, 0, 0],
+            [-0.08, -0.3, 0.2],
+          ],
+          handsAbs: [[0.26, leg * 1.04, -0.03], null],
+          elbows: [
+            [1, -0.3, -0.6],
+            [-0.5, -1, -0.3],
+          ],
+          fists: [
+            [0.3, 0.6, 0.6],
+            [0, 1.6, 0],
+          ],
+        },
+        d,
+      );
     default:
       // まだ決まっていない人（シルエット）。肩幅に立ち、軽くこぶしを上げる
       return build(
@@ -1036,10 +1193,30 @@ export function rhythmOf(style: StyleId | null, speed: number) {
       return 0.45;
     case "robot":
       return 0.5;
+    case "ninja":
+      return 0.22;
+    case "tuktuk":
+      return 1.1 * quick;
+    case "stuntman":
+      return 1.55 * quick;
+    case "salaryman":
+      return 0.32;
+    case "bubbletea":
+      // 店の音楽くらいのリズム
+      return 0.9;
     default:
       return 0.4;
   }
 }
+
+/** サラリーマンがネクタイを直している途中か（0〜1 の進み、直していなければ 0）。7 秒ごとに 1.4 秒 */
+export function tieFix(t: number) {
+  const u = ((((t + 3) % 7) + 7) % 7) / 1.4;
+  return u > 0 && u < 1 ? u : 0;
+}
+
+/** トゥクトゥク運転手がアクセルをふかしている強さ（0〜1）。ときどき右の手首をひねる */
+export const throttleOf = (t: number) => Math.max(0, Math.sin(t * 0.9)) ** 8;
 
 /** 0〜1 のでたらめに見える数（同じ n なら同じ値） */
 const hash = (n: number) => {
@@ -1088,7 +1265,8 @@ export function idleDelta(
   // ロボットは息をしない（胸の光の点滅で見せる）
   const robot = style === "robot";
   const b = robot ? 0 : breathWave(breath);
-  const a = robot ? 0 : 1 + 1.6 * fatigue;
+  // 忍者は気配を消すように、息を小さくする
+  const a = robot ? 0 : (1 + 1.6 * fatigue) * (style === "ninja" ? 0.45 : 1);
   out[P.breath] = b * a;
   out[P.shrug] = out[P.shrug + 1] = 0.009 * a * (b + 1);
   out[P.chest] = -0.03 * a * b;
@@ -1320,6 +1498,67 @@ export function idleDelta(
       addV(out, P.hand, 0, 0.03 * (at(step, 3) - 0.5) * e, 0.03 * (at(step, 4) - 0.5) * e);
       addV(out, P.hand + 3, 0, 0.03 * (at(step, 5) - 0.5) * e, 0.03 * (at(step, 6) - 0.5) * e);
       inc(out, P.chest + 1, 0.06 * (at(step, 0) - 0.5) * e);
+      break;
+    }
+    case "ninja": {
+      // ほとんど動かない。ゆっくり腰を沈め、目だけで相手を探るように首を小さく振る
+      inc(out, P.hip + 1, -0.008 * (s + 1) * e);
+      inc(out, P.hip, 0.006 * c * e);
+      inc(out, P.neck + 1, 0.1 * Math.sin(beat * 0.7) * e);
+      inc(out, P.neck, 0.03 * s * e);
+      break;
+    }
+    case "tuktuk": {
+      // 道のでこぼこで小さく揺れ、ハンドルを少し切る。ときどき右の手首をひねってアクセルをふかす
+      const bump = (Math.sin(t * 13) * Math.sin(t * 3.1) + 0.4 * Math.sin(t * 21)) * e;
+      const steer = Math.sin(beat / 3) * e;
+      inc(out, P.hip + 1, 0.005 * bump);
+      for (const i of [0, 1]) addV(out, P.hand + i * 3, 0, 0.006 * bump + (i === 0 ? 1 : -1) * 0.018 * steer, 0);
+      inc(out, P.chest + 1, 0.05 * steer);
+      inc(out, P.neck + 1, -0.04 * steer);
+      const rev = throttleOf(t) * e;
+      inc(out, P.fist + 3, -0.6 * rev);
+      inc(out, P.shrug + 1, 0.01 * rev);
+      break;
+    }
+    case "stuntman": {
+      // 身軽に弾み、左右の足を入れかえるように軽く浮かせる。肩もほぐす
+      const hop = Math.abs(Math.sin(beat / 2 + Math.PI / 2)) * 2 - 1;
+      inc(out, P.hip + 1, 0.02 * hop * e);
+      for (const i of [0, 1]) {
+        const lift = Math.max(0, Math.sin(beat / 2 + i * Math.PI));
+        inc(out, P.foot + i * 3 + 1, (0.008 * (hop + 1) + 0.025 * lift) * e);
+        inc(out, P.footRot + i * 3, (0.08 * (hop + 1) + 0.2 * lift) * e);
+      }
+      inc(out, P.hip, 0.015 * Math.sin(beat / 2) * e);
+      inc(out, P.chest + 1, 0.05 * Math.sin(beat / 2) * e);
+      inc(out, P.shrug, 0.008 * Math.max(0, Math.sin(beat / 4)) * e);
+      inc(out, P.shrug + 1, 0.008 * Math.max(0, -Math.sin(beat / 4)) * e);
+      break;
+    }
+    case "salaryman": {
+      // 落ち着いて静かに立つ。ときどき左手でネクタイの結び目を直し、あごを少し上げる
+      inc(out, P.hip, 0.006 * s * e);
+      inc(out, P.hipRot + 1, 0.02 * s * e);
+      const fix = energy > 0.5 ? tieFix(t) : 0;
+      if (fix > 0) {
+        const up = Math.sin(Math.PI * fix) ** 0.5;
+        const jiggle = Math.sin(fix * 22) * up;
+        addV(out, P.hand, -0.06 * up + 0.012 * jiggle, 0.2 * up, -0.03 * up);
+        inc(out, P.elbow, 0.5 * up);
+        inc(out, P.fist, 0.6 * up);
+        inc(out, P.neck, -0.1 * up);
+        inc(out, P.neck + 2, 0.06 * jiggle);
+      }
+      break;
+    }
+    case "bubbletea": {
+      // 店の音楽に合わせて軽く揺れ、カップを持つ手で小さく円を描く（中身を混ぜる）
+      inc(out, P.hip, 0.012 * s * e);
+      inc(out, P.hipRot + 2, 0.025 * s * e);
+      inc(out, P.hip + 1, 0.006 * Math.abs(Math.sin(beat)) * e);
+      inc(out, P.neck + 2, -0.05 * s * e);
+      addV(out, P.hand + 3, 0.012 * Math.cos(beat * 2) * e, 0.006 * Math.sin(beat) * e, 0.012 * Math.sin(beat * 2) * e);
       break;
     }
     default: {

@@ -3,16 +3,22 @@ import type { ShotKind } from "./track.ts";
 import type { StageStrike } from "./types.ts";
 
 /**
- * 新しい技の効果：飛ぶもの（トランプ・ロケットパンチ・光の玉）と、小さな粒（ハート・音符・きらめき・煙・湯気・回復の光）、
- * ゲーマーの光の枠、ロボットの再起動の光の線、体を包む光。
+ * 新しい技の効果：飛ぶもの（トランプ・ロケットパンチ・光の玉・手裏剣・名刺・タピオカ）と、
+ * 小さな粒（ハート・音符・きらめき・煙・湯気・回復の光・音の波）、ゲーマーの光の枠、ロボットの再起動の光の線とレーザー、
+ * 体を包む光、忍者の残像。
  * どれも舞台を作るときに数を決めて作っておき、使い回す（見えていないものは描かない）
  */
 
 /** 粒の形 */
-export type Speck = "heart" | "note" | "star" | "smoke" | "orb" | "pixel";
+export type Speck = "heart" | "note" | "star" | "smoke" | "orb" | "pixel" | "wave";
 
+const Y_UP = new THREE.Vector3(0, 1, 0);
 const SPECKS = 56;
 const CARDS = 4;
+const SHURIKENS = 2;
+const PEARLS = 6;
+/** 残像の長さ（秒） */
+const GHOST_LIFE = 0.42;
 
 /** 白い形を描いたテクスチャ（色は材質の色でつける） */
 function shapeTexture(kind: Speck) {
@@ -92,6 +98,15 @@ function shapeTexture(kind: Speck) {
       g.fillRect(14, 14, 36, 36);
       break;
     }
+    case "wave": {
+      // 音の波：右へふくらむ弧（「)」の形）。向きは粒を回してそろえる
+      g.lineCap = "round";
+      g.lineWidth = 6;
+      g.beginPath();
+      g.arc(10, 32, 30, -0.9, 0.9);
+      g.stroke();
+      break;
+    }
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -122,6 +137,49 @@ function cardTexture() {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
+}
+
+/** 名刺（白い紙に、名前と連絡先のような灰色の線。ロゴや社名は描かない） */
+function meishiTexture() {
+  const c = document.createElement("canvas");
+  c.width = 96;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#fbfbf8";
+  g.fillRect(0, 0, 96, 64);
+  // 明るい舞台でも見えるよう、ふちを濃くし、左に紺の帯を入れる
+  g.strokeStyle = "#7d828f";
+  g.lineWidth = 4;
+  g.strokeRect(2, 2, 92, 60);
+  g.fillStyle = "#2b3550";
+  g.fillRect(4, 4, 10, 56);
+  g.fillStyle = "#2a2d36";
+  g.fillRect(30, 24, 46, 8);
+  g.fillStyle = "#8d919b";
+  g.fillRect(22, 12, 26, 4);
+  g.fillRect(22, 42, 58, 4);
+  g.fillRect(22, 50, 44, 4);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** 手裏剣（4 つの刃の、平たい星。XY 面、半径 1） */
+function shurikenGeometry() {
+  const shape = new THREE.Shape();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 4;
+    const r = i % 2 ? 0.28 : 1;
+    if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  shape.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.12, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false, curveSegments: 6 });
+  g.translate(0, 0, -0.05);
+  return g;
 }
 
 /** 画面のような光の枠（四隅の印と、横線） */
@@ -211,6 +269,24 @@ export class StageFx {
   private readonly frameTex = frameTexture();
   private readonly rings: THREE.Mesh[] = [];
   private readonly aura: THREE.Sprite;
+  private readonly cardMat: THREE.MeshBasicMaterial;
+  private readonly meishiMat: THREE.MeshBasicMaterial;
+  private readonly shurikens: THREE.Mesh[] = [];
+  /** タピオカの粒（1 回の描画でまとめて描く） */
+  private readonly pearls: THREE.InstancedMesh;
+  private readonly ice: THREE.InstancedMesh;
+  private readonly euler = new THREE.Euler();
+  private readonly pearlVel: THREE.Vector3[] = [];
+  private readonly pearlPos: THREE.Vector3[] = [];
+  private readonly m4 = new THREE.Matrix4();
+  /** レーザー：外側の光（その人の色）と白い芯、目もとと当たる所の光 */
+  private readonly beam: THREE.Mesh;
+  private readonly beamCore: THREE.Mesh;
+  private readonly beamEnds: THREE.Sprite[] = [];
+  /** 残像：同じ形をまとめて描く（形ごとに 1 回の描画） */
+  private readonly ghosts = new Map<THREE.BufferGeometry, THREE.InstancedMesh>();
+  private readonly ghostMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, fog: false });
+  private ghostLife = 0;
   private shot: Shot | null = null;
   private readonly v = new THREE.Vector3();
   private readonly v2 = new THREE.Vector3();
@@ -219,7 +295,15 @@ export class StageFx {
   private readonly disposables: { dispose(): void }[] = [];
 
   constructor(private readonly camera: THREE.Camera) {
-    this.tex = { heart: shapeTexture("heart"), note: shapeTexture("note"), star: shapeTexture("star"), smoke: shapeTexture("smoke"), orb: shapeTexture("orb"), pixel: shapeTexture("pixel") };
+    this.tex = {
+      heart: shapeTexture("heart"),
+      note: shapeTexture("note"),
+      star: shapeTexture("star"),
+      smoke: shapeTexture("smoke"),
+      orb: shapeTexture("orb"),
+      pixel: shapeTexture("pixel"),
+      wave: shapeTexture("wave"),
+    };
     for (let i = 0; i < SPECKS; i++) {
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.star, transparent: true, depthWrite: false, fog: false }));
       sprite.visible = false;
@@ -227,13 +311,66 @@ export class StageFx {
       this.group.add(sprite);
       this.specks.push({ sprite, life: 0, max: 1, vel: new THREE.Vector3(), grow: 0, size: 0.1, spin: 0, gravity: 0, sway: 0, alpha: 1 });
     }
-    const cardMat = new THREE.MeshBasicMaterial({ map: this.cardTex, side: THREE.DoubleSide, fog: false, toneMapped: false });
-    this.disposables.push(cardMat, this.cardGeo);
+    // トランプと名刺は同じ板を使い、材質（絵）と縦横の比を変える
+    this.cardMat = new THREE.MeshBasicMaterial({ map: this.cardTex, side: THREE.DoubleSide, fog: false, toneMapped: false });
+    const meishiTex = meishiTexture();
+    this.meishiMat = new THREE.MeshBasicMaterial({ map: meishiTex, side: THREE.DoubleSide, fog: false, toneMapped: false });
+    this.disposables.push(this.cardMat, this.meishiMat, meishiTex, this.cardGeo);
     for (let i = 0; i < CARDS; i++) {
-      const m = new THREE.Mesh(this.cardGeo, cardMat);
+      const m = new THREE.Mesh(this.cardGeo, this.cardMat);
       m.visible = false;
       this.group.add(m);
       this.cards.push(m);
+    }
+    // 手裏剣：黒い鉄の星
+    const starGeo = shurikenGeometry();
+    // 明るい舞台でも形が見えるよう、黒に近い色で、金属の映り込みは控えめにする
+    const starMat = new THREE.MeshStandardMaterial({ color: "#1d2026", roughness: 0.4, metalness: 0.45 });
+    this.disposables.push(starGeo, starMat);
+    for (let i = 0; i < SHURIKENS; i++) {
+      const m = new THREE.Mesh(starGeo, starMat);
+      m.scale.setScalar(0.085);
+      m.visible = false;
+      this.group.add(m);
+      this.shurikens.push(m);
+    }
+    // タピオカ：黒くつやのある粒
+    const pearlGeo = new THREE.SphereGeometry(0.03, 12, 8);
+    const pearlMat = new THREE.MeshStandardMaterial({ color: "#241a16", roughness: 0.18, metalness: 0.1 });
+    this.disposables.push(pearlGeo, pearlMat);
+    this.pearls = new THREE.InstancedMesh(pearlGeo, pearlMat, PEARLS);
+    this.pearls.frustumCulled = false;
+    this.pearls.visible = false;
+    this.group.add(this.pearls);
+    // 氷のかけら：すき通った水色の小さな角（タピオカと同じ飛び方）
+    const iceGeo = new THREE.BoxGeometry(0.045, 0.04, 0.035);
+    const iceMat = new THREE.MeshStandardMaterial({ color: "#cfeaff", roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.85 });
+    this.disposables.push(iceGeo, iceMat);
+    this.ice = new THREE.InstancedMesh(iceGeo, iceMat, PEARLS);
+    this.ice.frustumCulled = false;
+    this.ice.visible = false;
+    this.group.add(this.ice);
+    for (let i = 0; i < PEARLS; i++) {
+      this.pearlVel.push(new THREE.Vector3());
+      this.pearlPos.push(new THREE.Vector3());
+    }
+    // レーザー（上下が開いた筒を、2 点のあいだに伸ばす）
+    const beamGeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
+    this.disposables.push(beamGeo);
+    const beamMat = (color: string) =>
+      new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
+    this.beam = new THREE.Mesh(beamGeo, beamMat("#ff3b3b"));
+    this.beamCore = new THREE.Mesh(beamGeo, beamMat("#ffffff"));
+    this.beam.visible = this.beamCore.visible = false;
+    this.beam.renderOrder = this.beamCore.renderOrder = 12;
+    this.beam.frustumCulled = this.beamCore.frustumCulled = false;
+    this.group.add(this.beam, this.beamCore);
+    for (let i = 0; i < 2; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.orb, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      s.visible = false;
+      s.renderOrder = 12;
+      this.group.add(s);
+      this.beamEnds.push(s);
     }
     const glow = (map: THREE.Texture) => new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
     // 光の玉：その人の色の玉（明るい舞台でも見えるよう、ふつうに重ねる）と、白く光る芯
@@ -286,7 +423,12 @@ export class StageFx {
   }
 
   /** 粒を 1 つ出す */
-  spawn(kind: Speck, at: THREE.Vector3, vel: THREE.Vector3, o: { color: string; size: number; life: number; grow?: number; spin?: number; gravity?: number; sway?: number; alpha?: number; additive?: boolean }) {
+  spawn(
+    kind: Speck,
+    at: THREE.Vector3,
+    vel: THREE.Vector3,
+    o: { color: string; size: number; life: number; grow?: number; spin?: number; gravity?: number; sway?: number; alpha?: number; additive?: boolean; rot?: number },
+  ) {
     const s = this.specks[this.next]!;
     this.next = (this.next + 1) % SPECKS;
     const m = s.sprite.material;
@@ -300,7 +442,7 @@ export class StageFx {
       m.needsUpdate = true;
     }
     m.color.set(o.color);
-    m.rotation = (Math.random() - 0.5) * 0.6;
+    m.rotation = o.rot ?? (Math.random() - 0.5) * 0.6;
     s.sprite.position.copy(at);
     s.sprite.visible = true;
     s.vel.copy(vel);
@@ -322,13 +464,106 @@ export class StageFx {
       this.orb.material.color.set(color);
       this.orbCore.material.color.set("#ffffff");
     }
+    if (kind === "cards" || kind === "meishi")
+      for (const c of this.cards) {
+        c.material = kind === "meishi" ? this.meishiMat : this.cardMat;
+        // 名刺は横長（91 × 55 mm くらい）
+        c.scale.set(kind === "meishi" ? 1.1 : 1, kind === "meishi" ? 0.46 : 1, 1);
+      }
+    if (kind === "pearls" || kind === "ice") {
+      // 粒ごとに少しずつ違う向き・速さで飛ばす（山なりに）
+      for (let i = 0; i < PEARLS; i++) {
+        this.pearlPos[i]!.copy(from);
+        this.pearlVel[i]!.set((Math.random() - 0.5) * 0.5, 0.5 + Math.random() * 0.6, (Math.random() - 0.5) * 0.5);
+      }
+    }
   }
 
   private clearShot() {
     this.shot = null;
     this.cards.forEach((c) => (c.visible = false));
+    this.shurikens.forEach((c) => (c.visible = false));
+    this.pearls.visible = this.ice.visible = false;
     this.orb.visible = this.orbCore.visible = false;
     this.rocket.visible = false;
+  }
+
+  /**
+   * レーザー：from（目）から to（相手の胸）へ光の線を伸ばす。reach は 0〜1 の伸び（1 で届いた）、k は明るさ
+   */
+  showLaser(from: THREE.Vector3, to: THREE.Vector3, reach: number, k: number, color: string) {
+    const on = k > 0.01 && reach > 0;
+    this.beam.visible = this.beamCore.visible = on;
+    this.beamEnds[0]!.visible = on;
+    this.beamEnds[1]!.visible = on && reach >= 1;
+    if (!on) return;
+    const end = this.v.copy(from).lerp(to, Math.min(1, reach));
+    const dir = this.dirV.subVectors(end, from);
+    const len = Math.max(0.001, dir.length());
+    const mid = this.v2.copy(from).add(end).multiplyScalar(0.5);
+    const flicker = 0.85 + 0.15 * Math.sin(performance.now() / 18);
+    for (const [m, r] of [
+      [this.beam, 0.024],
+      [this.beamCore, 0.008],
+    ] as const) {
+      m.position.copy(mid);
+      m.quaternion.setFromUnitVectors(Y_UP, dir.normalize());
+      m.scale.set(r * flicker * (0.6 + 0.4 * k), len, r * flicker * (0.6 + 0.4 * k));
+      (m.material as THREE.MeshBasicMaterial).opacity = k;
+    }
+    (this.beam.material as THREE.MeshBasicMaterial).color.set(color);
+    const [a, b] = this.beamEnds as [THREE.Sprite, THREE.Sprite];
+    a.position.copy(from);
+    a.scale.setScalar(0.16 * flicker * k);
+    a.material.color.set(color);
+    b.position.copy(end);
+    b.scale.setScalar(0.3 * flicker * k);
+    b.material.color.set("#ffffff");
+  }
+
+  /**
+   * 残像：root の下の見えている形を、いまの位置のまま半透明で写しとる（同じ形はまとめて 1 回で描く）。
+   * しばらくその場に残り、薄れて消える
+   */
+  ghost(root: THREE.Object3D, color: string) {
+    const groups = new Map<THREE.BufferGeometry, THREE.Matrix4[]>();
+    root.updateWorldMatrix(true, true);
+    root.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      let list = groups.get(m.geometry);
+      if (!list) groups.set(m.geometry, (list = []));
+      list.push(m.matrixWorld);
+    });
+    for (const im of this.ghosts.values()) im.visible = false;
+    for (const [geo, list] of groups) {
+      let im = this.ghosts.get(geo);
+      if (!im || im.instanceMatrix.count < list.length) {
+        if (im) {
+          this.group.remove(im);
+          im.dispose();
+        }
+        im = new THREE.InstancedMesh(geo, this.ghostMat, Math.max(8, list.length));
+        im.frustumCulled = false;
+        im.renderOrder = 6;
+        this.group.add(im);
+        this.ghosts.set(geo, im);
+      }
+      list.forEach((mat, i) => im!.setMatrixAt(i, mat));
+      im.count = list.length;
+      im.instanceMatrix.needsUpdate = true;
+      im.visible = true;
+    }
+    this.ghostMat.color.set(color);
+    this.ghostLife = GHOST_LIFE;
+  }
+
+  private stepGhost(dt: number) {
+    if (this.ghostLife <= 0) return;
+    this.ghostLife -= dt;
+    const u = Math.max(0, this.ghostLife / GHOST_LIFE);
+    this.ghostMat.opacity = 0.5 * u;
+    if (this.ghostLife <= 0) for (const im of this.ghosts.values()) im.visible = false;
   }
 
   /** 光の枠を、at（胸の前）に出す。k は 0〜1 の明るさ */
@@ -384,6 +619,7 @@ export class StageFx {
       s.sprite.material.opacity = s.alpha * Math.min(1, (1 - u) * 2.5);
     }
     this.stepShot(exDt);
+    this.stepGhost(realDt);
   }
 
   private stepShot(dt: number) {
@@ -438,7 +674,72 @@ export class StageFx {
         this.spawn("star", this.orb.position, this.v2.set((Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3), { color: this.orb.material.color.getStyle(), size: 0.07, life: 0.35, additive: false });
       return;
     }
-    // トランプ：少しずつずらして扇のように飛ばし、くるくる回す
+    if (s.kind === "shuriken") {
+      // 手裏剣：2 枚を少しずらして、水平に近い向きで速く回しながら飛ばす。防がれたら落ち、当たったら止まって消える
+      for (let i = 0; i < SHURIKENS; i++) {
+        const c = this.shurikens[i]!;
+        const ui = u - i * 0.18;
+        c.visible = ui > 0;
+        if (!c.visible) continue;
+        const end = passes ? 1.8 : stop;
+        if (ui <= end) {
+          c.position.copy(s.from).addScaledVector(dir, ui);
+          c.position.y += (i - 0.5) * 0.08 * Math.min(1, ui * 2);
+          // 刃の形が見えるよう、カメラのほうへ少し起こして回す
+          c.quaternion.copy(this.camera.quaternion);
+          c.rotateX(-0.6);
+          c.rotateZ(-s.age * 40 - i);
+          // 風を切る白い筋
+          if (Math.random() < 0.6) this.spawn("star", c.position, this.v2.set(0, 0, 0), { color: "#ffffff", size: 0.06, life: 0.18, additive: false, alpha: 0.8 });
+          s.fall[i] = (s.fall[i] ?? new THREE.Vector3()).set((Math.random() - 0.5) * 0.4, s.result === "blocked" ? 0.9 : 0, s.result === "blocked" ? -0.8 : 0);
+        } else if (s.result === "blocked" || passes) {
+          const v = s.fall[i]!;
+          v.y -= 4 * dt;
+          c.position.addScaledVector(v, dt);
+          c.rotation.z += dt * 10;
+          if (c.position.y < 0.02 || ui > end + 1.5) c.visible = false;
+        } else c.visible = ui < end + 0.3;
+      }
+      if (u > 4) this.clearShot();
+      return;
+    }
+    if (s.kind === "pearls" || s.kind === "ice") {
+      // タピオカ（氷）：山なりに、ばらけて飛ぶ。届いたら（防がれたら）はねて床へ落ちる。氷はくるくる回る
+      const mesh = s.kind === "ice" ? this.ice : this.pearls;
+      mesh.visible = true;
+      const end = passes ? 1.6 : stop;
+      let alive = false;
+      for (let i = 0; i < PEARLS; i++) {
+        const p = this.pearlPos[i]!;
+        const ui = u - i * 0.05;
+        if (ui <= 0) p.copy(s.from);
+        else if (ui <= end) {
+          p.copy(s.from).addScaledVector(dir, ui);
+          // 山なり（真ん中で高く）と、粒ごとのばらつき
+          p.y += 0.22 * Math.sin(Math.PI * Math.min(1, ui)) + ((i % 3) - 1) * 0.06 * ui;
+          p.x += ((i % 2) - 0.5) * 0.12 * ui;
+          p.z += ((i % 3) - 1) * 0.08 * ui;
+        } else {
+          const v = this.pearlVel[i]!;
+          v.y -= 5 * dt;
+          p.addScaledVector(v, dt);
+          if (p.y < 0.024) {
+            p.y = 0.024;
+            v.set(v.x * 0.5, Math.abs(v.y) * 0.35, v.z * 0.5);
+          }
+        }
+        if (ui < end + 1.4) alive = true;
+        if (s.kind === "ice") this.m4.makeRotationFromEuler(this.euler.set(s.age * 9 + i, s.age * 7, i * 0.7)).setPosition(p);
+        else this.m4.makeTranslation(p.x, p.y, p.z);
+        mesh.setMatrixAt(i, this.m4);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (s.kind === "ice" && u < end && Math.random() < 0.5)
+        this.spawn("star", this.pearlPos[0]!, this.v2.set(0, 0.2, 0), { color: "#e6f6ff", size: 0.07, life: 0.25, additive: false });
+      if (!alive) this.clearShot();
+      return;
+    }
+    // トランプ（名刺）：少しずつずらして扇のように飛ばし、くるくる回す
     for (let i = 0; i < CARDS; i++) {
       const c = this.cards[i]!;
       const ui = u - i * 0.12;
@@ -453,7 +754,12 @@ export class StageFx {
         c.position.copy(s.from).addScaledVector(dir, ui);
         c.position.y += spread * Math.sin(Math.PI * Math.min(1, ui)) + 0.05 * Math.sin(Math.PI * Math.min(1, ui));
         c.position.x += spread * 0.5 * ui;
-        c.rotation.set(Math.PI / 2 - 0.3, 0, s.age * 30 + i);
+        if (s.kind === "meishi") {
+          // 名刺は白くて小さいので、表をカメラへ向け、ゆっくり回して見せる
+          c.quaternion.copy(this.camera.quaternion);
+          c.rotateX(-0.5);
+          c.rotateZ(s.age * 14 + i);
+        } else c.rotation.set(Math.PI / 2 - 0.3, 0, s.age * 30 + i);
         s.fall[i] = (s.fall[i] ?? new THREE.Vector3()).set((Math.random() - 0.5) * 0.6, s.result === "blocked" ? 0.8 : 0.3, s.result === "blocked" ? -0.9 : -0.2);
       } else {
         // 届いた（防がれた）あとは、ひらひら落ちる
@@ -481,5 +787,12 @@ export class StageFx {
     (this.frame.material as THREE.Material).dispose();
     this.rings.forEach((r) => (r.material as THREE.Material).dispose());
     this.disposables.forEach((d) => d.dispose());
+    this.pearls.dispose();
+    this.ice.dispose();
+    (this.beam.material as THREE.Material).dispose();
+    (this.beamCore.material as THREE.Material).dispose();
+    this.beamEnds.forEach((s) => s.material.dispose());
+    this.ghosts.forEach((im) => im.dispose());
+    this.ghostMat.dispose();
   }
 }

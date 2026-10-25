@@ -15,6 +15,8 @@ import {
   idleDelta,
   rhythmOf,
   stanceOf,
+  throttleOf,
+  tieFix,
   tiredPose,
   waveOf,
 } from "./stances.ts";
@@ -41,6 +43,11 @@ const STYLES: StyleId[] = [
   "rapper",
   "chef",
   "robot",
+  "ninja",
+  "tuktuk",
+  "stuntman",
+  "salaryman",
+  "bubbletea",
 ];
 
 describe("バックボーンごとの構え", () => {
@@ -225,5 +232,49 @@ describe("新しいキャラクターの構えと待ちの動き", () => {
     expect(spin / 440).toBeLessThan(0.3);
     expect(wave / 440).toBeGreaterThan(0.1);
     expect(wave / 440).toBeLessThan(0.45);
+  });
+});
+
+describe("忍者・トゥクトゥク運転手・スタントマン・サラリーマン・タピオカ店員の構え", () => {
+  const d = bodyOf(NEUTRAL_STATS);
+
+  it("忍者は低く構え、息を小さくして、ゆっくり静かに待つ", () => {
+    expect(stanceOf("ninja", d)[P.hip + 1]!).toBeLessThan(stanceOf("boxing", d)[P.hip + 1]! - 0.08);
+    const breath = (s: StyleId) => Math.max(...[0, 0.5, 1, 1.5, 2, 2.5].map((b) => Math.abs(idleDelta(s, b, 0, 0, 0, 1, false)[P.breath]!)));
+    expect(breath("ninja")).toBeLessThan(breath("karate") * 0.6);
+    expect(rhythmOf("ninja", 1)).toBeLessThan(rhythmOf("boxing", 0) / 3);
+  });
+
+  it("トゥクトゥク運転手は、ハンドルを握るように両手を同じ高さで前へ出し、ときどきアクセルをふかす", () => {
+    const p = stanceOf("tuktuk", d);
+    const [l, r] = [handRoot(p, d, 0), handRoot(p, d, 1)];
+    expect(Math.abs(l[1] - r[1])).toBeLessThan(0.05);
+    expect(Math.min(l[2], r[2])).toBeGreaterThan(0.15);
+    expect(l[0] - r[0]).toBeGreaterThan(0.25);
+    let rev = 0;
+    for (let t = 0; t < 14; t += 0.05) if (throttleOf(t) > 0.3) rev++;
+    expect(rev).toBeGreaterThan(0);
+    expect(rev / 280).toBeLessThan(0.3);
+  });
+
+  it("サラリーマンは背すじを伸ばしてカバンを下げ、ときどきネクタイを直す", () => {
+    const p = stanceOf("salaryman", d);
+    expect(p[P.spine]! + p[P.chest]!).toBeLessThan(0);
+    expect(handRoot(p, d, 1)[1]).toBeLessThan(legLength(d) * 1.05);
+    let fix = 0;
+    for (let t = 0; t < 14; t += 0.05) if (tieFix(t) > 0) fix++;
+    expect(fix / 280).toBeGreaterThan(0.1);
+    expect(fix / 280).toBeLessThan(0.35);
+    // 直しているあいだは、左手が上がる
+    const t = [...Array(280).keys()].map((i) => i * 0.05).find((x) => tieFix(x) > 0.45 && tieFix(x) < 0.55)!;
+    expect(idleDelta("salaryman", 0, 0, t, 0, 1, false)[P.hand + 1]!).toBeGreaterThan(0.1);
+  });
+
+  it("スタントマンは身軽に弾み、タピオカ店員は左手を腰に当ててカップを胸の前に持つ", () => {
+    const hop = (s: StyleId) => Math.max(...[...Array(40).keys()].map((i) => idleDelta(s, 0, i * 0.3, i * 0.1, 0, 1, false)[P.hip + 1]!));
+    expect(hop("stuntman")).toBeGreaterThan(hop("boxing"));
+    const p = stanceOf("bubbletea", d);
+    expect(handRoot(p, d, 0)[1]).toBeLessThan(legLength(d) * 1.15);
+    expect(handRoot(p, d, 1)[1]).toBeGreaterThan(handRoot(p, d, 0)[1] + 0.2);
   });
 });

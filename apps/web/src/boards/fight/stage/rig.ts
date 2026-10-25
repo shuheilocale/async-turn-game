@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { BodyDims } from "./body.ts";
 import { solveTwoBone, type V3 } from "./math.ts";
-import { outfitOf, PROP_LENGTH, type Cloth, type Outfit } from "./outfit.ts";
+import { hangsDown, outfitOf, PROP_LENGTH, type Cloth, type Outfit } from "./outfit.ts";
 import { P, type Pose } from "./pose.ts";
 import type { StyleId } from "./types.ts";
 
@@ -61,6 +61,21 @@ function capeShape() {
     [0, 1.0],
   ].map(([y, r]) => v2(r!, y!));
   return new THREE.LatheGeometry(pts, 14, Math.PI / 2, Math.PI);
+}
+
+/** カップの底のタピオカ（小さな玉を、半径 1 の輪に並べて 1 つにまとめる） */
+function pearlsShape() {
+  const parts: THREE.BufferGeometry[] = [];
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const g = new THREE.SphereGeometry(0.26, 8, 6);
+    g.translate(Math.cos(a), (i % 2) * 0.3, Math.sin(a));
+    parts.push(g);
+  }
+  const merged = mergeGeometries(parts)!;
+  parts.forEach((g) => g.dispose());
+  return merged;
 }
 
 /** コック帽：ひだのある筒と、上のふくらみ（高さ 1、半径 1） */
@@ -174,6 +189,7 @@ export function createKit() {
     arc: new THREE.TorusGeometry(1, 0.09, 6, 20, Math.PI),
     cape: capeShape(),
     toque: toqueShape(),
+    pearls: pearlsShape(),
     /** 下へ flare 倍に広がる筒。広がりごとに 1 つ作って使い回す */
     tube(flare: number) {
       const key = Math.round(flare * 100);
@@ -205,6 +221,7 @@ const CLOTH: Record<Exclude<Cloth, "seat">, string> = {
   charcoal: "#252a35",
   black: "#16171c",
   silk: "#ece4d2",
+  navy: "#232a3d",
 };
 
 /** 布の目（細かいでこぼこ）。道着や服に軽くかける */
@@ -287,7 +304,7 @@ function painter(W = 256) {
  * 胸の服のテクスチャ。道着は重なった襟、テコンドーの道着は V 字の襟、シングレットは肩ひもの形に切り抜く。
  * 新しい服も、襟・ボタン・前合わせなどをここで描く
  */
-function topTexture(kind: Outfit["top"], cloth: string, seat: string, skin: string) {
+function topTexture(kind: Outfit["top"], cloth: string, seat: string, skin: string, bib: boolean) {
   const { g, W, poly, rect, dot, line, glitter, texture } = painter();
   if (kind === "singlet") {
     g.clearRect(0, 0, W, W);
@@ -417,14 +434,68 @@ function topTexture(kind: Outfit["top"], cloth: string, seat: string, skin: stri
       }
       break;
     }
+    case "shinobi": {
+      // 黒い布の打ち合わせ（襟はほんの少し明るく）と、おなかの上の刺し子の線
+      const lap = shade(cloth, 2.0);
+      poly([[0.44, 1.01], [0.5, 1.01], [0.6, 0.36], [0.55, 0.32]], lap);
+      poly([[0.5, 1.01], [0.56, 1.01], [0.45, 0.2], [0.4, 0.23]], lap);
+      g.globalAlpha = 0.18;
+      for (let v = 0.06; v < 0.3; v += 0.06) line([[0.05, v], [0.95, v]], "#ffffff", 1);
+      g.globalAlpha = 1;
+      break;
+    }
+    case "shirt": {
+      // 開襟シャツ：V に開いた襟元（肌が見える）、寝かせた襟、前のボタン、左胸のポケット。うすい水玉の柄
+      g.globalAlpha = 0.16;
+      for (let y = 0.04; y < 1; y += 0.09) for (let x = (y * 7) % 0.08; x < 1; x += 0.08) dot(x, y, 0.008, "#ffffff");
+      g.globalAlpha = 1;
+      poly([[0.43, 1.01], [0.57, 1.01], [0.5, 0.7]], skin);
+      poly([[0.37, 1.01], [0.43, 1.01], [0.5, 0.7], [0.455, 0.76]], shade(cloth, 1.18));
+      poly([[0.57, 1.01], [0.63, 1.01], [0.545, 0.76], [0.5, 0.7]], shade(cloth, 1.18));
+      line([[0.43, 1.0], [0.5, 0.7], [0.57, 1.0]], shade(cloth, 0.62), 2);
+      line([[0.5, 0.7], [0.5, 0]], shade(cloth, 0.7), 2);
+      for (const v of [0.55, 0.32, 0.1]) dot(0.5, v, 0.008, "#f4f1ea");
+      line([[0.58, 0.66], [0.58, 0.5], [0.66, 0.5], [0.66, 0.66], [0.58, 0.66]], shade(cloth, 0.68), 2);
+      break;
+    }
+    case "stunt": {
+      // 黒いスーツの前のファスナーと、その人の色のライン（わきを縦に、胸を横に）
+      for (const u of [0.25, 0.75]) rect(u - 0.018, 0, u + 0.018, 1.01, seat);
+      rect(0.3, 0.8, 0.7, 0.83, seat);
+      line([[0.5, 1.0], [0.5, 0]], "#6d717c", 2);
+      rect(0, 0.95, 1, 1.01, shade(cloth, 1.8));
+      break;
+    }
+    case "suit": {
+      // スーツの上着：白いシャツの V、その人の色のネクタイ、襟（ラペル）の縁、胸ポケットのチーフ
+      poly([[0.42, 1.01], [0.58, 1.01], [0.5, 0.36]], "#f2f1ec");
+      poly([[0.485, 0.965], [0.515, 0.965], [0.528, 0.5], [0.5, 0.42], [0.472, 0.5]], seat);
+      line([[0.49, 0.9], [0.51, 0.86]], shade(seat, 0.7), 1);
+      const lapel = shade(cloth, 1.55);
+      poly([[0.38, 1.01], [0.42, 1.01], [0.5, 0.36], [0.47, 0.42], [0.43, 0.62], [0.39, 0.66]], lapel);
+      poly([[0.58, 1.01], [0.62, 1.01], [0.61, 0.66], [0.57, 0.62], [0.53, 0.42], [0.5, 0.36]], lapel);
+      line([[0.6, 0.6], [0.68, 0.6]], shade(cloth, 0.7), 2);
+      poly([[0.61, 0.6], [0.635, 0.66], [0.66, 0.6]], "#f2f1ec");
+      break;
+    }
     default:
       break;
+  }
+  // 胸当てのエプロン（その人の色）：胸の前を覆い、肩ひもを首の後ろへ回す
+  if (bib) {
+    poly([[0.38, 0], [0.62, 0], [0.6, 0.78], [0.4, 0.78]], seat);
+    rect(0.4, 0.74, 0.6, 0.78, shade(seat, 0.8));
+    for (const u of [0.41, 0.59]) {
+      const top = u + (u - 0.5) * 0.6;
+      poly([[u - 0.012, 0.78], [u + 0.012, 0.78], [top + 0.012, 1.01], [top - 0.012, 1.01]], shade(seat, 0.85));
+    }
+    line([[0.44, 0.55], [0.56, 0.55]], shade(seat, 0.7), 2);
   }
   return texture();
 }
 
 /** おなかの服のテクスチャ（ポケット・ボタン・前合わせの続き） */
-function waistTexture(kind: Outfit["top"], cloth: string, seat: string) {
+function waistTexture(kind: Outfit["top"], cloth: string, seat: string, bib: boolean) {
   const { g, W, rect, dot, line, glitter, texture } = painter(128);
   g.fillStyle = cloth;
   g.fillRect(0, 0, W, W);
@@ -458,9 +529,27 @@ function waistTexture(kind: Outfit["top"], cloth: string, seat: string) {
       dot(0.445, 0.6, 0.022, "#2b2e36");
       dot(0.555, 0.6, 0.022, "#2b2e36");
       break;
+    case "shirt":
+      g.globalAlpha = 0.16;
+      for (let y = 0.04; y < 1; y += 0.18) for (let x = (y * 7) % 0.16; x < 1; x += 0.16) dot(x, y, 0.016, "#ffffff");
+      g.globalAlpha = 1;
+      line([[0.5, 1], [0.5, 0]], shade(cloth, 0.7), 2);
+      for (const v of [0.75, 0.3]) dot(0.5, v, 0.016, "#f4f1ea");
+      break;
+    case "stunt":
+      for (const u of [0.25, 0.75]) rect(u - 0.018, 0, u + 0.018, 1, seat);
+      line([[0.5, 1], [0.5, 0]], "#6d717c", 2);
+      break;
+    case "suit":
+      // 前のボタンと、腰のポケットのふた
+      line([[0.5, 1], [0.5, 0]], shade(cloth, 0.6), 2);
+      for (const v of [0.78, 0.38]) dot(0.5, v, 0.02, "#11131a");
+      for (const u of [0.32, 0.68]) rect(u - 0.1, 0.2, u + 0.1, 0.24, shade(cloth, 0.7));
+      break;
     default:
       break;
   }
+  if (bib) rect(0.38, 0, 0.62, 1, seat);
   return texture();
 }
 
@@ -511,6 +600,8 @@ class RigMats {
   /** その人の色の金属の板（ロボットの装甲） */
   readonly plate = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.45 });
   readonly gold = new THREE.MeshStandardMaterial({ color: "#e0b54e", roughness: 0.28, metalness: 1 });
+  /** ミルクティー（タピオカのカップの中身） */
+  readonly tea = new THREE.MeshStandardMaterial({ color: "#d4ad86", roughness: 0.25 });
   /** マントの裏地（その人の色。内側から見える） */
   readonly lining = new THREE.MeshStandardMaterial({ roughness: 0.5, side: THREE.BackSide });
   /** 光るもの（ロボットの目・ペンライト・ヘッドセットの光）。lamp はいつも、pulse は息に合わせて点滅する */
@@ -563,6 +654,7 @@ class RigMats {
       this.metal,
       this.plate,
       this.gold,
+      this.tea,
       this.lining,
       this.sil,
     ];
@@ -591,18 +683,18 @@ class RigMats {
     this.lamp.color.copy(this.lampColor);
     this.pulseColor.copy(this.lampColor);
     this.pulse.color.copy(this.pulseColor);
-    const key = `${outfit.top}|${cloth}|${colors.seat}|${colors.skin}`;
+    const key = `${outfit.top}|${cloth}|${colors.seat}|${colors.skin}|${outfit.bib}`;
     if (key !== this.topKey && outfit.top !== "none") {
       this.topKey = key;
       this.top.map?.dispose();
-      this.top.map = topTexture(outfit.top, cloth, colors.seat, colors.skin);
+      this.top.map = topTexture(outfit.top, cloth, colors.seat, colors.skin, outfit.bib);
       this.top.transparent = false;
       this.top.needsUpdate = true;
     }
     if (key !== this.waistKey && outfit.top !== "none" && outfit.top !== "singlet") {
       this.waistKey = key;
       this.waist.map?.dispose();
-      this.waist.map = waistTexture(outfit.top, cloth, colors.seat);
+      this.waist.map = waistTexture(outfit.top, cloth, colors.seat, outfit.bib);
       this.waist.needsUpdate = true;
     }
   }
@@ -635,6 +727,7 @@ type MatKey =
   | "metal"
   | "plate"
   | "gold"
+  | "tea"
   | "lining"
   | "lamp"
   | "pulse";
@@ -668,7 +761,9 @@ const set = (m: THREE.Object3D, p: V3, s: V3, r?: V3) => {
 const legCover = (o: Outfit, d: BodyDims) => o.legLen * (d.thigh + d.shin);
 
 /** 胴と腕を覆う、新しい服（パーカー・燕尾服など） */
-const isCoat = (o: Outfit) => o.top !== "none" && o.top !== "singlet" && o.top !== "gi" && o.top !== "dobok";
+const isCoat = (o: Outfit) => o.top !== "none" && o.top !== "singlet" && !isWrap(o);
+/** 前を打ち合わせて帯でしめる上着（道着・テコンドーの道着・忍び装束） */
+const isWrap = (o: Outfit) => o.top === "gi" || o.top === "dobok" || o.top === "shinobi";
 
 /** 服で隠れる体の部品 */
 export function hiddenParts(o: Outfit, d: BodyDims, sil: boolean): Set<string> {
@@ -679,7 +774,7 @@ export function hiddenParts(o: Outfit, d: BodyDims, sil: boolean): Set<string> {
     BODY_PARTS.forEach((p) => h.add(p));
     return h;
   }
-  if (o.top === "gi" || o.top === "dobok") ["ribs", "pec", "lat", "back", "abdomen", "upperArm", "bicep", "trap", "clav", "delt", "belly"].forEach((p) => h.add(p));
+  if (isWrap(o)) ["ribs", "pec", "lat", "back", "abdomen", "upperArm", "bicep", "trap", "clav", "delt", "belly"].forEach((p) => h.add(p));
   if (isCoat(o)) {
     ["ribs", "pec", "lat", "back", "abdomen", "bicep", "trap", "clav", "delt", "belly"].forEach((p) => h.add(p));
     if (o.upper >= 0.98) h.add("upperArm");
@@ -690,7 +785,8 @@ export function hiddenParts(o: Outfit, d: BodyDims, sil: boolean): Set<string> {
   if (cover >= d.thigh * 0.98) h.add("thigh");
   if (cover >= d.thigh + d.shin * 0.97) ["shin", "calf"].forEach((p) => h.add(p));
   if (o.hands === "gloves" || o.hands === "white") ["fist", "thumb"].forEach((p) => h.add(p));
-  if (o.feet !== "bare") h.add("foot");
+  // サンダルは足の甲が見える
+  if (o.feet !== "bare" && o.feet !== "sandals") h.add("foot");
   if (o.hair === "none") h.add("hair");
   if (o.bottom === "mawashi") h.delete("pelvis");
   return h;
@@ -726,8 +822,11 @@ const BODY_PARTS = [
   "foot",
 ];
 
-/** 技に合わせて見せる部品（包帯・味見のスプーン） */
-type CueName = "bandage" | "spoon";
+/**
+ * 技に合わせて見せる部品：包帯・味見のスプーン・持ち物を持たない手に移したカップ（held）・盾にするトレイと、
+ * 持ち物の形（form0 = ふだん、form1 = 太いストロー、form2 = シェイカー）
+ */
+type CueName = "bandage" | "spoon" | "held" | "tray" | "form0" | "form1" | "form2";
 
 /** 技に合わせて、そのときだけ変える見た目 */
 export interface RigCues {
@@ -742,9 +841,14 @@ export interface RigCues {
   spoon: -1 | 0 | 1;
   /** 光るもの（目・胸の光など）の明るさ（1 がふつう、0 で消える） */
   lamp: number;
+  /** 持ち物の形（0 = ふだん、1・2 = 技で持ちかえた形）と、持ち物を移した手（骨の左右。-1 は移さない） */
+  form: 0 | 1 | 2;
+  held: -1 | 0 | 1;
+  /** トレイを盾にしている腕（骨の左右。-1 はなし） */
+  tray: -1 | 0 | 1;
 }
 
-export const NO_CUES: RigCues = { hidden: false, detached: -1, wink: 0, bandage: -1, spoon: -1, lamp: 1 };
+export const NO_CUES: RigCues = { hidden: false, detached: -1, wink: 0, bandage: -1, spoon: -1, lamp: 1, form: 0, held: -1, tray: -1 };
 
 export class FighterRig {
   readonly root = new THREE.Group();
@@ -775,6 +879,8 @@ export class FighterRig {
   /** 持ち物：持つ手に付ける入れ物（左右を入れかえるときは鏡に映す）と、握るところに合わせた中身 */
   private readonly propHold = new THREE.Group();
   private readonly propRoot = new THREE.Group();
+  /** 持ち物を持たない手に、技のあいだだけ持たせるものの入れ物（左右の手に 1 つずつ。持ち物の手と鏡の形） */
+  private readonly heldRoot = [new THREE.Group(), new THREE.Group()] as const;
   private mirrored = false;
   private cues: RigCues = { ...NO_CUES };
   /** 目（ウインクで細める） */
@@ -804,6 +910,11 @@ export class FighterRig {
     this.hand[R].add(this.propHold);
     this.propHold.add(this.propRoot);
     this.propRoot.rotation.set(0, 0, Math.PI / 2);
+    for (const i of SIDES) {
+      this.hand[i].add(this.heldRoot[i]);
+      this.heldRoot[i].scale.x = i === L ? -1 : 1;
+      this.heldRoot[i].rotation.set(0, 0, Math.PI / 2);
+    }
   }
 
   private allBones(): THREE.Object3D[] {
@@ -915,8 +1026,8 @@ export class FighterRig {
     }
     const bottomMat: MatKey = o.bottom === "pants" ? "pants" : o.bottom === "mawashi" ? "deep" : "seat";
 
-    // 上着（道着・テコンドーの道着）
-    if (o.top === "gi" || o.top === "dobok") {
+    // 上着（道着・テコンドーの道着・忍び装束）
+    if (isWrap(o)) {
       const thick = o.cloth === "ivory" ? 1.06 : 1;
       a(this.ribs, k.chest, "top", (d, m) => set(m, [0, -0.04, -0.004], [d.chestW * 1.1 * thick + 0.012, d.chestH + 0.05, d.chestD * 1.14 * thick + 0.014]));
       a(this.spine, k.abdomen, "cloth", (d, m) => set(m, [0, -0.04, 0], [d.waistW * 1.16 * thick + 0.012, d.abdomen + 0.07, d.waistD * 1.2 * thick + 0.014]));
@@ -929,7 +1040,8 @@ export class FighterRig {
         a(this.shoulder[i], k.sphere, "cloth", (d, m) => set(m, [-s * 0.012, 0.006, -0.004], [d.deltR * 1.1 + 0.008, d.deltR * 0.95 + 0.008, d.deltR * 1.1 + 0.008]));
         a(this.upperArm[i], k.tube(1.12), "cloth", (d, m) => set(m, [0, 0.01, 0], [d.upperArmR * 1.45 + 0.01, d.upperArm + 0.02, d.upperArmR * 1.4 + 0.01]));
         a(this.upperArm[i], k.sphere, "cloth", (d, m) => set(m, [0, -d.upperArm, 0], [d.upperArmR * 1.42 + 0.01, d.forearmR * 1.5, d.upperArmR * 1.4 + 0.01]));
-        a(this.forearm[i], k.tube(1.25), "cloth", (d, m) => set(m, [0, 0, 0], [d.forearmR * 1.55 + 0.01, d.forearm * o.sleeve, d.forearmR * 1.45 + 0.01]));
+        // 忍び装束は袖口をしぼる（手甲の中に入れる）
+        a(this.forearm[i], k.tube(o.top === "shinobi" ? o.cuff : 1.25), "cloth", (d, m) => set(m, [0, 0, 0], [d.forearmR * 1.55 + 0.01, d.forearm * o.sleeve, d.forearmR * 1.45 + 0.01]));
       }
     }
     // 新しい服（パーカー・中国風の上着・燕尾服・スクラブ・ステージ衣装・T シャツ・コックコート）
@@ -966,18 +1078,24 @@ export class FighterRig {
           a(this.upperArm[i], k.sphere, "cloth", (d, m) => set(m, [0, -d.upperArm, 0], [d.upperArmR * sleeveR + 0.008, d.forearmR * 1.45, d.upperArmR * sleeveR * 0.97 + 0.008]));
           if (o.sleeve > 0) {
             a(this.forearm[i], k.tube(o.cuff), "cloth", (d, m) => set(m, [0, 0, 0], [d.forearmR * (1.4 + 0.3 * loose) + 0.01, d.forearm * o.sleeve, d.forearmR * (1.32 + 0.3 * loose) + 0.01]));
-            // 袖口：パーカーはリブ、中国風の上着はその人の色の縁取り
-            if (o.top === "hoodie" || o.top === "tunic")
-              a(this.forearm[i], k.band, o.top === "hoodie" ? "deep" : "seat", (d, m) => {
+            // 袖口：パーカーはリブ、中国風の上着はその人の色の縁取り、スーツは白いシャツの袖口
+            if (o.top === "hoodie" || o.top === "tunic" || o.top === "suit")
+              a(this.forearm[i], k.band, o.top === "hoodie" ? "deep" : o.top === "suit" ? "trim" : "seat", (d, m) => {
                 const r = (d.forearmR * (1.4 + 0.3 * loose) + 0.01) * o.cuff;
-                set(m, [0, -d.forearm * o.sleeve + 0.018, 0], [r + 0.002, 0.036, r * 0.95 + 0.002]);
+                const shirt = o.top === "suit" ? -0.012 : 0;
+                set(m, [0, -d.forearm * o.sleeve + 0.018 + shirt * 2, 0], [r + 0.002 + shirt * 0.6, 0.036, r * 0.95 + 0.002 + shirt * 0.6]);
               }, false);
           }
         }
+        // スタントスーツの袖の外側の線（その人の色）
+        if (o.top === "stunt") {
+          a(this.upperArm[i], k.box, "seat", (d, m) => set(m, [s * (d.upperArmR * sleeveR + 0.008), -d.upperArm * 0.5, 0], [0.008, d.upperArm * 0.9, 0.022]), false);
+          a(this.forearm[i], k.box, "seat", (d, m) => set(m, [s * (d.forearmR * (1.4 + 0.3 * loose) + 0.008), -d.forearm * 0.45, 0], [0.008, d.forearm * 0.75, 0.02]), false);
+        }
       }
       // 襟
-      if (o.top === "tunic" || o.top === "chef" || o.top === "tailcoat")
-        a(this.neck, k.band, o.top === "tunic" ? "seat" : o.top === "chef" ? "cloth" : "trim", (d, m) => set(m, [0, 0.012, -0.003], [d.neckR * 1.2 + 0.004, 0.042, d.neckR * 1.16 + 0.004]), false);
+      if (o.top === "tunic" || o.top === "chef" || o.top === "tailcoat" || o.top === "suit" || o.top === "stunt")
+        a(this.neck, k.band, o.top === "tunic" ? "seat" : o.top === "chef" || o.top === "stunt" ? "cloth" : "trim", (d, m) => set(m, [0, 0.012, -0.003], [d.neckR * 1.2 + 0.004, 0.042, d.neckR * 1.16 + 0.004]), false);
       // パーカーのフード（首の後ろにたたまれている）
       if (o.top === "hoodie")
         a(this.chest, k.sphere, "cloth", (d, m) => set(m, [0, d.chestH * 0.97, -d.chestD * 0.7], [d.shoulderHalf * 0.55, 0.075, 0.085], [0.5, 0, 0]));
@@ -1043,6 +1161,11 @@ export class FighterRig {
             set(m, [0, -len + 0.012, 0], [r + 0.002, 0.024, r * 1.05 + 0.002]);
           }, false);
         }
+        // スタントスーツのズボンの外側の線（太もも・すね）
+        if (o.top === "stunt") {
+          a(this.thigh[i], k.box, "seat", (d, m) => set(m, [s * (d.thighR * loose + 0.009), -d.thigh * 0.5, 0], [0.008, d.thigh * 0.9, 0.024]), false);
+          a(this.shin[i], k.box, "seat", (d, m) => set(m, [s * (d.calfR * 1.4 * (loose / 1.2) + 0.012), -d.shin * 0.45, 0], [0.008, d.shin * 0.8, 0.022]), false);
+        }
         // キックパンツ・水着の外側の線
         if (o.bottom === "kick" || o.bottom === "jammer")
           a(this.thigh[i], k.box, o.bottom === "kick" ? "trim" : "deep", (d, m) => {
@@ -1095,10 +1218,10 @@ export class FighterRig {
         a(this.foot[i], k.box, "trim", (d, m) => set(m, [0, -d.ankleH + 0.007, (d.footLen - 0.06) / 2], [0.096, 0.012, d.footLen + 0.062]), false);
       }
     }
-    // 低い靴：スニーカー（白に、その人の色の縁）・革靴・布の靴（白い底）
-    if (o.feet === "sneakers" || o.feet === "dress" || o.feet === "slip") {
+    // 低い靴：スニーカー（白に、その人の色の縁）・革靴・布の靴（白い底）・足袋（ズボンと同じ布に黒い底）
+    if (o.feet === "sneakers" || o.feet === "dress" || o.feet === "slip" || o.feet === "tabi") {
       const upper: MatKey = o.feet === "sneakers" ? "trim" : o.feet === "dress" ? "dark" : "pants";
-      const sole: MatKey = o.feet === "sneakers" ? "deep" : o.feet === "dress" ? "dark" : "trim";
+      const sole: MatKey = o.feet === "sneakers" ? "deep" : o.feet === "dress" || o.feet === "tabi" ? "dark" : "trim";
       const chunky = o.feet === "sneakers" ? 1 : 0;
       for (const i of SIDES) {
         a(this.foot[i], k.box, upper, (d, m) => set(m, [0, -d.ankleH * 0.42 + 0.008, (d.footLen - 0.06) / 2], [0.096 + 0.006 * chunky, d.ankleH + 0.03, d.footLen + 0.066], [0.05, 0, 0]));
@@ -1106,6 +1229,12 @@ export class FighterRig {
         if (chunky) a(this.shin[i], k.band, "seat", (d, m) => set(m, [0, -d.shin + 0.01, 0], [d.ankleR * 1.55, 0.04, d.ankleR * 1.7]), false);
       }
     }
+    // サンダル：足の甲が見え、底と甲のベルトだけ
+    if (o.feet === "sandals")
+      for (const i of SIDES) {
+        a(this.foot[i], k.box, "dark", (d, m) => set(m, [0, -d.ankleH + 0.004, (d.footLen - 0.06) / 2], [0.1, 0.016, d.footLen + 0.075]));
+        a(this.foot[i], k.boxSoft, "deep", (d, m) => set(m, [0, -d.ankleH * 0.35, d.footLen * 0.32], [0.094, 0.022, 0.05], [0.12, 0, 0]), false);
+      }
     // ムエタイの腕の飾り布・足首のサポーター
     if (o.armbands)
       for (const i of SIDES) {
@@ -1121,6 +1250,28 @@ export class FighterRig {
         a(this.shin[i], k.band, "seat", (d, m) => set(m, [0, -d.shin * 0.42, d.calfR * 0.12], [d.calfR * 1.08 + 0.016, 0.035, d.calfR * 1.18 + 0.018]), false);
         a(this.foot[i], k.boxSoft, "trim", (d, m) => set(m, [0, -d.ankleH * 0.1, d.footLen * 0.28], [0.082, 0.04, d.footLen * 0.62], [0.12, 0, 0]), false);
       }
+    // 手甲（前腕を覆うその人の色の布）
+    if (o.bracers)
+      for (const i of SIDES)
+        a(this.forearm[i], k.tube(0.9), "seat", (d, m) => set(m, [0, -d.forearm * 0.42, 0], [d.forearmR * 1.32 + 0.012, d.forearm * 0.56, d.forearmR * 1.24 + 0.012]), false);
+    // ひじ・ひざのプロテクター（ひじは腕の後ろ、ひざは脚の前に当てる）
+    if (o.pads)
+      for (const i of SIDES) {
+        // 袖・ズボンのひじ・ひざのふくらみより外に付ける
+        const elbow = (d: BodyDims) => d.upperArmR * 1.4 + 0.012;
+        const knee = (d: BodyDims) => d.kneeR * 1.6 * (o.baggy / 1.2) + 0.008;
+        a(this.upperArm[i], k.boxSoft, "deep", (d, m) => set(m, [0, -d.upperArm + 0.005, -elbow(d)], [d.forearmR * 2.3, d.forearmR * 2.4, 0.04]), false);
+        a(this.thigh[i], k.boxSoft, "deep", (d, m) => set(m, [0, -d.thigh + 0.01, -knee(d)], [d.kneeR * 2.4, d.kneeR * 2.7, 0.045]), false);
+      }
+    // 背中に負った刀（右の肩の上に柄が出る）
+    if (o.sword) {
+      const tilt = 0.62;
+      const dir: V3 = [-Math.sin(tilt), Math.cos(tilt), 0];
+      const at = (d: BodyDims, u: number): V3 => [dir[0] * u, d.chestH * 0.5 + dir[1] * u, -d.chestD * 1.3 - 0.02];
+      a(this.chest, k.cap, "dark", (d, m) => set(m, at(d, -0.04), [0.017, 0.62, 0.012], [0, 0, tilt]), false);
+      a(this.chest, k.cap, "metal", (d, m) => set(m, at(d, 0.28), [0.036, 0.008, 0.036], [0, 0, tilt]), false);
+      a(this.chest, k.cap, "seat", (d, m) => set(m, at(d, 0.36), [0.014, 0.15, 0.014], [0, 0, tilt]), false);
+    }
 
     // 頭の持ち物
     const hr = (d: BodyDims) => d.headR;
@@ -1167,6 +1318,19 @@ export class FighterRig {
         a(this.head, k.cap, "dark", (d, m) => set(m, [-hr(d) * 0.66, hr(d) * 0.42, hr(d) * 0.5], [0.004, 0.13, 0.004], [1.05, 0, 0.55]), false);
         a(this.head, k.sphereLo, "seat", (d, m) => set(m, [-hr(d) * 0.3, hr(d) * 0.32, hr(d) * 0.98], [0.012, 0.01, 0.01]), false);
         break;
+      case "hood":
+        // 忍びの頭巾：額から後ろ頭と首の後ろまで覆い、口元の布で鼻から下を隠す（目のまわりだけ見える）
+        a(this.head, k.hair, "cloth", (d, m) => set(m, [0, hr(d) * 0.84, -hr(d) * 0.03], [hr(d) * 0.95, hr(d) * 1.09, hr(d) * 1.07], [-0.33, 0, 0]));
+        a(this.head, k.sphere, "cloth", (d, m) => set(m, [0, hr(d) * 0.36, -hr(d) * 0.42], [hr(d) * 0.84, hr(d) * 0.66, hr(d) * 0.62]));
+        a(this.head, k.sphere, "cloth", (d, m) => set(m, [0, hr(d) * 0.47, hr(d) * 0.14], [hr(d) * 0.9, hr(d) * 0.42, hr(d) * 0.92]), false);
+        // 結び目の垂れ（その人の色）
+        a(this.head, k.boxSoft, "seat", (d, m) => set(m, [hr(d) * 0.2, hr(d) * 1.05, -hr(d) * 1.02], [0.03, 0.09, 0.012], [0.3, 0, -0.4]), false);
+        break;
+      case "bandana":
+        // バンダナ（その人の色）。後ろで結び、端を垂らす
+        a(this.head, k.hair, "seat", (d, m) => set(m, [0, hr(d) * 0.86, -hr(d) * 0.02], [hr(d) * 0.95, hr(d) * 1.08, hr(d) * 1.06], [-0.45, 0, 0]));
+        a(this.head, k.boxSoft, "seat", (d, m) => set(m, [0, hr(d) * 0.72, -hr(d) * 1.02], [0.04, 0.08, 0.014], [0.25, 0, 0.2]), false);
+        break;
       default:
         break;
     }
@@ -1183,6 +1347,14 @@ export class FighterRig {
       // コックのスカーフ（その人の色）
       a(this.neck, k.band, "seat", (d, m) => set(m, [0, 0.03, -0.003], [d.neckR * 1.12 + 0.004, 0.035, d.neckR * 1.1 + 0.004]), false);
       a(this.chest, k.boxSoft, "seat", (d, m) => set(m, [0, d.chestH - 0.012, d.neckR * 1.15 + 0.012], [0.04, 0.05, 0.018], [-0.3, 0, Math.PI / 4]), false);
+    } else if (o.neck === "towel") {
+      // 首にかけたタオル（白）：首の後ろから肩へかけ、両端を胸の前に垂らす
+      a(this.chest, k.ring, "trim", (d, m) => set(m, [0, d.chestH * 0.97, -d.chestD * 0.05], [d.neckR * 1.75 + 0.01, 0.12, d.chestD * 0.95], [0.25, 0, 0]));
+      for (const i of SIDES)
+        a(this.chest, k.boxSoft, "trim", (d, m) => set(m, [sgn(i) * (d.neckR + 0.02), d.chestH * 0.72, d.chestD * 1.12 + 0.012], [0.06, 0.2, 0.02], [-0.12, 0, sgn(i) * 0.08]), false);
+    } else if (o.neck === "tie") {
+      // ネクタイの結び目（ネクタイは上着のテクスチャに描く）
+      a(this.chest, k.boxSoft, "seat", (d, m) => set(m, [0, d.chestH + 0.004, d.neckR * 0.98 + 0.008], [0.028, 0.026, 0.018], [-0.2, 0, 0]), false);
     }
     // マント（外は黒、内側はその人の色）
     if (o.cape) {
@@ -1191,7 +1363,8 @@ export class FighterRig {
     }
     // エプロン（その人の色）
     if (o.apron) {
-      a(this.pelvis, k.box, "seat", (d, m) => set(m, [0, -0.17, d.hipD * 1.22 + 0.016], [d.hipW * 1.65, 0.42, 0.012], [-0.07, 0, 0]));
+      // 太いズボン・太い脚でも隠れないよう、太ももの前より外に垂らす
+      a(this.pelvis, k.box, "seat", (d, m) => set(m, [0, -0.17, Math.max(d.hipD * 1.22, d.thighR * o.baggy * 1.08 + 0.01) + 0.016], [d.hipW * 1.65, 0.42, 0.012], [-0.07, 0, 0]));
       a(this.pelvis, k.band, "seat", (d, m) => set(m, [0, d.pelvisUp * 0.75, 0], [d.waistW * o.loose * 1.2 + 0.02, 0.03, d.waistD * o.loose * 1.26 + 0.022]), false);
     }
     // 持ち物（右手）
@@ -1209,10 +1382,17 @@ export class FighterRig {
   }
 
   /** 右手の持ち物。握るところを原点に、+Y を親指の側へ伸ばして作る（ステッキは -Y を前腕の先へ） */
-  private buildProp(o: Outfit, a: (bone: THREE.Object3D, geo: THREE.BufferGeometry, mat: MatKey, fit: Piece["fit"], shadow?: boolean) => void) {
+  private buildProp(o: Outfit, a: (bone: THREE.Object3D, geo: THREE.BufferGeometry, mat: MatKey, fit: Piece["fit"], shadow?: boolean, cue?: CueName, side?: 0 | 1) => void) {
     const k = this.kit;
     const g = this.propRoot;
     const fix = (p: V3, s: V3, r?: V3): Piece["fit"] => (_, m) => set(m, p, s, r);
+    /** ストローの刺さった大きなカップ（中身はミルクティー、底にタピオカ、丸いふた） */
+    const cup = (root: THREE.Object3D, cue: CueName, side?: 0 | 1) => {
+      a(root, k.cap, "tea", fix([0, 0.03, 0.012], [0.05, 0.19, 0.05]), true, cue, side);
+      a(root, k.pearls, "dark", fix([0, -0.045, 0.012], [0.042, 0.042, 0.042]), false, cue, side);
+      a(root, k.sphere, "trim", fix([0, 0.125, 0.012], [0.052, 0.024, 0.052]), false, cue, side);
+      a(root, k.cap, "seat", fix([0.012, 0.2, 0.012], [0.0075, 0.13, 0.0075], [0, 0, -0.18]), false, cue, side);
+    };
     switch (o.prop) {
       case "cane":
         // ステッキは前腕の向きに続けて持つ（握りの玉は手のひらの中）
@@ -1228,6 +1408,25 @@ export class FighterRig {
       case "penlight":
         a(g, k.cap, "dark", fix([0, 0.0, 0], [0.013, 0.1, 0.013]), false);
         a(g, k.cap, "lamp", fix([0, 0.14, 0], [0.017, 0.18, 0.017]), false);
+        break;
+      case "bag":
+        // ビジネスバッグ：手の下に垂らす（前腕の向き）。黒い革に、金具と持ち手
+        a(g, k.arc, "dark", fix([0, -0.035, 0], [0.05, 0.045, 0.12], [Math.PI, Math.PI / 2, 0]), false);
+        a(g, k.box, "dark", fix([0, -0.2, 0], [0.075, 0.27, 0.38]));
+        a(g, k.box, "metal", fix([0, -0.1, 0], [0.082, 0.026, 0.06]), false);
+        break;
+      case "cup":
+        // ふだんはカップ。振る技では太いストロー（カップは反対の手へ）、見せる技ではシェイカーに持ちかえる
+        cup(g, "form0");
+        a(g, k.cap, "seat", fix([0, 0.24, 0], [0.017, 0.5, 0.017]), true, "form1");
+        a(g, k.cap, "metal", fix([0, 0.06, 0.01], [0.042, 0.2, 0.042]), true, "form2");
+        a(g, k.cap, "metal", fix([0, 0.19, 0.01], [0.032, 0.07, 0.032]), false, "form2");
+        for (const i of SIDES) {
+          cup(this.heldRoot[i], "held", i);
+          // 盾にする丸いトレイ（前腕の外側に当てて持つ）
+          a(this.forearm[i], k.cap, "deep", fix([0, -0.17, -0.07], [0.19, 0.012, 0.19], [Math.PI / 2, 0, 0]), true, "tray", i);
+          a(this.forearm[i], k.band, "trim", fix([0, -0.17, -0.08], [0.192, 0.024, 0.192], [Math.PI / 2, 0, 0]), false, "tray", i);
+        }
         break;
       default:
         break;
@@ -1318,12 +1517,29 @@ export class FighterRig {
       p.fit(d, p.mesh);
     }
     this.propRoot.position.set(0, -d.fistR * 1.02, d.fistR * 0.14);
-    // ステッキは前腕の向きに続け、ほかは親指の側へ伸ばす
-    this.propRoot.rotation.set(0, 0, this.outfit.prop === "cane" ? 0 : Math.PI / 2);
+    for (const h of this.heldRoot) h.position.copy(this.propRoot.position);
+    // ステッキ・カバンは前腕の向きに続け（下へ垂らす）、ほかは親指の側へ伸ばす
+    this.propRoot.rotation.set(0, 0, hangsDown(this.outfit.prop) ? 0 : Math.PI / 2);
   }
 
   private cueShown(p: Piece) {
-    return (p.cue === "bandage" ? this.cues.bandage : this.cues.spoon) === p.side;
+    const c = this.cues;
+    switch (p.cue) {
+      case "bandage":
+        return c.bandage === p.side;
+      case "spoon":
+        return c.spoon === p.side;
+      case "held":
+        return c.held === p.side;
+      case "tray":
+        return c.tray === p.side;
+      case "form0":
+        return c.form === 0;
+      case "form1":
+        return c.form === 1;
+      default:
+        return c.form === 2;
+    }
   }
 
   /** 左右を入れかえて描くか。持ち物を持つ手（右手の動きを描く骨）を入れかえ、形も鏡に映す */
@@ -1340,7 +1556,7 @@ export class FighterRig {
     this.cues = c;
     this.pelvis.visible = !c.hidden;
     if (prev.detached !== c.detached) for (const i of SIDES) this.hand[i].visible = c.detached !== i;
-    if (prev.bandage !== c.bandage || prev.spoon !== c.spoon) for (const p of this.worn) if (p.cue) p.mesh.visible = this.cueShown(p);
+    if (prev.bandage !== c.bandage || prev.spoon !== c.spoon || prev.form !== c.form || prev.held !== c.held || prev.tray !== c.tray) for (const p of this.worn) if (p.cue) p.mesh.visible = this.cueShown(p);
   }
 
   /**
@@ -1362,7 +1578,7 @@ export class FighterRig {
   propTip(out: THREE.Vector3) {
     const len = PROP_LENGTH[this.outfit.prop];
     if (!len) return this.strikePoint("hand", this.mirrored ? L : R, out);
-    out.set(0, this.outfit.prop === "cane" ? -0.9 : len, 0);
+    out.set(0, hangsDown(this.outfit.prop) ? -len : len, 0);
     return this.propRoot.localToWorld(out);
   }
 

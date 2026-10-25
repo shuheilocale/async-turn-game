@@ -32,6 +32,11 @@ const STYLES: StyleId[] = [
   "rapper",
   "chef",
   "robot",
+  "ninja",
+  "tuktuk",
+  "stuntman",
+  "salaryman",
+  "bubbletea",
 ];
 const KINDS: ActionKind[] = [
   "jab",

@@ -16,7 +16,7 @@ import {
   type KeyEdit,
   type ShotKind,
 } from "./track.ts";
-import type { ActionKind, StyleId } from "./types.ts";
+import type { ActionKind, StageStrike, StyleId } from "./types.ts";
 
 /**
  * 格闘家ではない人たちの技の動き：飛ばす・振る・見せる・回復・消えて現れる。
@@ -29,21 +29,73 @@ export const isSpecial = (k: ActionKind): k is SpecialKind => k === "projectile"
 /** 自分にかける技（相手は受けない） */
 export const isSelf = (k: ActionKind) => k === "heal" || k === "vanish";
 
-/** 飛ばすもの：マジシャンはトランプ、ロボットはロケットパンチ、ほかは光の玉 */
-export const shotOf = (style: StyleId | null): ShotKind => (style === "magician" ? "cards" : style === "robot" ? "rocket" : "orb");
+/**
+ * 飛ばすもの：マジシャンはトランプ、ロボットはロケットパンチ、忍者は手裏剣、サラリーマンは名刺、
+ * タピオカ店員はタピオカの粒、ほかは光の玉
+ */
+export function shotOf(style: StyleId | null): ShotKind {
+  switch (style) {
+    case "magician":
+      return "cards";
+    case "robot":
+      return "rocket";
+    case "ninja":
+      return "shuriken";
+    case "salaryman":
+      return "meishi";
+    case "bubbletea":
+      return "pearls";
+    default:
+      return "orb";
+  }
+}
 /** 手を離れてから相手に届くまで */
-export const SHOT_FLIGHT: Record<ShotKind, number> = { cards: 0.2, rocket: 0.24, orb: 0.3 };
+export const SHOT_FLIGHT: Record<ShotKind, number> = { cards: 0.2, rocket: 0.24, orb: 0.3, shuriken: 0.2, meishi: 0.2, pearls: 0.26, ice: 0.26 };
+
+/**
+ * タピオカ店員の飛ばす技は 2 つ（タピオカ弾・氷多め）あり、どちらも projectile で来る。
+ * 当たって強化・弱体（effects）が付いた技を「氷多め」とみなし、氷のかけらを飛ばす
+ */
+export const iceShot = (style: StyleId | null, strike: Pick<StageStrike, "kind" | "effects">) =>
+  style === "bubbletea" && strike.kind === "projectile" && (strike.effects?.length ?? 0) > 0;
 /** ロケットパンチが腕に戻るまで */
 export const ROCKET_RETURN = 0.3;
 
-export type PerformKind = "idol" | "rapper" | "gamer" | "magician" | "pose";
-/** 見せる技の形：アイドルはウインク、ラッパーは指さし、ゲーマーは指の動き、マジシャンは手のひらの光、ほかは決めポーズ */
-export const performOf = (style: StyleId | null): PerformKind =>
-  style === "idol" || style === "rapper" || style === "gamer" || style === "magician" ? style : "pose";
+export type PerformKind = "idol" | "rapper" | "gamer" | "magician" | "laser" | "horn" | "tie" | "shaker" | "seal" | "pose";
+/**
+ * 見せる技の形：アイドルはウインク、ラッパーは指さし、ゲーマーは指の動き、マジシャンは手のひらの光、
+ * ロボットはレーザー、トゥクトゥク運転手はクラクション、サラリーマンはネクタイを締める、
+ * タピオカ店員はシェイカーを振る、忍者は印を結ぶ、ほかは決めポーズ
+ */
+export function performOf(style: StyleId | null): PerformKind {
+  switch (style) {
+    case "idol":
+    case "rapper":
+    case "gamer":
+    case "magician":
+      return style;
+    case "robot":
+      return "laser";
+    case "tuktuk":
+      return "horn";
+    case "salaryman":
+      return "tie";
+    case "bubbletea":
+      return "shaker";
+    case "ninja":
+      return "seal";
+    default:
+      return "pose";
+  }
+}
 
-export type HealKind = "nurse" | "robot" | "chef" | "glow";
-/** 回復の形：看護師は手当て、ロボットは再起動、料理人は味見、ほかはやわらかい光 */
-export const healOf = (style: StyleId | null): HealKind => (style === "nurse" || style === "robot" || style === "chef" ? style : "glow");
+export type HealKind = "nurse" | "robot" | "chef" | "drink" | "glow";
+/** 回復の形：看護師は手当て、ロボットは再起動、料理人は味見、タピオカ店員はカップから飲む、ほかはやわらかい光 */
+export const healOf = (style: StyleId | null): HealKind =>
+  style === "nurse" || style === "robot" || style === "chef" ? style : style === "bubbletea" ? "drink" : "glow";
+
+/** ロボットのレーザーが、目から出て相手に届くまで */
+export const LASER_REACH = 0.1;
 
 /** 消えて現れるとき、元の場所から下がる・横へずれる距離 */
 export const VANISH_BACK = 0.3;
@@ -81,8 +133,16 @@ export function specialTrack(kind: SpecialKind, c: AttackCtx, groundPunch: () =>
   switch (kind) {
     case "projectile":
       return projectileTrack(c);
-    case "swing":
-      return swingTrack(c);
+    case "swing": {
+      const b = swingTrack(c);
+      // タピオカ店員は、カップのストローを太く抜いて振る（カップは左手に持ちかえる）
+      if (propOf(style) === "cup")
+        b.fx = [
+          { type: "form", at: 0.04, until: b.track.end, form: 1 },
+          { type: "held", at: 0.04, until: b.track.end, side: 0 },
+        ];
+      return b;
+    }
     case "perform":
       return performTrack(c);
     case "heal":
@@ -109,8 +169,8 @@ function projectileTrack(c: AttackCtx): Built {
   const t = (v: number) => v * sp;
   const shot = shotOf(att.style);
   const target = aim(T.body, result, -1);
-  if (shot === "cards") {
-    // 右手はステッキを持ったまま、左手を右の肩へ引き、体をひねり戻しながら手首を返してトランプを放つ
+  if (shot === "cards" || shot === "meishi") {
+    // 右手はステッキ（カバン）を持ったまま、左手を右の肩へ引き、体をひねり戻しながら手首を返してトランプ（名刺）を放つ
     tb.at(t(0.15), 1, (k) => {
       k.d.hipRot[1] -= 0.22;
       k.d.chest[1] -= 0.16;
@@ -132,10 +192,64 @@ function projectileTrack(c: AttackCtx): Built {
     tb.at(t(0.66), 1, (k) => shift(k.d, 0.02));
     tb.at(t(0.84), 0);
     const at = t(0.25);
-    const impact = at + SHOT_FLIGHT.cards;
+    const impact = at + SHOT_FLIGHT[shot];
     const fx = shotFx(shot, at, impact);
     fx[0]!.side = 0;
     return { track: tb.build(), impact, fx };
+  }
+  if (shot === "shuriken") {
+    // 低く構えたまま、右手を左の肩へ引き、横へ払うように手首を返して手裏剣を打つ
+    tb.at(t(0.13), 1, (k) => {
+      k.d.hip[1] -= 0.03;
+      k.d.hipRot[1] += 0.25;
+      k.d.chest[1] += 0.15;
+      k.d.elbow[1] = [0.2, 0.3, -1];
+      k.d.fist[1] = [0.2, 0.9, 0.3];
+      face(k.d);
+      k.hand(1, chestPoint(k.d, dims, [0.12, dims.shoulderY - 0.02, 0.14]));
+    });
+    const rel = tb.at(t(0.24), 1, (k) => {
+      shift(k.d, 0.05, 0, 0);
+      k.d.hip[1] -= 0.04;
+      k.d.hipRot[1] -= 0.35;
+      k.d.chest[1] -= 0.2;
+      k.d.elbow[1] = [-0.6, 0.4, -0.2];
+      k.d.fist[1] = [0, -0.8, -0.3];
+      face(k.d);
+      armToward(k, dims, 1, add(target, [-0.12, 0.12, 0]), 0.97);
+    }, "snap");
+    tb.pose(t(0.42), 1, rel, "linear");
+    tb.at(t(0.64), 1, (k) => (k.d.hip[1] -= 0.02));
+    tb.at(t(0.82), 0);
+    const at = t(0.22);
+    const impact = at + SHOT_FLIGHT.shuriken;
+    return { track: tb.build(), impact, fx: shotFx(shot, at, impact) };
+  }
+  if (shot === "pearls") {
+    // カップを肩の上へ振りかぶり、前へ突き出して、ストローの口からタピオカを飛ばす
+    tb.at(t(0.16), 1, (k) => {
+      k.d.hipRot[1] -= 0.18;
+      k.d.spine[0] -= 0.05;
+      k.d.elbow[1] = [-0.6, 0.2, -0.4];
+      face(k.d);
+      k.hand(1, chestPoint(k.d, dims, [-0.16, dims.shoulderY + 0.12, -0.02]));
+    });
+    const rel = tb.at(t(0.3), 1, (k) => {
+      shift(k.d, 0.06, 0, 0);
+      k.d.hipRot[1] += 0.3;
+      k.d.spine[0] += 0.08;
+      k.d.elbow[1] = [-0.6, 0.3, -0.2];
+      // 手首を小指の側へ倒し、カップの口（ストロー）を相手へ向ける
+      k.d.fist[1] = [0, 0, 1.3];
+      face(k.d);
+      armToward(k, dims, 1, add(target, [0, 0.15, 0]), 0.9);
+    }, "snap");
+    tb.pose(t(0.46), 1, rel, "linear");
+    tb.at(t(0.66), 1, (k) => shift(k.d, 0.02));
+    tb.at(t(0.84), 0);
+    const at = t(0.28);
+    const impact = at + SHOT_FLIGHT.pearls;
+    return { track: tb.build(), impact, fx: shotFx(shot, at, impact) };
   }
   if (shot === "rocket") {
     // 腕を引いてから、まっすぐ伸ばしきったところで手が飛ぶ。戻るまで腕は伸ばしたまま
@@ -392,6 +506,124 @@ function performTrack(c: AttackCtx): Built {
       tb.at(0.98, 0);
       return { track: tb.build(), impact: 0.5, fx: [{ type: "palm", at: 0.32, until: 0.66, side: 0 }] };
     }
+    case "laser": {
+      // 足をふんばって腰を落とし、頭を相手へまっすぐ向けて、目（バイザー）から光の線を放つ
+      const brace = (k: KeyEdit, pull: number) => {
+        shift(k.d, -0.03 * pull);
+        k.d.hip[1] -= 0.04;
+        k.d.hipRot[1] *= 0.5;
+        k.d.spine[0] += 0.06;
+        face(k.d, 0.1);
+        k.d.elbow = [
+          [0.3, -1, -0.1],
+          [-0.3, -1, -0.1],
+        ];
+        const hip = k.d.hip;
+        k.hand(0, [hip[0] + 0.24, hip[1] + 0.18, hip[2] + 0.06]);
+        k.hand(1, [hip[0] - 0.24, hip[1] + 0.18, hip[2] + 0.06]);
+      };
+      tb.at(0.18, 1, (k) => brace(k, 0));
+      tb.at(0.32, 1, (k) => brace(k, 0));
+      // 撃っているあいだの反動で、少しずつ押し戻される
+      tb.at(0.78, 1, (k) => brace(k, 1));
+      tb.at(1.04, 0);
+      return { track: tb.build(), impact: 0.32 + LASER_REACH, fx: [{ type: "laser", at: 0.32, until: 0.8 }] };
+    }
+    case "horn": {
+      // 右手をハンドルの真ん中へ寄せ、手のひらでクラクションを 3 回押す。相手へ音の波が広がる
+      const press = (k: KeyEdit, down: number) => {
+        // 押すたびに肩ごと体重をかけ、顔は相手へ向けたまま少しあごを上げる
+        k.d.spine[0] += 0.06 + 0.06 * down;
+        k.d.hip[1] -= 0.015 * down;
+        k.d.shrug = [0, 0.03 * down];
+        face(k.d, -0.08);
+        k.d.elbow[1] = [-1, 0.2, -0.2];
+        k.d.fist[1] = [1.3, 0, 0];
+        k.hand(1, chestPoint(k.d, dims, [0.04, dims.shoulderY - 0.26 - 0.11 * down, 0.3]));
+      };
+      tb.at(0.16, 1, (k) => press(k, 0));
+      for (let i = 0; i < 3; i++) {
+        tb.at(0.26 + i * 0.18, 1, (k) => press(k, 1), "snap");
+        tb.at(0.35 + i * 0.18, 1, (k) => press(k, 0));
+      }
+      tb.at(1.02, 0);
+      return { track: tb.build(), impact: 0.5, fx: [{ type: "horn", at: 0.24, until: 0.88 }] };
+    }
+    case "tie": {
+      // 左手でネクタイの結び目をきゅっと締め、あごを上げて相手を見すえる
+      const fix = (k: KeyEdit, pull: number) => {
+        k.d.chest[0] -= 0.04;
+        face(k.d, -0.06 - 0.06 * pull);
+        k.d.elbow[0] = [1, -0.4, -0.2];
+        k.d.fist[0] = [0.4, 1.2, 0];
+        k.hand(0, chestPoint(k.d, dims, [0.03, dims.chestH - 0.1 + 0.025 * pull, dims.chestD + 0.11]));
+      };
+      tb.at(0.2, 1, (k) => fix(k, 0));
+      tb.at(0.36, 1, (k) => fix(k, 1), "snap");
+      tb.at(0.48, 1, (k) => fix(k, 0.6));
+      tb.at(0.6, 1, (k) => fix(k, 1), "snap");
+      tb.at(0.86, 1, (k) => fix(k, 1));
+      tb.at(1.08, 0);
+      return { track: tb.build(), impact: 0.6, fx: [{ type: "sparkle", at: 0.6, until: 0.9 }] };
+    }
+    case "shaker": {
+      // シェイカーに持ちかえ、両手で右の肩の上で何度も振ってから、前へ差し出す
+      const shake = (k: KeyEdit, up: number) => {
+        k.d.hipRot[1] -= 0.1;
+        k.d.hip[1] -= 0.01 * up;
+        face(k.d);
+        k.d.elbow = [
+          [0.6, -1, -0.4],
+          [-0.8, -1, -0.3],
+        ];
+        k.d.fist[1] = [0, 1.6, 0];
+        const at = chestPoint(k.d, dims, [-0.12, dims.shoulderY + 0.06 + 0.08 * up, 0.12]);
+        k.hand(1, at);
+        k.hand(0, add(at, [0.06, -0.12, 0.02]));
+      };
+      tb.at(0.16, 1, (k) => shake(k, 0));
+      for (let i = 0; i < 7; i++) tb.at(0.22 + i * 0.08, 1, (k) => shake(k, i % 2 ? 0 : 1), "inOut");
+      const give = tb.at(0.92, 1, (k) => {
+        shift(k.d, 0.04, 0, 0);
+        face(k.d);
+        k.d.fist[1] = [0, 1.6, 0];
+        armToward(k, dims, 1, add(T.head, [0, -0.2, 0]), 0.86);
+      }, "outBack");
+      tb.pose(1.14, 1, give);
+      tb.at(1.34, 0);
+      return {
+        track: tb.build(),
+        impact: 0.94,
+        fx: [
+          { type: "form", at: 0.1, until: 1.3, form: 2 },
+          { type: "shake", at: 0.2, until: 0.8 },
+          { type: "sparkle", at: 0.94, until: 1.1 },
+        ],
+      };
+    }
+    case "seal": {
+      // 腰を落としたまま、胸の前で両手を合わせて印を結ぶ。手のまわりから白い煙がゆらりと立つ
+      const seal = (k: KeyEdit, sink: number) => {
+        k.d.hip[1] -= 0.03 * sink;
+        k.d.hipRot[1] *= 0.6;
+        face(k.d, 0.1);
+        k.d.elbow = [
+          [0.9, -0.6, -0.3],
+          [-0.9, -0.6, -0.3],
+        ];
+        k.d.fist = [
+          [0.3, 1.5, 0],
+          [0.3, -1.5, 0],
+        ];
+        k.hand(0, chestPoint(k.d, dims, [0.03, dims.shoulderY - 0.14, 0.2]));
+        k.hand(1, chestPoint(k.d, dims, [-0.03, dims.shoulderY - 0.14, 0.2]));
+      };
+      tb.at(0.22, 1, (k) => seal(k, 0.5), "snap");
+      tb.at(0.5, 1, (k) => seal(k, 1));
+      tb.at(0.8, 1, (k) => seal(k, 1));
+      tb.at(1.02, 0);
+      return { track: tb.build(), impact: 0.5, fx: [{ type: "wisp", at: 0.22, until: 0.9 }] };
+    }
     case "pose": {
       // かがんでから、両手を上げて胸を張る決めポーズ
       tb.at(0.16, 1, (k) => (k.d.hip[1] -= 0.04));
@@ -509,6 +741,35 @@ function healTrack(c: AttackCtx): Built {
         ],
       };
     }
+    case "drink": {
+      // カップのストローを口へ運んで、ごくごく飲む（あごを少し上げる）。飲み終えて、ひと息つく
+      const sip = (k: KeyEdit, gulp: number) => {
+        face(k.d, -0.12 - 0.04 * gulp);
+        k.d.chest[0] -= 0.04;
+        k.d.elbow[1] = [-0.7, -1, -0.3];
+        // 前腕を立てたまま手首を小指の側へ倒し、カップを前腕の先（上）へ向ける
+        k.d.fist[1] = [0, 0, 1.4];
+        const h = headOf(k, dims);
+        // カップが顔に隠れないよう、口の少し前・下で持つ（ストローの先が口に届く）
+        k.hand(1, add(h, [-0.01, -0.4 + 0.01 * gulp, 0.13]));
+      };
+      tb.at(0.26, 1, (k) => sip(k, 0));
+      for (let i = 0; i < 3; i++) tb.at(0.38 + i * 0.16, 1, (k) => sip(k, i % 2 ? 0 : 1));
+      tb.at(0.94, 1, (k) => {
+        face(k.d, 0.1);
+        k.d.breath = 1;
+        k.d.shrug = [0.02, 0.02];
+      });
+      tb.at(1.18, 0);
+      return {
+        track: tb.build(),
+        impact: 0.8,
+        fx: [
+          { type: "heal", at: 0.36, until: 1.16 },
+          { type: "sparkle", at: 0.92, until: 1.1 },
+        ],
+      };
+    }
     case "glow": {
       // 両手を胸に当て、深く息を吸う
       const calm = (k: KeyEdit) => {
@@ -537,10 +798,18 @@ function healTrack(c: AttackCtx): Built {
 export function vanishTrack(c: Pick<AttackCtx, "att">): Built {
   const dims = c.att.d;
   const tb = new TrackBuilder(c.att.base, dims);
-  // マントをひるがえすように、左手を顔の前へ払う
+  const ninja = c.att.style === "ninja";
+  // マントをひるがえすように、左手を顔の前へ払う。忍者は右手で煙玉を足もとへたたきつける
   const flourish = (k: KeyEdit) => {
-    k.d.hip[1] -= 0.03;
-    k.d.spine[0] += 0.1;
+    k.d.hip[1] -= ninja ? 0.06 : 0.03;
+    k.d.spine[0] += ninja ? 0.2 : 0.1;
+    if (ninja) {
+      k.d.elbow[1] = [-0.4, -1, 0.2];
+      k.d.fist[1] = [0.8, 0, 0];
+      const hip = k.d.hip;
+      k.hand(1, [hip[0] - 0.06, hip[1] - 0.08, hip[2] + 0.32]);
+      return;
+    }
     k.d.elbow[0] = [1, 0.4, 0];
     k.hand(0, chestPoint(k.d, dims, [-0.12, dims.shoulderY + 0.12, 0.2]));
   };
@@ -606,10 +875,42 @@ function groundSpecial(kind: SpecialKind, c: AttackCtx): Built {
     return { track: tb.build(), impact: 0.6, fx };
   }
   const p = performOf(c.att.style);
-  const type = p === "idol" ? "hearts" : p === "rapper" ? "notes" : p === "gamer" ? "frame" : p === "magician" ? "palm" : "sparkle";
-  const fx: FxLocal[] = [{ type, at: 0.25, until: 0.85, side: 0 }];
+  const TYPES: Record<PerformKind, FxLocal["type"]> = {
+    idol: "hearts",
+    rapper: "notes",
+    gamer: "frame",
+    magician: "palm",
+    laser: "laser",
+    horn: "horn",
+    tie: "sparkle",
+    shaker: "shake",
+    seal: "wisp",
+    pose: "sparkle",
+  };
+  const fx: FxLocal[] = [{ type: TYPES[p], at: 0.25, until: 0.85, side: 0 }];
   if (p === "idol") fx.push({ type: "wink", at: 0.25, until: 0.8 });
+  if (p === "shaker") fx.push({ type: "form", at: 0.2, until: 0.9, form: 2 });
   return { track: tb.build(), impact: 0.5, fx };
+}
+
+/**
+ * 忍者の分身のかわし：その場に半透明の残像を残し、横へすばやく跳んでかわす。
+ * 技として出したとき（dodge）と、相手の技をかわしたとき（reactionTrack）の両方で使う
+ */
+export function sidestep(k: KeyEdit, s: number) {
+  // 横と後ろへ斜めに跳ぶ（カメラから見ても、残像と本体が離れて見えるように）
+  shift(k.d, -0.26 * s, 0.2 * s);
+  k.d.hip[1] -= 0.06 * s;
+  k.d.spine[2] -= 0.12 * s;
+  k.d.neck[2] += 0.08 * s;
+}
+
+export function afterimageDodge(c: Pick<AttackCtx, "att">): Built {
+  const tb = new TrackBuilder(c.att.base, c.att.d);
+  tb.at(0.1, 1, (k) => sidestep(k, 1), "snap");
+  tb.at(0.45, 1, (k) => sidestep(k, 0.9));
+  tb.at(0.7, 0);
+  return { track: tb.build(), impact: 0.1, fx: [{ type: "ghost", at: 0.01, until: 0.45 }] };
 }
 
 /** 機械の動き：キーの間を、ゆるめずに一定の速さで動く（ロボットの技） */
