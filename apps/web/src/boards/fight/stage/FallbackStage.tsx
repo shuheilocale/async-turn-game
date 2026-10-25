@@ -7,8 +7,8 @@ import type { FighterLook, FighterStageProps, StyleId } from "./types.ts";
  * 横から見た 2 人（または 1 人）を棒と丸で描き、攻防が来たら少し動かして、終わったことを知らせる
  */
 
-/** バックボーンごとの構えの低さ・前かがみ・手の高さ */
-const STANCE: Record<StyleId, { low: number; lean: number; hands: number }> = {
+/** バックボーンごとの構えの低さ・前かがみ・手の高さ。ないものはふつうの構えで描く */
+const STANCE: Partial<Record<StyleId, { low: number; lean: number; hands: number }>> = {
   boxing: { low: 0.06, lean: 0.12, hands: 0.92 },
   muaythai: { low: 0.03, lean: 0.02, hands: 0.95 },
   karate: { low: 0.1, lean: 0, hands: 0.7 },
@@ -22,7 +22,7 @@ const STANCE: Record<StyleId, { low: number; lean: number; hands: number }> = {
 };
 
 function Figure({ look, x, facing, hit, down }: { look: FighterLook | null; x: number; facing: 1 | -1; hit: boolean; down: boolean }) {
-  const st = look ? STANCE[look.style] : { low: 0.03, lean: 0.05, hands: 0.8 };
+  const st = (look && STANCE[look.style]) || { low: 0.03, lean: 0.05, hands: 0.8 };
   const power = look ? statLevel(look.stats.power) : 0;
   const guard = look ? statLevel(look.stats.guard) : 0;
   const speed = look ? statLevel(look.stats.speed) : 0;
