@@ -7,6 +7,9 @@
   --cls-strike: #d6451b;
   --cls-grab: #7a4ddb;
   --cls-guard: #128094;
+  /* 強化（上向き）・回復は緑、弱体（下向き）は赤 */
+  --fx-up: #1d8a4e;
+  --fx-down: var(--danger);
   /* 3D の舞台を囲む枠は、画面の明暗に関係なく暗くする（リングの照明が映えるように） */
   --screen: #161b28;
   --screen-line: #2a3246;
@@ -21,6 +24,7 @@
     --cls-strike: #ff7a4d;
     --cls-grab: #a98bff;
     --cls-guard: #3cc3d6;
+    --fx-up: #4fd08a;
     --screen: #0b0e16;
     --screen-line: #232a3c;
   }
@@ -94,6 +98,53 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.fight-build-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+/* 格闘技・異種格闘技の切り替え */
+.fight-groups {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.fight .fight-group {
+  position: relative;
+  min-height: 40px;
+  padding: 4px 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.fight .fight-group.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.14);
+}
+
+/* 選んだバックボーンがある方の印 */
+.fight-group-dot {
+  position: absolute;
+  top: 6px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--seat-color);
 }
 
 .fight-styles {
@@ -393,6 +444,45 @@
   }
 }
 
+/* 続いている強化・弱体（上向き・下向きの印と、残りの攻防の数） */
+.fight-fx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fight-fx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 5px 0 3px;
+  border-radius: 6px;
+  font-size: 0.66rem;
+  line-height: 1.6;
+  color: var(--fx-up);
+  background: color-mix(in srgb, var(--fx-up) 12%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fx-up) 35%, transparent);
+}
+
+.fight-fx-chip.down {
+  color: var(--fx-down);
+  background: color-mix(in srgb, var(--fx-down) 10%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fx-down) 35%, transparent);
+}
+
+.fight-fx-chip b {
+  margin-left: 1px;
+  font-size: 0.66rem;
+}
+
+.fight-fx-arrow {
+  width: 10px;
+  height: 10px;
+}
+
 .fight-hp-style {
   display: flex;
   align-items: center;
@@ -518,6 +608,11 @@
 
 .fight-result-dmg .hurt b {
   color: var(--danger);
+}
+
+.fight-result-dmg .fight-healed,
+.fight-result-dmg .hurt .fight-healed {
+  color: var(--fx-up);
 }
 
 .fight .fight-again {

@@ -5,15 +5,36 @@ import type { BoardProps } from "./index.ts";
 import { FighterStage } from "./fight/stage/FighterStage.tsx";
 import { topAfter } from "./fight/stage/ground.ts";
 import type { FighterLook, StageEvent } from "./fight/stage/types.ts";
-import { MoveIcon, PositionIcon, StyleIcon } from "./fight/art.tsx";
+import { FxArrow, MoveIcon, PositionIcon, StyleIcon } from "./fight/art.tsx";
 import "./FightBoard.css";
 
 type Fighter = Fight.Fighter;
 type FighterStats = Fight.FighterStats;
 type StyleId = Fight.StyleId;
 type Technique = Fight.Technique;
-const { STYLE_IDS, STYLES, STAT_KEYS, STAT_MIN, STAT_MAX, STAT_TOTAL, MAX_HP, EXCHANGES, POSITIONS, techniqueOf, usableMoves } =
-  Fight;
+const {
+  MARTIAL_STYLES,
+  CROSSOVER_STYLES,
+  STYLES,
+  STAT_KEYS,
+  STAT_MIN,
+  STAT_MAX,
+  STAT_TOTAL,
+  MAX_HP,
+  EXCHANGES,
+  POSITIONS,
+  activeEffects,
+  chainCount,
+  techniqueNow,
+  techniqueOf,
+  usableMoves,
+  usesLeft,
+} = Fight;
+
+/** キャラ作りのバックボーンの分け方（格闘技・異種格闘技） */
+const STYLE_GROUPS = { martial: MARTIAL_STYLES, crossover: CROSSOVER_STYLES } as const;
+type StyleGroup = keyof typeof STYLE_GROUPS;
+const groupOf = (style: StyleId): StyleGroup => ((CROSSOVER_STYLES as readonly StyleId[]).includes(style) ? "crossover" : "martial");
 
 /** 3D の舞台が再生の終わりを知らせてこなかったときに、結果を出すまでの時間（再生は KO でなければ 1〜3.5 秒ほど） */
 const EVENT_FALLBACK_MS = 7000;
@@ -28,7 +49,14 @@ const sumOf = (s: FighterStats) => STAT_KEYS.reduce((a, k) => a + s[k], 0);
 function toEvent(ex: Fight.Exchange, id: number): StageEvent {
   return {
     id,
-    strikes: ex.strikes.map(({ by, kind, result, damage }) => ({ by, kind, result, damage })),
+    strikes: ex.strikes.map(({ by, kind, result, damage, heal, effects }) => ({
+      by,
+      kind,
+      result,
+      damage,
+      ...(heal && { heal }),
+      ...(effects && { effects: effects.map((e) => ({ who: e.who, stat: e.stat, dir: e.amount > 0 ? (1 as const) : (-1 as const) })) }),
+    })),
     position: ex.position,
     ko: ex.ko,
   };
@@ -56,6 +84,7 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
   const opp = other(me);
   const canBuild = you !== null && !v.built[me];
   const [style, setStyle] = useState<StyleId | null>(null);
+  const [group, setGroup] = useState<StyleGroup>("martial");
   const [stats, setStats] = useState<FighterStats>({ power: 5, guard: 5, speed: 5, stamina: 5 });
   /** ポイントを自分で動かしたか。動かしていなければ、バックボーンを選ぶとおすすめの振り分けにする */
   const [custom, setCustom] = useState(false);
@@ -124,9 +153,33 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
       <p className="board-note">{note}</p>
 
       <section className={`fight-build seat${me}`}>
-        <h3 className="muted">{t("game.fight.stylesTitle")}</h3>
-        <div className="fight-styles" role="radiogroup" aria-label={t("game.fight.stylesTitle")}>
-          {STYLE_IDS.map((id) => (
+        <div className="fight-build-head">
+          <h3 className="muted">{t("game.fight.stylesTitle")}</h3>
+          <div className="fight-groups" role="tablist" aria-label={t("game.fight.stylesTitle")}>
+            {(Object.keys(STYLE_GROUPS) as StyleGroup[]).map((g) => (
+              <button
+                key={g}
+                type="button"
+                role="tab"
+                id={`fight-group-${g}`}
+                aria-selected={group === g}
+                aria-controls="fight-styles"
+                className={`fight-group ${group === g ? "on" : ""}`}
+                onClick={() => setGroup(g)}
+              >
+                {t(`game.fight.group.${g}`)}
+                {style && groupOf(style) === g && <span className="fight-group-dot" aria-hidden />}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div
+          id="fight-styles"
+          className="fight-styles"
+          role="radiogroup"
+          aria-labelledby={`fight-group-${group}`}
+        >
+          {STYLE_GROUPS[group].map((id) => (
             <button
               key={id}
               type="button"
@@ -280,6 +333,8 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
   const round = replaying ? shown.index + 1 : Math.min(v.exchange + 1, EXCHANGES);
   const history = replaying ? v.history.slice(0, shown.index) : v.history;
   const top = topOf(history);
+  // 続いている強化・弱体（再生中は、再生している攻防の前の分）
+  const fx = activeEffects(history);
   const lastEx = !replaying ? v.history.at(-1) : undefined;
 
   let note: string | null = null;
@@ -316,7 +371,14 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
 
       <div className="fight-bars">
         {([me, opp] as Seat[]).map((seat) => (
-          <HpBar key={seat} seat={seat} name={names[seat] || t(`game.fight.seat${seat}`)} fighter={fighters[seat]} hp={hp[seat]} />
+          <HpBar
+            key={seat}
+            seat={seat}
+            name={names[seat] || t(`game.fight.seat${seat}`)}
+            fighter={fighters[seat]}
+            hp={hp[seat]}
+            fx={fx.filter((e) => e.who === seat)}
+          />
         ))}
       </div>
 
@@ -366,7 +428,9 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
         <section className={`fight-moves seat${me}`}>
           <h3 className="muted">{t("game.fight.moves")}</h3>
           <MoveList
-            style={fighters[me].style}
+            fighters={fighters}
+            seat={me}
+            history={v.history}
             position={v.position}
             selected={sel?.act ?? null}
             disabled={!interactive}
@@ -378,7 +442,7 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
       {playing && (
         <details className={`fight-theirs seat${opp}`}>
           <summary>{t("game.fight.theirMoves", { name: names[opp] || t(`game.fight.seat${opp}`) })}</summary>
-          <MoveList style={fighters[opp].style} position={v.position} selected={null} disabled compact />
+          <MoveList fighters={fighters} seat={opp} history={v.history} position={v.position} selected={null} disabled compact />
         </details>
       )}
 
@@ -413,8 +477,8 @@ function FightPhase({ state, status, you, names, interactive, selected, onSelect
   );
 }
 
-/** 体力のバー。名前・バックボーン・パラメータも添える */
-function HpBar({ seat, name, fighter, hp }: { seat: Seat; name: string; fighter: Fighter; hp: number }) {
+/** 体力のバー。名前・バックボーン・パラメータと、続いている強化・弱体も添える */
+function HpBar({ seat, name, fighter, hp, fx }: { seat: Seat; name: string; fighter: Fighter; hp: number; fx: Fight.Effect[] }) {
   const { t } = useI18n();
   const ratio = hp / MAX_HP;
   return (
@@ -434,6 +498,27 @@ function HpBar({ seat, name, fighter, hp }: { seat: Seat; name: string; fighter:
       >
         <span style={{ "--hp": `${ratio * 100}%` } as CSSProperties} />
       </span>
+      {fx.length > 0 && (
+        <ul className="fight-fx" aria-label={t("game.fight.fxTitle")}>
+          {fx.map((e) => {
+            const stat = t(`game.fight.stat.${e.stat}`);
+            const up = e.amount > 0;
+            return (
+              <li
+                key={`${e.stat}${up ? "+" : "-"}`}
+                className={`fight-fx-chip ${up ? "up" : "down"}`}
+                aria-label={t("game.fight.fxLeft", { stat, dir: t(up ? "game.fight.fxUp" : "game.fight.fxDown"), n: e.left })}
+              >
+                <FxArrow up={up} />
+                <span aria-hidden>{stat}</span>
+                <b className="num" aria-hidden>
+                  {e.left}
+                </b>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <span className="fight-hp-style">
         <StyleIcon style={fighter.style} className="fight-style-icon tiny" />
         {t(`game.fight.style.${fighter.style}`)}
@@ -443,16 +528,23 @@ function HpBar({ seat, name, fighter, hp }: { seat: Seat; name: string; fighter:
   );
 }
 
-/** 技のボタンの並び。今の位置で使えない技は押せず、使える位置を出す */
+/**
+ * 技のボタンの並び。今の位置で使えない技・使い切った技は押せず、使える位置や残りの回数を出す。
+ * 読みは今の形で、続けるほど強い技は今の上乗せも出す
+ */
 function MoveList({
-  style,
+  fighters,
+  seat,
+  history,
   position,
   selected,
   disabled,
   compact = false,
   onPick,
 }: {
-  style: StyleId;
+  fighters: [Fighter, Fighter];
+  seat: Seat;
+  history: Fight.Exchange[];
   position: Fight.Position;
   selected: string | null;
   disabled: boolean;
@@ -460,14 +552,18 @@ function MoveList({
   onPick?(act: string): void;
 }) {
   const { t } = useI18n();
+  const style = fighters[seat].style;
   const usable = new Set(usableMoves(style, position).map((m) => m.id));
   const top = Math.max(...STYLES[style].moves.map((m) => m.power));
   return (
     <div className={`fight-move-list ${compact ? "compact" : ""}`}>
-      {STYLES[style].moves.map((m) => {
-        const here = usable.has(m.id);
-        const tags = moveTags(t, m);
+      {STYLES[style].moves.map((base) => {
+        const m = techniqueNow(fighters, history, seat, base.id) ?? base;
+        const left = usesLeft(base, history, seat);
+        const here = usable.has(m.id) && left !== 0;
+        const tags = moveTags(t, m, { left, chain: chainCount(base, history, seat) });
         const label = t(`game.fight.move.${style}.${m.id}`);
+        const sub = m.guard && m.guard !== "focus" ? (`game.fight.guard.${m.guard}` as const) : (`game.fight.kind.${m.kind}` as const);
         const body = (
           <>
             <MoveIcon tech={m} className={`fight-move-icon cls-${m.cls}`} />
@@ -475,7 +571,7 @@ function MoveList({
               <span className="fight-move-name">
                 {label}
                 <small className="muted">
-                  {t(`game.fight.cls.${m.cls}`)}・{t(m.guard ? `game.fight.guard.${m.guard}` : `game.fight.kind.${m.kind}`)}
+                  {t(`game.fight.cls.${m.cls}`)}・{t(sub)}
                 </small>
               </span>
               {!compact && <span className="fight-move-edge">{t(`game.fight.edge.${m.guard ?? m.cls}`)}</span>}
@@ -483,7 +579,7 @@ function MoveList({
                 {m.cls !== "guard" && (
                   <span className="fight-move-power" aria-label={t("game.fight.power")}>
                     {Array.from({ length: POWER_PIPS }, (_, i) => (
-                      <i key={i} className={i < Math.round((m.power / top) * POWER_PIPS) ? "on" : ""} />
+                      <i key={i} className={i < Math.round((Math.min(m.power, top) / top) * POWER_PIPS) ? "on" : ""} />
                     ))}
                   </span>
                 )}
@@ -492,10 +588,14 @@ function MoveList({
                     {tag}
                   </span>
                 ))}
-                {!here && (
-                  <span className="fight-tag off">
-                    {t("game.fight.only", { pos: m.where.map((p) => t(`game.fight.pos.${p}`)).join("・") })}
-                  </span>
+                {left === 0 ? (
+                  <span className="fight-tag off">{t("game.fight.tag.usedUp")}</span>
+                ) : (
+                  !usable.has(m.id) && (
+                    <span className="fight-tag off">
+                      {t("game.fight.only", { pos: m.where.map((p) => t(`game.fight.pos.${p}`)).join("・") })}
+                    </span>
+                  )
                 )}
               </span>
             </span>
@@ -525,12 +625,26 @@ function MoveList({
   );
 }
 
-/** 技の小さな札：速い・遅い、決まったあとの位置 */
-function moveTags(t: T, m: Technique): string[] {
+/**
+ * 技の小さな札：速い・遅い、決まったあとの位置、回復・強化・弱体、残りの回数、特別な効果。
+ * left は残りの回数（限りがなければ null）、chain は続けるほど強い技の今の回数
+ */
+function moveTags(t: T, m: Technique, { left, chain }: { left: number | null; chain: number }): string[] {
   const tags: string[] = [];
+  if (m.read) tags.push(t("game.fight.tag.read", { cls: t(`game.fight.cls.${m.cls}`) }));
   if (m.quick >= 1) tags.push(t("game.fight.fast"));
   if (m.quick <= -1) tags.push(t("game.fight.slow"));
   if (m.to) tags.push(t("game.fight.toPos", { pos: t(`game.fight.pos.${m.to}`) }));
+  if (m.heal) tags.push(t("game.fight.tag.heal", { n: m.heal }));
+  for (const fx of m.fx ?? []) {
+    const stat = t(`game.fight.stat.${fx.stat}`);
+    tags.push(t(fx.to === "self" ? "game.fight.tag.selfUp" : "game.fight.tag.foeDown", { stat }));
+  }
+  if (m.swap) tags.push(t("game.fight.tag.swap"));
+  if (m.chain) tags.push(chain > 0 ? t("game.fight.tag.chainNow", { n: chain * m.chain.per }) : t("game.fight.tag.chain"));
+  if (m.wild) tags.push(t("game.fight.tag.wild"));
+  if (m.encore) tags.push(t("game.fight.tag.encore"));
+  if (left !== null && left > 0) tags.push(t("game.fight.tag.uses", { n: left }));
   return tags;
 }
 
@@ -553,8 +667,14 @@ export function describeExchange(
     s.by === you ? t("game.fight.whose.you", { move: name(s) }) : t("game.fight.whose.name", { name: names[s.by], move: name(s) });
   const vars = { x: whose(x), y: whose(y), a: who(x.by), m: name(x), b: who(y.by), n: name(y) };
   const yTech = techniqueOf(fighters[y.by].style, y.act);
+  /** ため（回復・強化・弱体）が決まった */
+  const charged = (s: Fight.Strike) => s.result === "hit" && techniqueOf(fighters[s.by].style, s.act)?.guard === "focus";
   let main: string;
-  if (x.result === "blocked") main = t("game.fight.r.blocked", vars);
+  if (charged(x) && charged(y)) main = t("game.fight.r.focusBoth", vars);
+  else if (charged(y) && x.result === "hit") main = t("game.fight.r.focusHit", vars);
+  else if (charged(y)) main = t("game.fight.r.focusCalm", { ...vars, x: whose(y), a: who(x.by), m: name(x) });
+  else if (charged(x)) main = t("game.fight.r.focusCalm", { ...vars, x: whose(x), a: who(y.by), m: name(y) });
+  else if (x.result === "blocked") main = t("game.fight.r.blocked", vars);
   else if (x.result === "dodged") main = t("game.fight.r.dodged", vars);
   else if (x.result === "countered")
     main = t(yTech?.cls === "strike" ? "game.fight.r.stopped" : yTech?.cls === "grab" ? "game.fight.r.outgrabbed" : "game.fight.r.returned", vars);
@@ -567,8 +687,19 @@ export function describeExchange(
   else if (ex.position !== ex.from)
     notes.push(ex.position === "standing" ? t("game.fight.r.toStanding") : t("game.fight.r.toPos", { pos: t(`game.fight.pos.${ex.position}`) }));
   if (ex.ko !== null) notes.push(ex.ko === you ? t("game.fight.r.downYou") : t("game.fight.r.down", { who: who(ex.ko) }));
+  // 回復と、付いた（移った）強化・弱体。続く長さは攻防のあとの記録から
+  for (const s of ex.strikes) {
+    if (s.heal) notes.push(t("game.fight.r.heal", { who: who(s.by), n: s.heal }));
+    for (const e of s.effects ?? []) {
+      const stat = t(`game.fight.stat.${e.stat}`);
+      const target = e.who === you ? t("game.fight.fx.you", { stat }) : t("game.fight.fx.name", { name: names[e.who], stat });
+      const turns = ex.fx?.find((f) => f.who === e.who && f.stat === e.stat && Math.sign(f.amount) === Math.sign(e.amount))?.left ?? 0;
+      notes.push(t(e.amount > 0 ? "game.fight.r.fxUp" : "game.fight.r.fxDown", { target, n: Math.abs(e.amount), turns }));
+    }
+  }
   // 英語の「your jab → …」は文の頭を大文字にする
-  return { main: main.charAt(0).toUpperCase() + main.slice(1), notes };
+  const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+  return { main: cap(main), notes: notes.map(cap) };
 }
 
 /** 直前の攻防の結果。文と、2 人が受けたダメージ */
@@ -593,6 +724,7 @@ function ExchangeResult({
   const me: Seat = you ?? 0;
   const { main, notes } = describeExchange(t, ex, fighters, names, you, who);
   const taken = (seat: Seat) => ex.strikes.filter((s) => s.by !== seat).reduce((a, s) => a + s.damage, 0);
+  const healed = (seat: Seat) => ex.strikes.filter((s) => s.by === seat).reduce((a, s) => a + (s.heal ?? 0), 0);
   return (
     <div className="fight-result" key={index}>
       <span className="muted small">{t("game.fight.lastExchange", { n: index + 1 })}</span>
@@ -602,7 +734,8 @@ function ExchangeResult({
         {([me, other(me)] as Seat[]).map((seat) => (
           <span key={seat} className={`seat${seat} ${taken(seat) > 0 ? "hurt" : ""}`}>
             <span className="token dot" aria-hidden />
-            {who(seat)} <b className="num">{taken(seat) > 0 ? `−${taken(seat)}` : "±0"}</b>
+            {who(seat)} <b className="num">{taken(seat) > 0 ? `−${taken(seat)}` : healed(seat) > 0 ? "" : "±0"}</b>
+            {healed(seat) > 0 && <b className="num fight-healed">+{healed(seat)}</b>}
           </span>
         ))}
       </span>

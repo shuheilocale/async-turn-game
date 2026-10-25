@@ -7,5 +7,6 @@ export default [
   { text: "game.fight.tour.build", target: ".fight-build", advance: "move" },
   { text: "game.fight.tour.moves", target: ".fight-moves" },
   { text: "game.fight.tour.position", target: ".fight-ring" },
+  { text: "game.fight.tour.effects", target: ".fight-bars" },
   { text: "game.fight.tour.end", target: ".fight-bars" },
 ] satisfies TourStep[];
