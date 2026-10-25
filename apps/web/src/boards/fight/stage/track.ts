@@ -1,5 +1,6 @@
 import { armLength, type BodyDims } from "./body.ts";
-import { add, apply3, dist as distance, easings, type EaseName, type V3 } from "./math.ts";
+import { add, apply3, dist as distance, easings, norm, scale, sub, type EaseName, type V3 } from "./math.ts";
+import { TWO_HAND_GAP } from "./outfit.ts";
 import { chestFrame, headCenter, lerpPose, P, pack, pelvisFrame, shoulderLocal, unpack, type Pose, type PoseDesc } from "./pose.ts";
 import { withHands } from "./stances.ts";
 import type { StageStrike, StyleId } from "./types.ts";
@@ -164,8 +165,8 @@ export interface Built {
   fx?: FxLocal[];
 }
 
-/** 飛ばすもの：トランプ / ロケットパンチ / 光の玉 / 手裏剣 / 名刺 / タピオカの粒 / 氷のかけら */
-export type ShotKind = "cards" | "rocket" | "orb" | "shuriken" | "meishi" | "pearls" | "ice";
+/** 飛ばすもの：トランプ / ロケットパンチ / 光の玉 / 手裏剣 / 名刺 / タピオカの粒 / 氷のかけら / 金色のコイン / 放水（飛ばさず、水の線を走らせる） */
+export type ShotKind = "cards" | "rocket" | "orb" | "shuriken" | "meishi" | "pearls" | "ice" | "coins" | "water";
 
 /**
  * 動きに合わせて出す効果。at から until まで続く（一度きりのものは at だけ見る）。
@@ -176,6 +177,10 @@ export type ShotKind = "cards" | "rocket" | "orb" | "shuriken" | "meishi" | "pea
  * - laser：目から相手へ走る光の線。horn：クラクションの音の波。shake：シェイカーのしぶき。wisp：手から立つ白い煙
  * - ghost：その場に残る半透明の残像（一度きり）。dust：足もとの土ぼこり
  * - form：持ち物の形を持ちかえる（form の番号）。held：持ち物を反対の手（side）に移す。tray：トレイを盾にする（side の腕）
+ * - water：筒先から相手へ走る水の線としぶき。vinyl：手もとで光るレコード。chart：光るグラフ（dir = 1 で上向き、-1 で下向き）。
+ *   coinrain：降ってきて光るコイン。lift：ヘルメットを持ち上げて汗をぬぐう。phones：ヘッドホンを耳に当てる。
+ *   chomp：恐竜のフードの口でかむ。roar：ほえる声の波（口も開く）。fluff：もふっとした綿のような粒（一度きり）。
+ *   zanshin：足もとに静かに広がる光の輪。tail：しっぽを持ち上げて伸ばす（恐竜のしっぽで払う技）
  */
 export type FxType =
   | "shot"
@@ -201,7 +206,18 @@ export type FxType =
   | "dust"
   | "form"
   | "held"
-  | "tray";
+  | "tray"
+  | "water"
+  | "vinyl"
+  | "chart"
+  | "coinrain"
+  | "lift"
+  | "phones"
+  | "chomp"
+  | "roar"
+  | "fluff"
+  | "zanshin"
+  | "tail";
 
 export interface FxLocal {
   type: FxType;
@@ -212,6 +228,8 @@ export interface FxLocal {
   shot?: ShotKind;
   /** 持ちかえる持ち物の形（form） */
   form?: 1 | 2;
+  /** グラフの向き（chart。1 = 上向き、-1 = 下向き） */
+  dir?: 1 | -1;
 }
 
 export interface Fx extends FxLocal {
@@ -234,6 +252,11 @@ export interface AttackCtx {
   result: Result;
   /** 位置関係が変わるときの、この技のあとの姿勢（攻める人・守る人）。いまの足もとから見た位置に直してある */
   after: { att: Pose; def: Pose } | null;
+  /**
+   * 技の中身（強化・弱体の付き方とダメージ）。同じ種類の技が 2 つ以上あるバックボーンで、どの技かを見分けるのに使う。
+   * 返し技など、攻防の記録にない動きでは省く
+   */
+  strike?: Pick<StageStrike, "by" | "damage" | "effects" | "result">;
 }
 
 // ---- 攻める人の動き ----
@@ -249,6 +272,12 @@ export function aim(t: V3, result: Result, side: number): V3 {
 export function chestPoint(d: PoseDesc, dims: BodyDims, v: V3): V3 {
   const f = chestFrame(pack(d), dims);
   return add(f.o, apply3(f.r, v));
+}
+
+/** 両手で持つ持ち物（竹刀・筒先）を持つ：右手を grip に、左手をその後ろ（dir の逆へ TWO_HAND_GAP）に置く */
+export function hold2(k: KeyEdit, grip: V3, dir: V3) {
+  k.hand(1, grip);
+  k.hand(0, sub(grip, scale(norm(dir), TWO_HAND_GAP)));
 }
 
 /** 両腕を上げて頭を守る */
@@ -290,6 +319,115 @@ export function bagShield(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
   // 前腕を立てると、カバンが手の上に来て顔を隠す
   k.hand(1, add(head, [-0.05, -0.3, 0.2]));
   k.hand(0, add(head, [0.13, -0.16, 0.22]));
+}
+
+/** 竹刀で受ける（剣道家）：左手を低く、右手を高く右へ出して、竹刀を顔の前に斜めに立てる */
+export function shinaiGuard(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
+  d.neck[0] += 0.06;
+  d.spine[0] += 0.04;
+  d.shrug = [0.015, 0.015];
+  d.elbow = [
+    [0.5, -1, -0.2],
+    [-0.3, -1, -0.2],
+  ];
+  const head = headCenter(pack(d), dims);
+  k.hand(0, add(head, [0.15, -0.14, 0.28]));
+  k.hand(1, add(head, [-0.03, -0.02, 0.35]));
+}
+
+/** 防火服で受ける（消防士）：肩を相手へ向けて背を丸め、両腕を顔の前で重ねる */
+export function coatGuard(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
+  d.hipRot[1] -= 0.35;
+  d.spine[0] += 0.16;
+  d.chest[1] -= 0.2;
+  d.neck[0] += 0.2;
+  d.neck[1] += 0.3;
+  d.shrug = [0.03, 0.03];
+  d.elbow = [
+    [0.3, -1, 0.4],
+    [-0.3, -1, 0.4],
+  ];
+  d.fist = [
+    [0.6, 1.2, 0],
+    [0.6, -1.2, 0],
+  ];
+  const head = headCenter(pack(d), dims);
+  k.hand(0, add(head, [0.0, -0.06, 0.16]));
+  k.hand(1, add(head, [-0.06, 0.02, 0.18]));
+}
+
+/** ヘッドホンで受ける（DJ）：両手でヘッドホンを耳に押し当て、ひじを前に寄せてあごを引く */
+export function phonesGuard(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
+  d.neck[0] += 0.18;
+  d.spine[0] += 0.08;
+  d.shrug = [0.03, 0.03];
+  d.elbow = [
+    [0.2, -0.6, 1],
+    [-0.2, -0.6, 1],
+  ];
+  d.fist = [
+    [0.2, 1.4, 0],
+    [0.2, -1.4, 0],
+  ];
+  const head = headCenter(pack(d), dims);
+  k.hand(0, add(head, [0.12, -0.03, 0.03]));
+  k.hand(1, add(head, [-0.12, -0.03, 0.03]));
+}
+
+/** もふっと受ける（恐竜の着ぐるみ）：おなかを突き出して受け止め、両手を横へ広げて大きくのけぞる */
+export function fluffGuard(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
+  d.hip[2] += 0.06;
+  d.hip[1] -= 0.03;
+  d.spine[0] -= 0.22;
+  d.chest[0] -= 0.16;
+  d.neck[0] += 0.3;
+  d.elbow = [
+    [1, -0.3, -0.3],
+    [-1, -0.3, -0.3],
+  ];
+  const c = chestPoint(d, dims, [0, dims.shoulderY - 0.1, 0]);
+  k.hand(0, add(c, [0.36, 0.02, 0.1]));
+  k.hand(1, add(c, [-0.36, 0.02, 0.1]));
+}
+
+/** バックボーンごとの受け方（頭・胴への技）。決めていない人は両腕で頭を守る */
+export function guardOf(style: StyleId | null): (k: KeyEdit, d: PoseDesc, dims: BodyDims) => void {
+  switch (style) {
+    case "salaryman":
+      return bagShield;
+    case "kendo":
+      return shinaiGuard;
+    case "firefighter":
+      return coatGuard;
+    case "dj":
+      return phonesGuard;
+    case "dino":
+      return fluffGuard;
+    default:
+      return blockHigh;
+  }
+}
+
+/** すっと身を引く（投資家の損切り）：背すじを伸ばしたまま、静かに大きく下がる */
+export function withdraw(d: PoseDesc, k: number) {
+  shift(d, -0.3 * k);
+  d.hip[1] += 0.005 * k;
+  d.spine[0] -= 0.06 * k;
+  d.chest[0] -= 0.04 * k;
+  d.neck[0] += 0.04 * k;
+  d.footRot[0][0] += 0.25 * k;
+}
+
+/** バックボーンごとのかわし方。決めていない人は頭を振ってひざを沈める */
+export function awayOf(style: StyleId | null): (d: PoseDesc, k: number) => void {
+  switch (style) {
+    case "salaryman":
+      return bow;
+    case "investor":
+      return withdraw;
+    default:
+      return slip;
+  }
 }
 
 /** お辞儀をするように、腰から上体を深く倒して頭を下げ、相手の技の下をくぐる（サラリーマンのかわし） */

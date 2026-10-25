@@ -37,6 +37,12 @@ const STYLES: StyleId[] = [
   "stuntman",
   "salaryman",
   "bubbletea",
+  "kendo",
+  "luchador",
+  "firefighter",
+  "dj",
+  "investor",
+  "dino",
 ];
 const KINDS: ActionKind[] = [
   "jab",
@@ -277,6 +283,14 @@ function Preview() {
           }
         >
           強化・弱体
+        </button>
+        {/* 同じ種類の技が 2 つ以上ある人（DJ・投資家の見せる技、剣道家の振る技）を見分けて確かめる */}
+        <button onClick={() => play([{ by, kind: "perform", result: "hit", damage: 0, effects: [{ who: by, stat: "power", dir: 1 }] }], after)}>自分だけ強化</button>
+        <button onClick={() => play([{ by, kind: "swing", result, damage: 8, effects: [{ who: by === 0 ? 1 : 0, stat: "power", dir: -1 }] }], after)}>
+          振る（攻撃↓）
+        </button>
+        <button onClick={() => play([{ by, kind: "swing", result, damage: 10, effects: [{ who: by === 0 ? 1 : 0, stat: "guard", dir: -1 }] }], after)}>
+          振る（守り↓）
         </button>
         <button
           onClick={() =>

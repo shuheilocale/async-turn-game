@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bodyOf, NEUTRAL_STATS } from "./body.ts";
-import { hangsDown, outfitOf, PROP_LENGTH, propOf } from "./outfit.ts";
+import { hangsDown, outfitOf, PROP_LENGTH, propOf, twoHanded } from "./outfit.ts";
 import { hiddenParts } from "./rig.ts";
 import type { StyleId } from "./types.ts";
 
@@ -30,6 +30,12 @@ const STYLES: StyleId[] = [
   "stuntman",
   "salaryman",
   "bubbletea",
+  "kendo",
+  "luchador",
+  "firefighter",
+  "dj",
+  "investor",
+  "dino",
 ];
 
 describe("服装の決め方", () => {
@@ -57,6 +63,28 @@ describe("服装の決め方", () => {
     expect(outfitOf("stuntman")).toMatchObject({ top: "stunt", cloth: "black", pants: "black", pads: true });
     expect(outfitOf("salaryman")).toMatchObject({ top: "suit", neck: "tie", feet: "dress", prop: "bag" });
     expect(outfitOf("bubbletea")).toMatchObject({ head: "bandana", prop: "cup", apron: true, bib: true });
+  });
+
+  it("剣道家・ルチャドール・消防士・DJ・投資家・恐竜の着ぐるみは、それと分かる服と持ち物を持つ", () => {
+    expect(outfitOf("kendo")).toMatchObject({ top: "kendo", cloth: "navy", pants: "navy", head: "men", hands: "kote", feet: "bare", prop: "shinai", bogu: true, wide: true });
+    expect(outfitOf("luchador")).toMatchObject({ top: "none", bottom: "tights", head: "mask", feet: "lucha", prop: "none" });
+    expect(outfitOf("firefighter")).toMatchObject({ top: "turnout", pants: "khaki", head: "helmet", hands: "work", feet: "rubber", prop: "nozzle", reflect: true });
+    expect(outfitOf("dj")).toMatchObject({ top: "bomber", cloth: "seat", head: "capf", neck: "phones", feet: "sneakers" });
+    expect(outfitOf("investor")).toMatchObject({ top: "vest", cloth: "white", neck: "tie", head: "glasses", prop: "tablet", feet: "dress" });
+    expect(outfitOf("dino")).toMatchObject({ top: "dino", cloth: "green", pants: "green", head: "dino", hands: "paws", feet: "paws", tail: true, wide: true });
+    // 袴は裾が広がり、ルチャのタイツは脚にぴったり
+    expect(outfitOf("kendo").flare).toBeGreaterThan(1.3);
+    expect(outfitOf("luchador").flare).toBeLessThanOrEqual(1.0);
+  });
+
+  it("竹刀とホースの筒先は両手で持ち、竹刀は筒先より長い。タブレットは片手で持つ", () => {
+    expect(twoHanded("shinai")).toBe(true);
+    expect(twoHanded("nozzle")).toBe(true);
+    expect(twoHanded("tablet")).toBe(false);
+    expect(twoHanded("cane")).toBe(false);
+    expect(PROP_LENGTH.shinai).toBeGreaterThan(PROP_LENGTH.nozzle * 3);
+    expect(PROP_LENGTH.tablet).toBeGreaterThan(0);
+    expect(hangsDown("shinai")).toBe(false);
   });
 
   it("カバンは手の下に垂らし、カップは立てて持つ。カップで振るのは太いストロー", () => {
@@ -93,7 +121,11 @@ describe("服装の決め方", () => {
         o.top === "stunt" ||
         o.pads ||
         o.bracers ||
-        o.bib
+        o.bib ||
+        o.bogu ||
+        o.tail ||
+        o.top === "bomber" ||
+        o.top === "vest"
       );
     };
     for (const s of STYLES) expect(usesSeat(s), s).toBe(true);
@@ -140,6 +172,24 @@ describe("服で隠れる体の部品", () => {
     expect(tuk.has("shin")).toBe(false);
     const suit = hiddenParts(outfitOf("salaryman"), d, false);
     for (const p of ["ribs", "upperArm", "thigh", "shin", "foot"]) expect(suit.has(p), p).toBe(true);
+  });
+
+  it("覆面は頭をすっかり包み、小手・作業手袋・着ぐるみの手はこぶしを隠す。剣道ははだしで、面から顔が見える", () => {
+    const mask = hiddenParts(outfitOf("luchador"), d, false);
+    for (const p of ["head", "hair", "thigh", "shin", "foot"]) expect(mask.has(p), p).toBe(true);
+    // ルチャドールは上が裸
+    for (const p of ["ribs", "pec", "upperArm", "fist"]) expect(mask.has(p), p).toBe(false);
+    for (const s of ["kendo", "firefighter", "dino"] as const) {
+      const h = hiddenParts(outfitOf(s), d, false);
+      expect(h.has("fist"), s).toBe(true);
+      expect(h.has("hair"), s).toBe(true);
+      expect(h.has("head"), s).toBe(false);
+    }
+    expect(hiddenParts(outfitOf("kendo"), d, false).has("foot")).toBe(false);
+    expect(hiddenParts(outfitOf("dino"), d, false).has("foot")).toBe(true);
+    // ベストの下は長袖の白いシャツ（腕は見えない）、DJ は手が見える
+    expect(hiddenParts(outfitOf("investor"), d, false).has("upperArm")).toBe(true);
+    expect(hiddenParts(outfitOf("dj"), d, false).has("fist")).toBe(false);
   });
 
   it("白い手袋はこぶしを隠し、スイムキャップは髪を隠す。水着のときは脚が見える", () => {

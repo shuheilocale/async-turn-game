@@ -9,6 +9,7 @@ import {
   clinchPose,
   downPose,
   fatigueOf,
+  glassesFix,
   groundBottomPose,
   groundTopPose,
   handRoot,
@@ -20,6 +21,7 @@ import {
   tiredPose,
   waveOf,
 } from "./stances.ts";
+import { TWO_HAND_GAP } from "./outfit.ts";
 import type { StyleId } from "./types.ts";
 
 const STYLES: StyleId[] = [
@@ -48,6 +50,12 @@ const STYLES: StyleId[] = [
   "stuntman",
   "salaryman",
   "bubbletea",
+  "kendo",
+  "luchador",
+  "firefighter",
+  "dj",
+  "investor",
+  "dino",
 ];
 
 describe("バックボーンごとの構え", () => {
@@ -232,6 +240,67 @@ describe("新しいキャラクターの構えと待ちの動き", () => {
     expect(spin / 440).toBeLessThan(0.3);
     expect(wave / 440).toBeGreaterThan(0.1);
     expect(wave / 440).toBeLessThan(0.45);
+  });
+});
+
+describe("剣道家・ルチャドール・消防士・DJ・投資家・恐竜の着ぐるみの構え", () => {
+  const d = bodyOf(NEUTRAL_STATS);
+
+  it("剣道家は右足を前にし、竹刀の柄を両手で持って（右手が前）、剣先を相手ののどの高さへ向ける", () => {
+    const p = stanceOf("kendo", d);
+    const f = unpack(p).foot;
+    expect(f[1][2]).toBeGreaterThan(f[0][2] + 0.15);
+    const [l, r] = [handRoot(p, d, 0), handRoot(p, d, 1)];
+    // 両手は竹刀の柄の上（左手から右手まで、柄を握る間あい）
+    expect(dist(l, r)).toBeCloseTo(TWO_HAND_GAP, 1);
+    expect(r[2]).toBeGreaterThan(l[2] + 0.1);
+    expect(r[1]).toBeGreaterThan(l[1]);
+    // 両手はへその前（胸より低い）
+    expect(l[1]).toBeLessThan(legLength(d) + d.pelvisUp + d.abdomen + 0.1);
+  });
+
+  it("剣道家の鍔迫り合いは、両手を胸の前に寄せて竹刀を立てる", () => {
+    const p = clinchPose("kendo", d, 0.6);
+    const [l, r] = [handRoot(p, d, 0), handRoot(p, d, 1)];
+    expect(r[1] - l[1]).toBeGreaterThan(Math.abs(r[2] - l[2]) * 2);
+    expect(Math.abs(r[0] - l[0])).toBeLessThan(0.05);
+  });
+
+  it("消防士は足を広く、腰を落としてどっしり立ち、筒先を両手で前へ向けて持つ", () => {
+    const width = (s: StyleId) => {
+      const f = unpack(stanceOf(s, d)).foot;
+      return Math.hypot(f[0][0] - f[1][0], f[0][2] - f[1][2]);
+    };
+    expect(width("firefighter")).toBeGreaterThan(width("salaryman") + 0.15);
+    expect(stanceOf("firefighter", d)[P.hip + 1]!).toBeLessThan(stanceOf("investor", d)[P.hip + 1]! - 0.04);
+    const p = stanceOf("firefighter", d);
+    const [l, r] = [handRoot(p, d, 0), handRoot(p, d, 1)];
+    expect(dist(l, r)).toBeCloseTo(TWO_HAND_GAP, 1);
+    expect(r[2]).toBeGreaterThan(l[2]);
+  });
+
+  it("ルチャドールは胸を張って弾み、恐竜はのしのしと左右へ大きく揺れる", () => {
+    const lu = stanceOf("luchador", d);
+    expect(lu[P.chest]!).toBeLessThan(0);
+    const range = (s: StyleId, at: number) => {
+      const v = [...Array(60).keys()].map((i) => idleDelta(s, 0, i * 0.21, i * 0.1, 0, 1, false)[at]!);
+      return Math.max(...v) - Math.min(...v);
+    };
+    expect(range("luchador", P.hip + 1)).toBeGreaterThan(range("investor", P.hip + 1));
+    expect(range("dino", P.hip)).toBeGreaterThan(range("boxing", P.hip) * 1.5);
+    // 恐竜は足を交互に浮かせて踏む
+    expect(range("dino", P.foot + 1)).toBeGreaterThan(0.02);
+  });
+
+  it("DJ はビートに乗って速めに首でリズムをとり、投資家はゆっくり、ときどき眼鏡を押し上げる", () => {
+    expect(rhythmOf("dj", 0)).toBeGreaterThan(rhythmOf("investor", 0) * 4);
+    let fix = 0;
+    for (let t = 0; t < 13; t += 0.05) if (glassesFix(t) > 0) fix++;
+    expect(fix / 260).toBeGreaterThan(0.08);
+    expect(fix / 260).toBeLessThan(0.3);
+    const t = [...Array(260).keys()].map((i) => i * 0.05).find((x) => glassesFix(x) > 0.45 && glassesFix(x) < 0.55)!;
+    // 押し上げているあいだは、左手が顔の高さまで上がる
+    expect(idleDelta("investor", 0, 0, t, 0, 1, false)[P.hand + 1]!).toBeGreaterThan(0.25);
   });
 });
 
