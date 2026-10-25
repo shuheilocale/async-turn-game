@@ -29,14 +29,29 @@ const STANCE: Partial<Record<StyleId, { low: number; lean: number; hands: number
   rapper: { low: 0.05, lean: -0.06, hands: 0.62 },
   chef: { low: 0.05, lean: 0.04, hands: 0.6 },
   robot: { low: 0.03, lean: 0, hands: 0.66 },
+  ninja: { low: 0.2, lean: 0.22, hands: 0.78 },
+  tuktuk: { low: 0.04, lean: 0.1, hands: 0.55 },
+  stuntman: { low: 0.07, lean: 0.08, hands: 0.82 },
+  salaryman: { low: 0.01, lean: -0.04, hands: 0.62 },
+  bubbletea: { low: 0.02, lean: -0.02, hands: 0.74 },
 };
 
 /**
- * 格闘家ではない人たちの見分け方：胴と脚の色・頭にかぶるもの・持ち物。
+ * 格闘家ではない人たちの見分け方：胴と脚の色・頭にかぶるもの・持ち物・首まわりと体の印。
  * 色の seat はその人の色、white・black・metal は決まった色
  */
 type Paint = "seat" | "white" | "black" | "metal";
-const LOOK: Partial<Record<StyleId, { body?: Paint; legs?: Paint; hat?: "tophat" | "toque" | "cap" | "swim" | "headset" | "antenna" | "mic"; prop?: "cane" | "pan" | "penlight" }>> = {
+interface Look {
+  body?: Paint;
+  legs?: Paint;
+  hat?: "tophat" | "toque" | "cap" | "swim" | "headset" | "antenna" | "mic" | "hood" | "bandana";
+  prop?: "cane" | "pan" | "penlight" | "bag" | "cup";
+  /** 首まわり：タオル・ネクタイ */
+  neck?: "towel" | "tie";
+  /** 体の印：ひじ・ひざのプロテクター・胸当てのエプロン・帯 */
+  mark?: "pads" | "apron" | "belt";
+}
+const LOOK: Partial<Record<StyleId, Look>> = {
   kickboxing: { legs: "seat" },
   taichi: { body: "white", legs: "black" },
   gamer: { body: "seat", legs: "black", hat: "headset" },
@@ -47,6 +62,11 @@ const LOOK: Partial<Record<StyleId, { body?: Paint; legs?: Paint; hat?: "tophat"
   rapper: { body: "seat", legs: "black", hat: "cap" },
   chef: { body: "white", legs: "black", hat: "toque", prop: "pan" },
   robot: { body: "metal", legs: "metal", hat: "antenna" },
+  ninja: { body: "black", legs: "black", hat: "hood", mark: "belt" },
+  tuktuk: { body: "seat", legs: "black", neck: "towel" },
+  stuntman: { body: "black", legs: "black", mark: "pads" },
+  salaryman: { body: "black", legs: "black", neck: "tie", prop: "bag" },
+  bubbletea: { body: "white", legs: "black", hat: "bandana", prop: "cup", mark: "apron" },
 };
 const paintClass = (p: Paint | undefined) => (p ? ` paint-${p}` : "");
 
@@ -62,7 +82,10 @@ function Figure({ look, x, facing, hit, down }: { look: FighterLook | null; x: n
   const head = { x: lean * 1.3, y: shoulder - 15 };
   const hand = { x: 18 * facing + lean, y: shoulder + (1 - st.hands) * 40 };
   const cls = look ? `seat${look.seat}` : "sil";
-  const lk = (look && LOOK[look.style]) || {};
+  const lk: Look = (look && LOOK[look.style]) || {};
+  // ひざ・ひじ（プロテクターの印を付ける場所）
+  const knee = { x: 7 * facing, y: (140 + hip) / 2 };
+  const elbow = { x: (lean + hand.x) / 2, y: (shoulder + hand.y) / 2 + 3 };
   if (down)
     return (
       <g transform={`translate(${x} 0)`} className={`fs2-fig ${cls}`}>
@@ -86,6 +109,34 @@ function Figure({ look, x, facing, hit, down }: { look: FighterLook | null; x: n
           </g>
         )}
         {lk.prop === "penlight" && <line x1={hand.x} y1={hand.y} x2={hand.x + 3 * facing} y2={hand.y - 14} className="fs2-light" />}
+        {lk.mark === "apron" && <line x1={lean * 0.75} y1={shoulder + 9} x2={-1 * facing} y2={hip + 16} className="fs2-apron" />}
+        {lk.mark === "belt" && <line x1={-6} y1={hip - 3} x2={6} y2={hip - 3} className="fs2-tie" strokeWidth={4} />}
+        {lk.neck === "tie" && <line x1={lean} y1={shoulder + 1} x2={lean * 0.8} y2={shoulder + 17} className="fs2-tie" />}
+        {lk.neck === "towel" && (
+          <g className="fs2-towel">
+            <line x1={lean - 6} y1={shoulder + 1} x2={lean + 6} y2={shoulder + 1} />
+            <line x1={lean + 4 * facing} y1={shoulder + 1} x2={lean + 4 * facing} y2={shoulder + 12} />
+          </g>
+        )}
+        {lk.mark === "pads" && (
+          <g className="fs2-pad">
+            <circle cx={knee.x} cy={knee.y} r={3.4} />
+            <circle cx={-knee.x * 0.6} cy={knee.y} r={3.4} />
+            <circle cx={elbow.x} cy={elbow.y} r={3} />
+          </g>
+        )}
+        {lk.prop === "bag" && (
+          <g className="fs2-bag">
+            <rect x={hand.x - 7} y={hand.y + 3} width={14} height={10} rx={2} />
+            <line x1={hand.x - 3} y1={hand.y + 3} x2={hand.x - 1} y2={hand.y} />
+          </g>
+        )}
+        {lk.prop === "cup" && (
+          <g>
+            <line x1={hand.x + 1} y1={hand.y - 9} x2={hand.x + 3 * facing} y2={hand.y - 17} className="fs2-light" strokeWidth={2} />
+            <rect x={hand.x - 3.5} y={hand.y - 10} width={7} height={12} rx={1.5} className="fs2-cup" />
+          </g>
+        )}
         <circle cx={hand.x} cy={hand.y} r={look && (look.style === "boxing" || look.style === "muaythai" || look.style === "kickboxing") ? 6.5 : 4.5} className="fs2-glove" />
         <circle cx={head.x} cy={head.y} r={9.5} className={`fs2-head${lk.body === "metal" ? " paint-metal" : ""}`} />
         {lk.hat && <Hat kind={lk.hat} x={head.x} y={head.y} facing={facing} />}
@@ -144,6 +195,22 @@ function Hat({ kind, x, y, facing }: { kind: string; x: number; y: number; facin
       return (
         <g className="fs2-hat">
           <line x1={x - 4 * facing} y1={y + 1} x2={x + 7 * facing} y2={y + 5} className="fs2-wire" strokeWidth={1.6} />
+        </g>
+      );
+    case "hood":
+      // 忍びの頭巾：頭を黒く覆い、目のところだけ細く開ける。後ろにその人の色の結び目
+      return (
+        <g className="fs2-hat black">
+          <circle cx={x} cy={y} r={10.2} />
+          <line x1={x + 1 * facing} y1={y - 1.5} x2={x + 9 * facing} y2={y - 1.5} className="fs2-slit" />
+          <circle cx={x - 10 * facing} cy={y - 5} r={2.4} className="fs2-band" />
+        </g>
+      );
+    case "bandana":
+      return (
+        <g className="fs2-hat">
+          <path d={`M ${x - 10} ${y - 1} A 10 10 0 0 1 ${x + 10} ${y - 1} Z`} className="fs2-band" />
+          <circle cx={x - 10 * facing} cy={y - 2} r={2.6} className="fs2-band" />
         </g>
       );
     default:

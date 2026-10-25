@@ -391,6 +391,47 @@
   stroke-linecap: round;
 }
 
+/* 忍者の頭巾の目のすき間・ネクタイ・タオル・プロテクター・エプロン・カバン・カップ */
+.fs2-hat .fs2-slit {
+  stroke: #f2e6da;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.fs2-tie {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.fs2-towel {
+  stroke: #f4f2ec;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.fs2-pad {
+  fill: var(--accent);
+}
+
+.fs2-apron {
+  stroke: var(--accent);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.fs2-bag {
+  fill: #1d2029;
+  stroke: #1d2029;
+  stroke-width: 1.6;
+}
+
+.fs2-cup {
+  fill: #d4ad86;
+  stroke: #8c6a4a;
+  stroke-width: 0.8;
+}
+
 .fs2-num {
   font-family: var(--font-num);
   font-weight: 700;
@@ -426,5 +467,10 @@
 
   .fs2-hat .fs2-wire {
     stroke: #6a7184;
+  }
+
+  .fs2-bag {
+    fill: #4a5062;
+    stroke: #4a5062;
   }
 }

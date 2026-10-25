@@ -193,3 +193,102 @@ describe("バックボーンらしい動き方", () => {
     }
   });
 });
+
+describe("忍者・トゥクトゥク運転手・スタントマン・サラリーマン・タピオカ店員とロボットのレーザー", () => {
+  /** その人の技の中で、腰がいちばん高いところ */
+  const hipMax = (ex: ReturnType<typeof play>, who: 0 | 1) =>
+    Math.max(...ex.clips.filter((c) => c.who === who).flatMap((c) => c.track.keys.filter((k) => k.w > 0.5).map((k) => k.pose[P.hip + 1]!)));
+
+  it("飛ばすもの・見せる技・回復の形が、その人らしいものになる", () => {
+    expect(shotOf("ninja")).toBe("shuriken");
+    expect(shotOf("salaryman")).toBe("meishi");
+    expect(shotOf("bubbletea")).toBe("pearls");
+    expect(performOf("robot")).toBe("laser");
+    expect(performOf("tuktuk")).toBe("horn");
+    expect(performOf("salaryman")).toBe("tie");
+    expect(performOf("bubbletea")).toBe("shaker");
+    expect(healOf("bubbletea")).toBe("drink");
+    for (const s of ["shuriken", "meishi", "pearls", "ice"] as const) expect(SHOT_FLIGHT[s]).toBeGreaterThan(0);
+  });
+
+  it("名刺は持ち物を持たない左手で、手裏剣とタピオカは右手で飛ばす", () => {
+    const shot = (s: StyleId) => play([s, "judo"], [one(0, "projectile")]).fx.find((f) => f.type === "shot")!;
+    expect(shot("salaryman")).toMatchObject({ shot: "meishi", side: 0 });
+    expect(shot("ninja")).toMatchObject({ shot: "shuriken", side: 1 });
+    expect(shot("bubbletea")).toMatchObject({ shot: "pearls", side: 1 });
+  });
+
+  it("タピオカ店員の飛ばす技は、強化・弱体が付いたら氷のかけら（氷多め）にする", () => {
+    const fx = [{ who: 1 as const, stat: "speed" as const, dir: -1 as const }];
+    expect(play(["bubbletea", "judo"], [one(0, "projectile", "hit", { effects: fx })]).fx.find((f) => f.type === "shot")!.shot).toBe("ice");
+    // ほかの人の飛ばす技は、強化・弱体が付いても変えない
+    expect(play(["ninja", "judo"], [one(0, "projectile", "hit", { effects: fx })]).fx.find((f) => f.type === "shot")!.shot).toBe("shuriken");
+  });
+
+  it("ロボットのレーザーは、光の線が届いた瞬間に当たる", () => {
+    const ex = play(["robot", "judo"], [one(0, "perform", "hit", { damage: 18 })]);
+    const laser = ex.fx.find((f) => f.type === "laser")!;
+    expect(ex.impacts[0]!.at).toBeGreaterThan(laser.at);
+    expect(ex.impacts[0]!.at).toBeLessThan(laser.until);
+    expect(ex.clips[0]!.track.keys.slice(1).every((k) => k.ease === "linear")).toBe(true);
+  });
+
+  it("忍者の分身：相手の打撃をかわすと残像を 1 回だけ残し、後ろへ跳ぶ（分身の dodge は重ねて見せない）", () => {
+    const ex = play(["boxing", "ninja"], [one(0, "straight", "dodged"), one(1, "dodge")]);
+    const ghosts = ex.fx.filter((f) => f.type === "ghost");
+    expect(ghosts).toHaveLength(1);
+    expect(ghosts[0]!.who).toBe(1);
+    const ninja = ex.clips.filter((c) => c.who === 1);
+    expect(ninja).toHaveLength(1);
+    const away = ninja[0]!.track.keys.find((k) => k.w === 1)!;
+    expect(away.pose[P.hip + 2]!).toBeLessThan(ninja[0]!.track.keys[0]!.pose[P.hip + 2]! - 0.15);
+    // 1 人で出したかわし（見切り）でも残像を出す。ほかの人は出さない
+    expect(play(["ninja", "boxing"], [one(0, "dodge")]).fx.some((f) => f.type === "ghost")).toBe(true);
+    expect(play(["boxing", "karate"], [one(0, "straight", "dodged"), one(1, "dodge")]).fx.some((f) => f.type === "ghost")).toBe(false);
+  });
+
+  it("忍者の煙玉：かわされた技のすぐ後ろの vanish は、かわす動きとして見せる", () => {
+    const ex = play(["boxing", "ninja"], [one(0, "straight", "dodged"), one(1, "vanish")]);
+    expect(ex.fx.filter((f) => f.type === "hide" && f.who === 1)).toHaveLength(1);
+    expect(ex.fx.some((f) => f.type === "smoke" && f.who === 1)).toBe(true);
+  });
+
+  it("サラリーマンはお辞儀をするようにかわす（上体を前へ深く倒す）", () => {
+    const r = play(["boxing", "salaryman"], [one(0, "straight", "dodged")]).clips.find((c) => c.who === 1)!;
+    const lean = (p: Float64Array) => p[P.hipRot]! + p[P.spine]!;
+    expect(lean(r.track.keys.find((k) => k.w === 1)!.pose)).toBeGreaterThan(lean(r.track.keys[0]!.pose) + 0.6);
+    const own = play(["salaryman", "boxing"], [one(0, "dodge")]).clips[0]!;
+    expect(lean(own.track.keys.find((k) => k.w === 1)!.pose)).toBeGreaterThan(lean(own.track.keys[0]!.pose) + 0.6);
+  });
+
+  it("タピオカ店員は、上への技をトレイで受け、振る技ではストローに持ちかえてカップを左手へ移す", () => {
+    expect(play(["boxing", "bubbletea"], [one(0, "straight", "blocked")]).fx.find((f) => f.type === "tray")).toMatchObject({ who: 1, side: 0 });
+    expect(play(["bubbletea", "boxing"], [one(0, "block")]).fx.some((f) => f.type === "tray")).toBe(true);
+    // 下段の蹴りはすねで受ける（トレイは出さない）
+    expect(play(["boxing", "bubbletea"], [one(0, "kick_low", "blocked")]).fx.some((f) => f.type === "tray")).toBe(false);
+    const swing = play(["bubbletea", "boxing"], [one(0, "swing")]);
+    expect(swing.fx.find((f) => f.type === "form")?.form).toBe(1);
+    expect(swing.fx.find((f) => f.type === "held")?.side).toBe(0);
+    expect(play(["bubbletea", "boxing"], [one(0, "perform")]).fx.find((f) => f.type === "form")?.form).toBe(2);
+  });
+
+  it("トゥクトゥク運転手の突進は大きく踏み込み、土ぼこりを立てる。クラクションは音の波", () => {
+    const reach = (s: StyleId) => {
+      const c = play([s, "judo"], [one(0, "push")]).clips[0]!;
+      return Math.max(...c.track.keys.map((k) => k.pose[P.hip + 2]!)) - c.track.keys[0]!.pose[P.hip + 2]!;
+    };
+    expect(reach("tuktuk")).toBeGreaterThan(reach("boxing") + 0.1);
+    expect(play(["tuktuk", "judo"], [one(0, "push")]).fx.some((f) => f.type === "dust")).toBe(true);
+    expect(play(["tuktuk", "judo"], [one(0, "takedown", "blocked")]).fx.some((f) => f.type === "dust")).toBe(true);
+    expect(play(["tuktuk", "judo"], [one(0, "perform", "hit", { damage: 0 })]).fx.some((f) => f.type === "horn")).toBe(true);
+  });
+
+  it("スタントマンの蹴りは跳び上がって蹴り、KO で倒れるときは受け身を取って床に転がる", () => {
+    for (const kind of ["kick_high", "spin_kick"] as const)
+      expect(hipMax(play(["stuntman", "judo"], [one(0, kind)]), 0), kind).toBeGreaterThan(hipMax(play(["karate", "judo"], [one(0, kind)]), 0) + 0.08);
+    const ex = buildExchange({ id: 1, strikes: [one(1, "straight", "hit", { damage: 30 })], position: "standing", ko: 0 }, ctxOf(["stuntman", "boxing"]));
+    const fall = ex.clips.filter((c) => c.who === 0).at(-1)!;
+    expect(fall.track.keys.length).toBeGreaterThan(5);
+    expect(fall.track.keys[fall.track.keys.length - 1]!.pose[P.hip + 1]!).toBeLessThan(0.2);
+  });
+});

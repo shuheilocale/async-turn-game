@@ -4,10 +4,12 @@ import { edit, headCenter, P, pack, type Pose, type PoseDesc } from "./pose.ts";
 import { clinchPose, downPose, groundBottomPose, groundTopPose, handRoot, stanceOf, withHands } from "./stances.ts";
 import { isDefense, isGrapple, mergeStrikes } from "./ground.ts";
 import { propOf } from "./outfit.ts";
-import { isSelf, isSpecial, mechanical, specialTrack, stretchTime, UNTIL_END, vanishTrack, VANISH_GONE } from "./special.ts";
+import { afterimageDodge, iceShot, isSelf, isSpecial, mechanical, sidestep, specialTrack, stretchTime, UNTIL_END, vanishTrack, VANISH_GONE } from "./special.ts";
 import {
   aim,
+  bagShield,
   blockHigh,
+  bow,
   chestPoint,
   face,
   reachFoot,
@@ -72,6 +74,9 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
   const sp = 1 - 0.08 * dims.speed; // すばやいほど少し速く
   const t = (v: number) => v * sp;
   const guard = (k: KeyEdit) => face(k.d, 0.12);
+  // トゥクトゥク運転手の突進は大きく踏み込み、スタントマンの蹴りは跳び上がって蹴る
+  const rush = att.style === "tuktuk" ? 1 : 0;
+  const air = att.style === "stuntman" ? 1 : 0;
 
   switch (kind) {
     case "jab": {
@@ -189,18 +194,19 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       const end = aim(add(target, [0.12, 0, -0.04]), result, -1);
       tb.at(t(0.1), 1, (k) => {
         shift(k.d, 0.04, 0.03, 1);
-        k.d.hip[1] -= 0.02;
+        k.d.hip[1] -= 0.02 + 0.05 * air;
         k.d.hipRot[1] += 0.25;
         k.hand(1, [-0.28, k.d.hip[1] + 0.2, -0.15]);
         face(k.d);
       });
       tb.at(t(0.21), 1, (k) => {
         shift(k.d, 0.07, 0.04, 1);
+        k.d.hip[1] += 0.1 * air;
         k.d.hipRot = [0.05, 0.75 + 0.3 * high, -0.25 - 0.3 * high];
         k.d.spine[2] += 0.12 * high;
         k.d.chest[0] -= 0.08 * high;
         k.d.footRot[0] = [0.45, 1.0, 0];
-        k.d.foot[0][1] += 0.04;
+        k.d.foot[0][1] += 0.04 + 0.12 * air;
         k.d.foot[1] = [-0.22, 0.3 + 0.45 * high, 0.08];
         k.d.knee[1] = [0.3, 0.3, 1];
         k.d.footRot[1] = [0.9, 0.4, -0.6];
@@ -209,11 +215,14 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       }, "out");
       const hit = tb.at(t(0.32), 1, (k) => {
         shift(k.d, 0.08, 0.04, 1);
-        k.d.hipRot = [0.08, 1.15 + 0.3 * high, -0.35 - 0.5 * high];
+        // スタントマンは宙に浮いたまま蹴る（軸足も床から離れ、体を大きく倒す）
+        k.d.hip[1] += 0.14 * air;
+        k.d.hipRot = [0.08, 1.15 + 0.3 * high + 0.2 * air, -0.35 - 0.5 * high - 0.25 * air];
         k.d.spine[2] += 0.18 * high;
         k.d.chest[0] -= 0.14 * high;
-        k.d.footRot[0] = [0.5, 1.45, 0];
-        k.d.foot[0][1] += 0.05;
+        k.d.footRot[0] = [0.5 + 0.6 * air, 1.45, 0];
+        k.d.foot[0][1] += 0.05 + 0.22 * air;
+        k.d.foot[0][2] -= 0.08 * air;
         k.d.knee[1] = [0.5, 0.6, 0.4];
         k.d.footRot[1] = [0.1, 0.5, -1.4];
         k.hand(1, [-0.48, k.d.hip[1] + 0.12, -0.3]);
@@ -223,6 +232,8 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       tb.pose(t(0.42), 1, hit, "linear");
       tb.at(t(0.6), 1, (k) => {
         shift(k.d, 0.04, 0.02, 1);
+        // 着地：ひざを深く曲げて受ける
+        k.d.hip[1] -= 0.06 * air;
         k.d.hipRot = [0.05, 0.6, -0.2];
         k.d.foot[1] = [-0.15, 0.25 + 0.3 * high, 0.05];
         k.d.knee[1] = [0.3, 0.3, 1];
@@ -237,41 +248,58 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       // 後ろ回し蹴り。背中を向けて回りながら、後ろ足のかかとを当てて、ひと回りして構えに戻る
       const end = aim(add(T.head, [0, -0.05, -0.08]), result, 1);
       const y0 = att.base[P.hipRot + 1]!;
+      // スタントマンは深く沈んでから跳び、宙で体を後ろへ倒しながら回って蹴る（宙返りのように）
       tb.at(t(0.12), 1, (k) => {
         k.d.hipRot[1] = y0 - 1.3;
         k.d.chest[1] -= 0.3;
         k.d.neck[1] += 0.9;
         k.d.footRot[0][1] -= 1.3;
-        k.d.hip[1] -= 0.03;
+        k.d.hip[1] -= 0.03 + 0.08 * air;
       });
       tb.at(t(0.24), 1, (k) => {
-        k.d.hipRot = [0.25, y0 - 2.7, 0.1];
+        k.d.hip[1] += 0.3 * air;
+        k.d.hipRot = [0.25 - 0.55 * air, y0 - 2.7, 0.1];
         k.d.chest[1] -= 0.2;
-        k.d.neck = [-0.2, 1.4, 0];
-        k.d.footRot[0] = [0.3, k.d.footRot[0][1] - 2.4, 0];
+        k.d.neck = [-0.2 + 0.3 * air, 1.4, 0];
+        k.d.footRot[0] = [0.3 + 0.6 * air, k.d.footRot[0][1] - 2.4, 0];
+        k.d.foot[0][1] += 0.4 * air;
         k.d.foot[1] = [0.05, 0.55, 0.15];
         k.d.knee[1] = [0, -0.3, 1];
         k.d.footRot[1] = [0.9, y0 - 2.6, 0];
       }, "in");
       const hit = tb.at(t(0.38), 1, (k) => {
         shift(k.d, 0.05, 0, 1);
-        k.d.hipRot = [0.55, y0 - 3.1, 0.25];
+        k.d.hip[1] += 0.32 * air;
+        k.d.hipRot = [0.55 - 0.9 * air, y0 - 3.1, 0.25 + 0.2 * air];
         k.d.chest[1] -= 0.15;
-        k.d.neck = [-0.45, 1.3, 0];
-        k.d.footRot[0] = [0.3, k.d.footRot[0][1] - 2.6, 0];
+        k.d.neck = [-0.45 + 0.5 * air, 1.3, 0];
+        k.d.footRot[0] = [0.3 + 0.8 * air, k.d.footRot[0][1] - 2.6, 0];
+        k.d.foot[0][1] += 0.45 * air;
+        k.d.knee[0] = [0, -1, 0.5 * air];
         k.d.knee[1] = [0, -1, 0];
         k.d.footRot[1] = [0.2, y0 - 3.1, 0];
         reachFoot(k.d, dims, 1, end);
       }, "snap");
       tb.pose(t(0.48), 1, hit, "linear");
       tb.at(t(0.68), 1, (k) => {
+        k.d.hip[1] += 0.12 * air;
+        k.d.hipRot[0] -= 0.3 * air;
         k.d.hipRot[1] = y0 - 4.6;
         k.d.chest[1] -= 0.1;
         k.d.neck[1] -= 0.4;
         k.d.footRot[0][1] -= 4.0;
         k.d.footRot[1][1] -= 4.6;
+        k.d.foot[0][1] += 0.18 * air;
         k.d.foot[1] = [0.1, 0.35, -0.1];
       });
+      // 着地（ひざで受けて沈む）
+      if (air)
+        tb.at(t(0.8), 1, (k) => {
+          k.d.hip[1] -= 0.1;
+          k.d.hipRot[1] = y0 - 5.6;
+          k.d.footRot[0][1] -= 5.2;
+          k.d.footRot[1][1] -= 5.6;
+        }, "in");
       // ひと回り（-2π）して、見た目は構えと同じ向きに戻る
       tb.at(t(0.92), 1, (k) => {
         k.d.hipRot[1] -= 2 * Math.PI;
@@ -344,7 +372,8 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
         k.hand(1, add(chestPoint(k.d, dims, [-0.12, 0.12, 0.2]), [0, 0, 0]));
       });
       const hit = tb.at(t(0.26), 1, (k) => {
-        shift(k.d, 0.18);
+        shift(k.d, 0.18 + 0.26 * rush);
+        k.d.spine[0] += 0.1 * rush;
         k.d.foot[0][2] += 0.1;
         k.d.hipRot[1] *= 0.5;
         k.d.spine[0] += 0.12;
@@ -356,7 +385,7 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
         k.hand(1, add(T.body, [-0.13, 0.12, -0.04]));
       }, "snap");
       tb.pose(t(0.36), 1, hit, "linear");
-      tb.at(t(0.6), 1, (k) => shift(k.d, 0.05));
+      tb.at(t(0.6), 1, (k) => shift(k.d, 0.05 + 0.08 * rush));
       tb.at(t(0.72), 0);
       return { track: tb.build(), impact: t(0.26) };
     }
@@ -396,11 +425,11 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
         k.hand(1, [-0.15, k.d.hip[1] + 0.35, 0.35]);
       });
       const shoot = tb.at(t(0.34), 1, (k) => {
-        k.d.hip[1] = legLength(dims) * 0.55;
-        k.d.hipRot = [0.85, -0.15, 0];
+        k.d.hip[1] = legLength(dims) * (0.55 - 0.05 * rush);
+        k.d.hipRot = [0.85 + 0.1 * rush, -0.15, 0];
         k.d.spine[0] += 0.2;
         k.d.neck[0] = -0.7;
-        shift(k.d, 0.42, 0, 0);
+        shift(k.d, 0.42 + 0.12 * rush, 0, 0);
         k.d.foot[0][2] += 0.15;
         k.d.foot[1] = [k.d.foot[1][0], 0.07, k.d.foot[1][2] + 0.25];
         k.d.footRot[1] = [1.2, -0.3, 0];
@@ -492,15 +521,19 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
       return { track: tb.build(), impact: t(0.5) };
     }
     case "block": {
-      tb.at(t(0.12), 1, (k) => blockHigh(k, k.d, dims), "out");
-      tb.at(t(0.55), 1, (k) => blockHigh(k, k.d, dims));
+      // サラリーマンはカバンを盾にする
+      const shield = att.style === "salaryman" ? bagShield : blockHigh;
+      tb.at(t(0.12), 1, (k) => shield(k, k.d, dims), "out");
+      tb.at(t(0.55), 1, (k) => shield(k, k.d, dims));
       tb.at(t(0.75), 0);
       return { track: tb.build(), impact: t(0.12) };
     }
     case "dodge":
     default: {
-      tb.at(t(0.14), 1, (k) => slip(k.d, 1), "out");
-      tb.at(t(0.45), 1, (k) => slip(k.d, 0.9));
+      // サラリーマンはお辞儀をするようにかわす
+      const away = att.style === "salaryman" ? bow : slip;
+      tb.at(t(0.14), 1, (k) => away(k.d, 1), "out");
+      tb.at(t(0.45), 1, (k) => away(k.d, 0.9));
       tb.at(t(0.65), 0);
       return { track: tb.build(), impact: t(0.14) };
     }
@@ -621,6 +654,9 @@ function clinchAttack(kind: ActionKind, c: AttackCtx): Built {
 }
 
 export function attackTrack(kind: ActionKind, c: AttackCtx): Built {
+  const style = c.att.style;
+  // 忍者の立ったままのかわしは、残像を残して横へ跳ぶ（分身）
+  if (style === "ninja" && kind === "dodge" && c.position === "standing") return afterimageDodge(c);
   const b = isSpecial(kind)
     ? specialTrack(kind, c, () => groundAttack("straight", c))
     : c.position === "ground"
@@ -628,6 +664,11 @@ export function attackTrack(kind: ActionKind, c: AttackCtx): Built {
       : c.position === "clinch"
         ? clinchAttack(kind, c)
         : standingAttack(kind, c);
+  // トゥクトゥク運転手の突進と、スタントマンの跳び蹴りの着地は、足もとに土ぼこりを立てる
+  // タピオカ店員はトレイを盾にして防ぐ
+  if (style === "bubbletea" && kind === "block" && c.position !== "ground") b.fx = [...(b.fx ?? []), { type: "tray", at: 0, until: b.track.end, side: 0 }];
+  if (c.position === "standing" && ((style === "tuktuk" && (kind === "push" || kind === "takedown")) || (style === "stuntman" && kind === "spin_kick")))
+    b.fx = [...(b.fx ?? []), style === "tuktuk" ? { type: "dust", at: 0.04, until: b.impact + 0.08 } : { type: "dust", at: b.track.end * 0.82, until: b.track.end * 0.9 }];
   // ロボットは一定の速さでカクッと動き、太極拳はゆっくり大きく動く
   if (c.att.style === "robot") return mechanical(b);
   if (c.att.style === "taichi" && !isSelf(kind) && kind !== "perform") return stretchTime(b, 1.25);
@@ -724,7 +765,8 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
         kk.d.hip[1] -= 0.12;
         kk.d.hipRot[0] += 0.5;
         kk.d.foot[1][2] -= 0.2;
-      } else blockHigh(kk, kk.d, dims);
+      } else if (me.style === "salaryman") bagShield(kk, kk.d, dims);
+      else blockHigh(kk, kk.d, dims);
     };
     tb.at(T(0), 1, block, "out");
     tb.at(T(0.08), 1, (kk) => {
@@ -744,7 +786,11 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
         kk.d.hip[0] += 0.1;
         return;
       }
-      if (zone === "head") slip(kk.d, 1);
+      // 忍者は残像を残して横へ跳ぶ（残像は buildExchange で出す）
+      if (me.style === "ninja") sidestep(kk, 1);
+      // サラリーマンはお辞儀をするように頭を下げてかわす
+      else if (me.style === "salaryman" && zone !== "legs") bow(kk.d, 1);
+      else if (zone === "head") slip(kk.d, 1);
       else if (kind === "projectile") {
         // 飛んでくるものは、横へ身をかわす
         slip(kk.d, 1);
@@ -786,6 +832,20 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
       ];
     }, "inOut");
     void air;
+    if (me.style === "stuntman") {
+      // スタントマンは受け身を取る：あごを引き、落ちる瞬間に両腕で床をたたいて衝撃を逃がす
+      tb.at(T(0.42), 1, (kk) => {
+        kk.d.neck[0] -= 0.35;
+        ukemiArms(kk, 0.3);
+      }, "in", c.after);
+      tb.at(T(0.52), 1, (kk) => {
+        kk.d.neck[0] -= 0.4;
+        ukemiArms(kk, 0);
+      }, "snap", c.after);
+      tb.at(T(0.7), 1, (kk) => (kk.d.neck[0] -= 0.2), "out", c.after);
+      tb.pose(T(0.9), 1, c.after);
+      return { track: tb.build(), offset: 0 };
+    }
     tb.pose(T(kind === "throw" ? 0.5 : 0.5), 1, c.after, "in");
     // 落ちた反動
     tb.at(T(0.62), 1, (kk) => {
@@ -902,11 +962,65 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
   return { track: tb.build(), offset: 0 };
 }
 
-/** 倒れる（KO）。ひざが抜け、後ろへ崩れて、あお向けに倒れる */
+/**
+ * 受け身の腕：あお向けに落ちるとき、両腕を体から 45 度ほど開いて、手のひらで床をたたく。
+ * lift は床から浮かせた高さ（振り上げ）
+ */
+function ukemiArms(k: KeyEdit, lift: number) {
+  const hip = k.d.hip;
+  k.d.elbow = [
+    [0.3, 0.2, -1],
+    [-0.3, 0.2, -1],
+  ];
+  k.d.fist = [
+    [0, 1.5, 0],
+    [0, -1.5, 0],
+  ];
+  k.hand(0, [hip[0] + 0.42, 0.05 + lift, hip[2] - 0.22]);
+  k.hand(1, [hip[0] - 0.42, 0.05 + lift, hip[2] - 0.22]);
+}
+
+/** 倒れる（KO）。ひざが抜け、後ろへ崩れて、あお向けに倒れる。スタントマンは受け身を取って倒れる */
 export function fallTrack(me: Side, down: Pose): Track {
   const dims = me.d;
   const tb = new TrackBuilder(me.base, dims);
   const lying = me.base[P.hip + 1]! < 0.35;
+  if (!lying && me.style === "stuntman") {
+    // 自分から腰を落として後ろへ転がり、あごを引いたまま、背中がつく瞬間に両腕で床をたたく
+    tb.at(0.14, 1, (k) => {
+      k.d.hip[1] -= 0.24;
+      k.d.hipRot[0] += 0.2;
+      k.d.spine[0] += 0.3;
+      k.d.neck[0] += 0.4;
+      k.d.elbow = [
+        [0.5, -0.3, -0.5],
+        [-0.5, -0.3, -0.5],
+      ];
+      const hip = k.d.hip;
+      k.hand(0, [hip[0] + 0.12, hip[1] + 0.42, hip[2] + 0.28]);
+      k.hand(1, [hip[0] - 0.12, hip[1] + 0.42, hip[2] + 0.28]);
+    }, "out");
+    tb.at(0.42, 1, (k) => {
+      k.d.hip = [0, 0.2, -0.2];
+      k.d.hipRot = [-1.0, 0, 0];
+      k.d.spine = [0.4, 0, 0];
+      k.d.neck = [0.6, 0, 0];
+      k.d.foot[0] = [0.15, 0.25, 0.2];
+      k.d.foot[1] = [-0.15, 0.3, 0.18];
+      k.d.knee = [
+        [0.3, 1, 0.5],
+        [-0.3, 1, 0.5],
+      ];
+      ukemiArms(k, 0.32);
+    }, "inOut");
+    tb.at(0.56, 1, (k) => {
+      k.d.neck[0] += 0.5;
+      ukemiArms(k, 0);
+    }, "snap", down);
+    tb.at(0.74, 1, (k) => (k.d.neck[0] += 0.3), "out", down);
+    tb.pose(1.0, 1, down, "inOut");
+    return tb.build();
+  }
   if (!lying) {
     tb.at(0.14, 1, (k) => {
       k.d.hip[1] -= 0.16;
@@ -1245,7 +1359,7 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
     clips.push({ who: a, start: t, track: built.track, ...(limb ? { limb } : {}) });
     const impactAt = t + built.impact;
     let next = t + Math.max(built.impact + 0.45, built.track.end - 0.1);
-    for (const f of built.fx ?? []) fx.push({ ...f, at: t + f.at, until: f.until >= UNTIL_END ? UNTIL_END : t + f.until, who: a, target: d, result: s.result });
+    for (const f of built.fx ?? []) fx.push({ ...f, ...(f.shot === "pearls" && iceShot(sides[a].style, s) ? { shot: "ice" as const } : {}), at: t + f.at, until: f.until >= UNTIL_END ? UNTIL_END : t + f.until, who: a, target: d, result: s.result });
     if (s.heal) marks.push({ at: impactAt, who: a, heal: s.heal });
     for (const e of s.effects ?? []) marks.push({ at: impactAt + 0.08, who: e.who, stat: e.stat, dir: e.dir });
 
@@ -1320,6 +1434,12 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
           lead,
         });
         clips.push({ who: d, start: impactAt - lead, track: re.track });
+        // 忍者がかわしたときは、跳ぶ前の場所に残像を残す（分身）
+        if (s.result === "dodged" && sides[d].style === "ninja" && position !== "ground")
+          fx.push({ type: "ghost", at: impactAt - lead + 0.01, until: impactAt - lead + 0.45, who: d, target: a, result: s.result });
+        // タピオカ店員は、上・胴への技をトレイで受ける
+        if (s.result === "blocked" && sides[d].style === "bubbletea" && position !== "ground" && (zone === "head" || (zone === "body" && !s.kind.startsWith("kick"))))
+          fx.push({ type: "tray", at: impactAt - lead, until: impactAt - lead + re.track.end, side: 0, who: d, target: a, result: s.result });
         next = Math.max(next, impactAt - lead + re.track.end - 0.15);
         impacts.push({ at: impactAt, target: d, by: a, zone, result: s.result, damage: s.damage, kind: s.kind });
       }

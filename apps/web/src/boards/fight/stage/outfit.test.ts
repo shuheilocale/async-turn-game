@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bodyOf, NEUTRAL_STATS } from "./body.ts";
-import { outfitOf, PROP_LENGTH, propOf } from "./outfit.ts";
+import { hangsDown, outfitOf, PROP_LENGTH, propOf } from "./outfit.ts";
 import { hiddenParts } from "./rig.ts";
 import type { StyleId } from "./types.ts";
 
@@ -25,10 +25,15 @@ const STYLES: StyleId[] = [
   "rapper",
   "chef",
   "robot",
+  "ninja",
+  "tuktuk",
+  "stuntman",
+  "salaryman",
+  "bubbletea",
 ];
 
 describe("服装の決め方", () => {
-  it("20 のバックボーンは、どれも違う服装になる", () => {
+  it("どのバックボーンも、違う服装になる", () => {
     const keys = new Set(STYLES.map((s) => JSON.stringify(outfitOf(s))));
     expect(keys.size).toBe(STYLES.length);
   });
@@ -45,6 +50,24 @@ describe("服装の決め方", () => {
     expect(outfitOf("robot").robot).toBe(true);
   });
 
+  it("忍者・トゥクトゥク運転手・スタントマン・サラリーマン・タピオカ店員は、それと分かる服と持ち物を持つ", () => {
+    expect(outfitOf("ninja")).toMatchObject({ top: "shinobi", head: "hood", feet: "tabi", belt: "belt", bracers: true, sword: true, cloth: "black", prop: "none" });
+    expect(outfitOf("tuktuk")).toMatchObject({ top: "shirt", cloth: "seat", neck: "towel", feet: "sandals" });
+    expect(outfitOf("tuktuk").upper).toBeLessThan(1);
+    expect(outfitOf("stuntman")).toMatchObject({ top: "stunt", cloth: "black", pants: "black", pads: true });
+    expect(outfitOf("salaryman")).toMatchObject({ top: "suit", neck: "tie", feet: "dress", prop: "bag" });
+    expect(outfitOf("bubbletea")).toMatchObject({ head: "bandana", prop: "cup", apron: true, bib: true });
+  });
+
+  it("カバンは手の下に垂らし、カップは立てて持つ。カップで振るのは太いストロー", () => {
+    expect(hangsDown("bag")).toBe(true);
+    expect(hangsDown("cane")).toBe(true);
+    expect(hangsDown("cup")).toBe(false);
+    expect(hangsDown("pan")).toBe(false);
+    expect(PROP_LENGTH.cup).toBeGreaterThan(PROP_LENGTH.penlight);
+    expect(PROP_LENGTH.bag).toBeGreaterThan(0);
+  });
+
   it("看護師は上下ともその人の色のスクラブで、帽子はかぶらない", () => {
     const o = outfitOf("nurse");
     expect(o).toMatchObject({ top: "scrub", cloth: "seat", pants: "seat", head: "none" });
@@ -55,7 +78,23 @@ describe("服装の決め方", () => {
     // 服の色に seat がない人は、rig.ts でその人の色の部品（縁取り・リボン・ペンライトなど）を付ける
     const usesSeat = (s: StyleId) => {
       const o = outfitOf(s);
-      return o.cloth === "seat" || o.pants === "seat" || o.hands === "gloves" || o.belt !== "none" || o.bottom !== "pants" || o.neck !== "none" || o.head !== "none" || o.prop !== "none" || o.robot || o.top === "tunic";
+      return (
+        o.cloth === "seat" ||
+        o.pants === "seat" ||
+        o.hands === "gloves" ||
+        o.hands === "mma" ||
+        o.belt !== "none" ||
+        o.bottom !== "pants" ||
+        o.neck !== "none" ||
+        o.head !== "none" ||
+        o.prop !== "none" ||
+        o.robot ||
+        o.top === "tunic" ||
+        o.top === "stunt" ||
+        o.pads ||
+        o.bracers ||
+        o.bib
+      );
     };
     for (const s of STYLES) expect(usesSeat(s), s).toBe(true);
   });
@@ -88,6 +127,19 @@ describe("服で隠れる体の部品", () => {
     const scrub = hiddenParts(outfitOf("nurse"), d, false);
     expect(scrub.has("ribs")).toBe(true);
     expect(scrub.has("upperArm")).toBe(false);
+  });
+
+  it("忍び装束は道着と同じく胴と腕を隠し、頭巾は髪を隠す。サンダルは足の甲が見え、半袖のシャツは上腕が見える", () => {
+    const ninja = hiddenParts(outfitOf("ninja"), d, false);
+    for (const p of ["ribs", "upperArm", "hair", "foot", "thigh"]) expect(ninja.has(p), p).toBe(true);
+    const tuk = hiddenParts(outfitOf("tuktuk"), d, false);
+    expect(tuk.has("foot")).toBe(false);
+    expect(tuk.has("upperArm")).toBe(false);
+    expect(tuk.has("ribs")).toBe(true);
+    // 少し短いズボンなので、足首のあたりは見える
+    expect(tuk.has("shin")).toBe(false);
+    const suit = hiddenParts(outfitOf("salaryman"), d, false);
+    for (const p of ["ribs", "upperArm", "thigh", "shin", "foot"]) expect(suit.has(p), p).toBe(true);
   });
 
   it("白い手袋はこぶしを隠し、スイムキャップは髪を隠す。水着のときは脚が見える", () => {

@@ -9,7 +9,7 @@ import { addPose, lerpPose, mirrorPose, newPose, P, type Pose } from "./pose.ts"
 import { createKit, FighterRig, NO_CUES, type Kit, type RigCues } from "./rig.ts";
 import { breathRate, breathWave, fatigueOf, idleDelta, rhythmOf, tiredPose } from "./stances.ts";
 import { StageFx } from "./fx.ts";
-import { ROCKET_RETURN } from "./special.ts";
+import { LASER_REACH, performOf, ROCKET_RETURN } from "./special.ts";
 import type { Fx } from "./track.ts";
 import type { FighterLook, FighterStageProps, StageEvent, StyleId } from "./types.ts";
 
@@ -471,6 +471,15 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     const at = imp.zone === "head" ? def.rig.worldOf("head", tv) : imp.zone === "legs" ? def.rig.worldOf("hip", tv).setY(0.5) : def.rig.worldOf("chest", tv);
     const k = powerOf(imp.damage);
     const reduce = options.reduceMotion;
+    if (imp.kind === "perform" && performOf(actors[imp.by].style) === "laser" && (imp.result === "hit" || imp.result === "countered")) {
+      // ロボットのレーザー：光の線が当たった所が光り、少しゆれる（火花は光の線のほうで出す）
+      effects.flash(at, "#ffe9e9", imp.by === 0 ? theme.p0 : theme.p1, k);
+      shake = reduce ? 0 : 0.012 * k;
+      if (imp.damage > 0) effects.number(def.rig.worldOf("head", tv2).add(tv3.set(0, 0.26, 0)), `${imp.damage}`, imp.by, imp.damage >= 15);
+      focusAt.copy(at);
+      focusBoost = 0.8;
+      return;
+    }
     if (imp.kind === "perform") {
       // 触れずに見せる技：火花やゆれはなく、相手のまわりに小さなきらめきだけ
       if (imp.result === "hit" || imp.result === "countered") {
@@ -587,14 +596,19 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         if (f.shot === "cards") sparkle(from, 3, color, 0.08);
         break;
       }
+      case "ghost":
+        // 分身：いまの姿を、その人の色を明るくした半透明の残像として残す
+        sfx.ghost(a.rig.root, `#${glowColor.set(color).lerp(white, 0.35).getHexString()}`);
+        break;
       case "smoke": {
-        // 煙：体のまわりにもくもくと広がる
-        const at = a.rig.worldOf("hip", tvA).add(tvB.set(0, 0.25, 0));
-        const n = options.reduceMotion ? 7 : 15;
+        // 煙：体のまわりにもくもくと広がる（忍者の煙玉は白く、足もとから立つ）
+        const ninja = a.style === "ninja";
+        const at = a.rig.worldOf("hip", tvA).add(tvB.set(0, ninja ? 0.05 : 0.25, 0));
+        const n = options.reduceMotion ? 7 : ninja ? 18 : 15;
         for (let i = 0; i < n; i++) {
           const p = tvC.copy(at).add(tvB.set(rnd(0.5), rnd(1.0), rnd(0.5)));
           sfx.spawn("smoke", p, tvB.set(rnd(0.6), 0.25 + Math.random() * 0.3, rnd(0.6)), {
-            color: theme.dark ? "#a3abbd" : i % 3 ? "#b7bdca" : "#d3d7e0",
+            color: ninja ? (i % 3 ? "#eceef2" : "#d4d8e0") : theme.dark ? "#a3abbd" : i % 3 ? "#b7bdca" : "#d3d7e0",
             size: 0.38 + Math.random() * 0.26,
             life: 0.7 + Math.random() * 0.4,
             grow: 0.9,
@@ -692,10 +706,77 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         sfx.showRings(hip, ys, u > 0.45 && u < 0.98 ? 1 : 0, colorsOf(a).seat);
         break;
       }
+      case "laser": {
+        // 目（バイザー）から相手の胸へ。かわされたら横を抜け、防がれたら手前で止まる
+        const def = actors[f.target];
+        const dir = towardFoe(f, tvA);
+        const from = a.rig.worldOf("head", tvB).addScaledVector(dir, 0.13).add(tvC.set(0, 0.01, 0));
+        const to = def.rig.worldOf("chest", laserTo).add(tvC.set(0, 0.08, 0));
+        if (f.result === "dodged" || f.result === "whiff") to.addScaledVector(tvC.set(-dir.z, 0.25, dir.x), 0.35).addScaledVector(dir, 1.2);
+        else if (f.result === "blocked") to.lerp(from, 0.12);
+        const reach = clamp((p.t - f.at) / LASER_REACH, 0, 1);
+        const k = Math.min(1, (1 - u) * 6);
+        sfx.showLaser(from, to, reach, k, color);
+        if (reach >= 1 && f.result !== "dodged" && f.result !== "whiff" && every(0.035))
+          sfx.spawn("star", to, tvC.set(rnd(1.2), 0.4 + Math.random() * 0.8, rnd(1.2)), { color: Math.random() < 0.5 ? "#ffffff" : color, size: 0.06, life: 0.3, gravity: 3 });
+        break;
+      }
+      case "horn": {
+        // クラクションの音の波：右手から相手のほうへ、弧が広がりながら進む（画面の上で相手のほうへ開く向きにそろえる）
+        if (!every(0.09)) break;
+        const dir = towardFoe(f, tvA);
+        const from = a.rig.strikePoint("hand", boneSide(a, 1), tvB).addScaledVector(dir, 0.1).add(tvC.set(0, 0.12, 0));
+        const sx = tvC.copy(actors[f.target].world).applyMatrix4(camera.matrixWorldInverse).x - laserTo.copy(a.world).applyMatrix4(camera.matrixWorldInverse).x;
+        sfx.spawn("wave", from, tvC.copy(dir).multiplyScalar(1.7).add(tvA.set(0, 0.15, 0)), {
+          color: Math.random() < 0.6 ? color : theme.dark ? "#ffffff" : "#2a2f3c",
+          size: 0.2,
+          life: 0.6,
+          grow: 2.8,
+          rot: sx >= 0 ? 0 : Math.PI,
+          additive: false,
+        });
+        break;
+      }
+      case "shake": {
+        // シェイカーのしぶきと氷のきらめき（手のまわりに飛び散って落ちる）
+        if (!every(0.05)) break;
+        const hand = a.rig.strikePoint("hand", boneSide(a, 1), tvB).add(tvC.set(0, 0.12, 0));
+        const ice = Math.random() < 0.35;
+        sfx.spawn(ice ? "star" : "orb", hand, tvC.set(rnd(1.0), 0.5 + Math.random() * 0.6, rnd(1.0)), {
+          color: ice ? "#ffffff" : Math.random() < 0.5 ? "#e8cfb0" : "#c99a6b",
+          size: ice ? 0.06 : 0.04,
+          life: 0.5,
+          gravity: 3.5,
+          additive: false,
+        });
+        break;
+      }
+      case "wisp": {
+        // 印を結んだ手から、白い煙がゆらりと立ちのぼる
+        if (!every(0.08)) break;
+        const hands = a.rig.strikePoint("hand", 0, tvB).lerp(a.rig.strikePoint("hand", 1, tvC), 0.5);
+        sfx.spawn("smoke", hands, tvC.set(rnd(0.15), 0.35, rnd(0.15)), { color: theme.dark ? "#cdd2dc" : "#eef0f4", size: 0.1, life: 0.8, grow: 1.6, alpha: 0.7, sway: 0.3 });
+        break;
+      }
+      case "dust": {
+        // 足もとの土ぼこり（後ろへ流れる）
+        if (!every(0.035)) break;
+        const back = towardFoe(f, tvA).multiplyScalar(-0.7);
+        const foot = a.rig.strikePoint("foot", Math.random() < 0.5 ? 0 : 1, tvB).setY(0.05);
+        sfx.spawn("smoke", foot, back.add(tvC.set(rnd(0.3), 0.25, rnd(0.3))), {
+          color: theme.dark ? "#8d8573" : "#cdbfa6",
+          size: 0.14,
+          life: 0.55,
+          grow: 1.6,
+          alpha: 0.75,
+        });
+        break;
+      }
       default:
         break;
     }
   }
+  const laserTo = new THREE.Vector3();
 
   /** 攻防の効果のうち、体の見た目を変えるもの（消える・手を飛ばす・ウインク・包帯など）と、続く効果 */
   function cuesOf(a: Actor, dt: number): RigCues {
@@ -720,6 +801,18 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
           break;
         case "spoon":
           c.spoon = boneSide(a, f.side);
+          break;
+        case "form":
+          c.form = f.form ?? 0;
+          break;
+        case "held":
+          c.held = boneSide(a, f.side);
+          break;
+        case "tray":
+          c.tray = boneSide(a, f.side);
+          break;
+        case "ghost":
+          // 一度きり（startFx で出す）
           break;
         case "reboot":
           // 目の光が消え、ちらついてから戻る
@@ -960,6 +1053,7 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     sfx.showFrame(tv, 0, "#fff");
     sfx.showRings(tv, [0, 0], 0, "#fff");
     sfx.showAura(tv, 0, "#fff");
+    sfx.showLaser(tv, tv, 0, 0, "#fff");
     for (const a of actors) {
       if (!a.rig.root.visible) continue;
       updateActor(a, dt);

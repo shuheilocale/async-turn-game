@@ -164,8 +164,8 @@ export interface Built {
   fx?: FxLocal[];
 }
 
-/** 飛ばすもの：トランプ / ロケットパンチ / 光の玉 */
-export type ShotKind = "cards" | "rocket" | "orb";
+/** 飛ばすもの：トランプ / ロケットパンチ / 光の玉 / 手裏剣 / 名刺 / タピオカの粒 / 氷のかけら */
+export type ShotKind = "cards" | "rocket" | "orb" | "shuriken" | "meishi" | "pearls" | "ice";
 
 /**
  * 動きに合わせて出す効果。at から until まで続く（一度きりのものは at だけ見る）。
@@ -173,6 +173,9 @@ export type ShotKind = "cards" | "rocket" | "orb";
  * - hide：体を消す（消えて現れる）。smoke：煙（一度きり）
  * - wink・hearts・notes・frame・palm・sparkle：見せる技（ウインク・ハート・音符・光の枠・手のひらの光・きらめき）
  * - heal：やわらかい緑の光。bandage：腕の包帯。spoon：味見のスプーン。reboot：再起動（目の光が消え、光の線が走る）。steam：湯気
+ * - laser：目から相手へ走る光の線。horn：クラクションの音の波。shake：シェイカーのしぶき。wisp：手から立つ白い煙
+ * - ghost：その場に残る半透明の残像（一度きり）。dust：足もとの土ぼこり
+ * - form：持ち物の形を持ちかえる（form の番号）。held：持ち物を反対の手（side）に移す。tray：トレイを盾にする（side の腕）
  */
 export type FxType =
   | "shot"
@@ -189,7 +192,16 @@ export type FxType =
   | "bandage"
   | "spoon"
   | "reboot"
-  | "steam";
+  | "steam"
+  | "laser"
+  | "horn"
+  | "shake"
+  | "wisp"
+  | "ghost"
+  | "dust"
+  | "form"
+  | "held"
+  | "tray";
 
 export interface FxLocal {
   type: FxType;
@@ -198,6 +210,8 @@ export interface FxLocal {
   /** 手を使う効果の手（左足前の向きで 0 = 左、1 = 右） */
   side?: 0 | 1;
   shot?: ShotKind;
+  /** 持ちかえる持ち物の形（form） */
+  form?: 1 | 2;
 }
 
 export interface Fx extends FxLocal {
@@ -253,6 +267,39 @@ export function blockHigh(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
   const head = headCenter(pack(d), dims);
   k.hand(0, add(head, [0.07, 0.04, 0.13]));
   k.hand(1, add(head, [-0.07, 0.03, 0.12]));
+}
+
+/**
+ * カバンを盾にする（サラリーマン）。右手のカバンを顔の前に立て、左手で横から支える。
+ * カバンは手の下に垂らして持つので、前腕を立てると手の上に来る
+ */
+export function bagShield(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
+  d.neck[0] += 0.12;
+  d.spine[0] += 0.05;
+  d.shrug = [0.015, 0.015];
+  d.elbow = [
+    [0.6, -1, 0.2],
+    [-0.1, -1, 0.3],
+  ];
+  // カバンの広い面を相手へ向ける
+  d.fist = [
+    [0.6, 1.2, 0],
+    [0, 1.57, 0],
+  ];
+  const head = headCenter(pack(d), dims);
+  // 前腕を立てると、カバンが手の上に来て顔を隠す
+  k.hand(1, add(head, [-0.05, -0.3, 0.2]));
+  k.hand(0, add(head, [0.13, -0.16, 0.22]));
+}
+
+/** お辞儀をするように、腰から上体を深く倒して頭を下げ、相手の技の下をくぐる（サラリーマンのかわし） */
+export function bow(d: PoseDesc, k: number) {
+  d.hip[2] -= 0.12 * k;
+  d.hip[1] -= 0.03 * k;
+  d.hipRot[0] += 0.55 * k;
+  d.spine[0] += 0.35 * k;
+  d.chest[0] += 0.1 * k;
+  d.neck[0] += 0.15 * k;
 }
 
 /** 頭を横へ振り、ひざを沈めてかわす。前かがみの構えでも頭が前へ出ないよう、腰を少し引く */
