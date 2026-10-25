@@ -25,7 +25,12 @@ export type StyleId =
   | "idol"
   | "rapper"
   | "chef"
-  | "robot";
+  | "robot"
+  | "ninja"
+  | "tuktuk"
+  | "stuntman"
+  | "salaryman"
+  | "bubbletea";
 
 /** パラメータ（それぞれ 1〜8、合計 20）。体格の見た目にも使う */
 export interface FighterStats {
