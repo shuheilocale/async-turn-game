@@ -24,6 +24,7 @@ const {
   EXCHANGES,
   POSITIONS,
   activeEffects,
+  ambushBonus,
   chainCount,
   techniqueNow,
   techniqueOf,
@@ -561,7 +562,9 @@ function MoveList({
         const m = techniqueNow(fighters, history, seat, base.id) ?? base;
         const left = usesLeft(base, history, seat);
         const here = usable.has(m.id) && left !== 0;
-        const tags = moveTags(t, m, { left, chain: chainCount(base, history, seat) });
+        const tags = moveTags(t, m, { left, chain: chainCount(base, history, seat), ambush: ambushBonus(base, history, fighters, seat) });
+        // 守りに回ると多くくらうバックボーン（トゥクトゥク運転手）は、守りの技にそのことを添える
+        if (m.cls === "guard" && (STYLES[style].taken?.guarding ?? 1) > 1) tags.push(t("game.fight.tag.exposed"));
         const label = t(`game.fight.move.${style}.${m.id}`);
         const sub = m.guard && m.guard !== "focus" ? (`game.fight.guard.${m.guard}` as const) : (`game.fight.kind.${m.kind}` as const);
         const body = (
@@ -574,7 +577,7 @@ function MoveList({
                   {t(`game.fight.cls.${m.cls}`)}・{t(sub)}
                 </small>
               </span>
-              {!compact && <span className="fight-move-edge">{t(`game.fight.edge.${m.guard ?? m.cls}`)}</span>}
+              {!compact && <span className="fight-move-edge">{t(`game.fight.edge.${m.sure ? "sure" : (m.guard ?? m.cls)}`)}</span>}
               <span className="fight-move-tags">
                 {m.cls !== "guard" && (
                   <span className="fight-move-power" aria-label={t("game.fight.power")}>
@@ -627,11 +630,13 @@ function MoveList({
 
 /**
  * 技の小さな札：速い・遅い、決まったあとの位置、回復・強化・弱体、残りの回数、特別な効果。
- * left は残りの回数（限りがなければ null）、chain は続けるほど強い技の今の回数
+ * left は残りの回数（限りがなければ null）、chain は続けるほど強い技の今の回数、ambush は身を隠した次の技の今の上乗せ
  */
-function moveTags(t: T, m: Technique, { left, chain }: { left: number | null; chain: number }): string[] {
+function moveTags(t: T, m: Technique, { left, chain, ambush }: { left: number | null; chain: number; ambush: number }): string[] {
   const tags: string[] = [];
   if (m.read) tags.push(t("game.fight.tag.read", { cls: t(`game.fight.cls.${m.cls}`) }));
+  if (m.sure) tags.push(t("game.fight.tag.sure"));
+  if (m.ambush) tags.push(ambush > 0 ? t("game.fight.tag.ambushNow", { n: ambush }) : t("game.fight.tag.ambush"));
   if (m.quick >= 1) tags.push(t("game.fight.fast"));
   if (m.quick <= -1) tags.push(t("game.fight.slow"));
   if (m.to) tags.push(t("game.fight.toPos", { pos: t(`game.fight.pos.${m.to}`) }));

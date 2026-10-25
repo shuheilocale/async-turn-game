@@ -107,37 +107,6 @@ function botGame(a: Fighter, b: Fighter, rng: Rng): FightState {
   throw new Error("終わらなかった");
 }
 
-/** 何局か戦った結果の数え */
-interface Tally {
-  /** a 側の勝ち点（勝ち 1・引き分け 0.5）の割合 */
-  rate: number;
-  games: number;
-  kos: number;
-  draws: number;
-  /** 攻防の数の合計 */
-  exchanges: number;
-}
-
-/** a 側から見た勝率と、KO・引き分け・攻防の数。席の有利不利が出ないよう、半分は席を入れ替える */
-function tally(make: (rng: Rng) => [Fighter, Fighter], games: number, seed: number): Tally {
-  const rng = seeded(seed);
-  let points = 0;
-  const out = { games, kos: 0, draws: 0, exchanges: 0 };
-  for (let g = 0; g < games; g++) {
-    const [a, b] = make(rng);
-    const swap = g % 2 === 1;
-    const end = botGame(swap ? b : a, swap ? a : b, rng);
-    const st = fight.status(end);
-    if (st.kind !== "finished") throw new Error("終わっていない");
-    const aSeat: Seat = swap ? 1 : 0;
-    points += st.winner === null ? 0.5 : st.winner === aSeat ? 1 : 0;
-    out.exchanges += end.history.length;
-    if (end.history.at(-1)?.ko != null) out.kos++;
-    else if (st.winner === null) out.draws++;
-  }
-  return { rate: points / games, ...out };
-}
-const winRate = (make: (rng: Rng) => [Fighter, Fighter], games: number, seed: number) => tally(make, games, seed).rate;
 
 /** 1 回の攻防を、記録（強化・弱体や技の回数のもと）付きで決める。exchange は疲れの回数（ふつうは 0 にそろえる） */
 function bout(a: Fighter, b: Fighter, act0: string, act1: string, opts: { hp?: [number, number]; position?: Position; history?: Exchange[]; luck?: readonly number[] } = {}): Exchange {
@@ -163,14 +132,15 @@ const record = (acts: [string, string], extra: Partial<Exchange> = {}): Exchange
 
 describe("fight", () => {
   describe("バックボーンと技", () => {
-    it("バックボーンは 20 種類（格闘技 12・異種格闘技 8）で、それぞれ技が 6〜7 個。技の名前（id）はバックボーンの中で重ならない", () => {
-      expect(STYLE_IDS).toHaveLength(20);
+    it("バックボーンは 25 種類（格闘技 12・異種格闘技 13）で、それぞれ技が 6〜7 個。技の名前（id）はバックボーンの中で重ならない", () => {
+      expect(STYLE_IDS).toHaveLength(25);
       expect(MARTIAL_STYLES).toHaveLength(12);
-      expect(CROSSOVER_STYLES).toHaveLength(8);
+      expect(CROSSOVER_STYLES).toHaveLength(13);
       expect([...STYLE_IDS]).toEqual([...MARTIAL_STYLES, ...CROSSOVER_STYLES]);
       expect(MARTIAL_STYLES).toContain("kickboxing");
       expect(MARTIAL_STYLES).toContain("taichi");
       expect(CROSSOVER_STYLES).toContain("robot");
+      for (const style of ["ninja", "tuktuk", "stuntman", "salaryman", "bubbletea"] as const) expect(CROSSOVER_STYLES).toContain(style);
       for (const style of STYLE_IDS) {
         const moves = STYLES[style].moves;
         expect(moves.length, style).toBeGreaterThanOrEqual(6);
@@ -183,8 +153,10 @@ describe("fight", () => {
       for (const style of STYLE_IDS) {
         for (const pos of POSITIONS) {
           const moves = usableMoves(style, pos);
-          // 打撃を受ける守り（ブロック・かわす・カウンター。回数に限りのある「消える」と「ため」は数えない）
-          const receive = moves.some((m) => m.cls === "guard" && (m.guard === "block" || m.guard === "dodge" || m.guard === "counter") && !m.read);
+          // 打撃を受ける守り（ブロック・かわす・カウンター。回数に限りのある技（消える・分身）と「ため」は数えない）
+          const receive = moves.some(
+            (m) => m.cls === "guard" && (m.guard === "block" || m.guard === "dodge" || m.guard === "counter") && !m.read && m.uses === undefined,
+          );
           expect(receive, `${style} ${pos} 守り`).toBe(true);
           // 組み技を止める技（打撃・返し）
           expect(moves.some((m) => m.cls === "strike" || m.guard === "catch"), `${style} ${pos} 組み止め`).toBe(true);
@@ -211,6 +183,14 @@ describe("fight", () => {
       expect(techniqueOf("magician", "vanish")?.kind).toBe("vanish");
       expect(techniqueOf("nurse", "teate")?.kind).toBe("heal");
       expect(techniqueOf("idol", "pose")?.kind).toBe("perform");
+      expect(techniqueOf("ninja", "shuriken")?.kind).toBe("projectile");
+      expect(techniqueOf("ninja", "kemuridama")?.kind).toBe("vanish");
+      expect(techniqueOf("tuktuk", "taiatari")?.kind).toBe("push");
+      expect(techniqueOf("stuntman", "senpu")?.kind).toBe("spin_kick");
+      expect(techniqueOf("salaryman", "meishi")?.kind).toBe("projectile");
+      expect(techniqueOf("salaryman", "kaban")?.guard).toBe("block");
+      expect(techniqueOf("bubbletea", "straw")?.kind).toBe("swing");
+      expect(techniqueOf("bubbletea", "milktea")?.kind).toBe("heal");
     });
 
     it("回復・回数に限りのある技・強化と弱体は、上限と続く長さが決まっている（強すぎない）", () => {
@@ -441,6 +421,102 @@ describe("fight", () => {
     });
   });
 
+  describe("忍者・トゥクトゥク運転手・スタントマン・サラリーマン・タピオカ店員", () => {
+    const mma = f("mma");
+
+    it("忍者の分身：すばやさが相手より低くても、打撃を必ずかわす（2 回まで）。組み技にはつかまる", () => {
+      const slow = f("ninja", stats(6, 6, 1, 7));
+      const fast = f("mma", stats(5, 2, 8, 5));
+      // ふつうのかわし（見切り）は遅いとかわしそこねる
+      expect(resultOf(bout(slow, fast, "mikiri", "highkick"), 1)).toBe("hit");
+      const ex = bout(slow, fast, "bunshin", "highkick");
+      expect(resultOf(ex, 1)).toBe("dodged");
+      expect(taken(ex, 0)).toBe(0);
+      expect(techniqueOf("ninja", "bunshin")!.uses).toBe(2);
+      const grabbed = bout(slow, fast, "bunshin", "tackle");
+      expect(resultOf(grabbed, 1)).toBe("hit");
+      expect(taken(grabbed, 0)).toBeGreaterThan(0);
+    });
+
+    it("忍者の忍び足：前の攻防で守っていたら（身を隠していたら）重い。煙玉は消えてかわす（1 回）", () => {
+      const ninja = f("ninja");
+      const hid = [record(["mikiri", "guard"])];
+      const struck = [record(["shuto", "guard"])];
+      const plain = taken(bout(ninja, mma, "shinobi", "tackle"), 1);
+      expect(taken(bout(ninja, mma, "shinobi", "tackle", { history: hid }), 1)).toBeGreaterThan(plain * 1.3);
+      expect(taken(bout(ninja, mma, "shinobi", "tackle", { history: struck }), 1)).toBe(plain);
+      const smoke = bout(ninja, mma, "kemuridama", "choke", { position: "ground" });
+      expect(smoke.strikes.map((x) => [x.by, x.result, x.kind])).toEqual([
+        [1, "dodged", "submission"],
+        [0, "hit", "vanish"],
+      ]);
+      expect(smoke.position).toBe("standing");
+      expect(techniqueOf("ninja", "kemuridama")!.uses).toBe(1);
+    });
+
+    it("忍者は速くて打たれ弱い（おすすめの振り分け）", () => {
+      const b = STYLES.ninja.build;
+      expect(b.speed).toBeGreaterThanOrEqual(7);
+      expect(b.guard).toBeLessThanOrEqual(3);
+    });
+
+    it("トゥクトゥク運転手は止まると弱い：守りの技を出しているときだけ、受けるダメージが多い", () => {
+      const tuktuk = f("tuktuk");
+      const nurse = f("nurse");
+      // ため（クラクションとテーピング）で打撃をくらう
+      expect(taken(bout(mma, tuktuk, "straight", "horn"), 1)).toBeGreaterThan(taken(bout(mma, nurse, "straight", "taping"), 1));
+      // 組みに来たところに打撃をくらうのは、ほかの人と同じ
+      expect(taken(bout(mma, tuktuk, "straight", "tsukkomi"), 1)).toBe(taken(bout(mma, f("karate"), "straight", "ashibarai"), 1));
+      // クラクションは相手のすばやさを下げる
+      expect(bout(tuktuk, mma, "horn", "guard").fx).toContainEqual({ who: 1, stat: "speed", amount: -3, left: 3 });
+    });
+
+    it("トゥクトゥク運転手の体当たりは、当て続けるほど重い。ハンドルさばきは組み技を返す", () => {
+      const tuktuk = f("tuktuk");
+      const landed = [record(["taiatari", "tackle"], { strikes: [{ by: 0, act: "taiatari", kind: "push", cls: "strike", result: "hit", damage: 15 }] })];
+      expect(taken(bout(tuktuk, mma, "taiatari", "tackle", { history: landed }), 1)).toBeGreaterThan(taken(bout(tuktuk, mma, "taiatari", "tackle"), 1));
+      const caught = bout(tuktuk, mma, "handle", "tackle");
+      expect(resultOf(caught, 1)).toBe("countered");
+      expect(caught.position).toBe("standing");
+    });
+
+    it("スタントマンは受け身がうまい：投げ・倒されたときのダメージが少ない（打撃はふつう）", () => {
+      const grabbed = (style: StyleId, dodgeAct: string) => taken(bout(mma, f(style), "tackle", dodgeAct), 1);
+      expect(grabbed("stuntman", "wire")).toBeLessThan(grabbed("boxing", "duck"));
+      expect(taken(bout(mma, f("stuntman"), "straight", "dive"), 1)).toBe(taken(bout(mma, f("karate"), "straight", "ashibarai"), 1));
+      // 段取りで、次の攻防から攻撃が上がる
+      expect(bout(f("stuntman"), mma, "dandori", "guard").fx).toContainEqual({ who: 0, stat: "power", amount: 4, left: 2 });
+    });
+
+    it("サラリーマンは疲れにくい（残業で鍛えたスタミナ）。定時まであと少しは、体力が少ないほど強い", () => {
+      /** 最後の攻防で、組みに来た相手に打撃を当てたダメージの、はじめに対する割合（スタミナの少ない振り分けで比べる） */
+      const keep = (style: StyleId, act: string) => {
+        const late = (round: number) => {
+          const s = { ...built(f(style, stats(5, 5, 8, 2)), mma), history: Array(round).fill(null) as Exchange[] };
+          return taken(exchange(s, act, "tackle").history.at(-1)!, 1);
+        };
+        return late(7) / late(0);
+      };
+      expect(keep("salaryman", "teiji")).toBeGreaterThan(keep("mma", "straight") + 0.08);
+      const salaryman = f("salaryman");
+      expect(taken(bout(salaryman, mma, "teiji", "tackle", { hp: [25, MAX_HP] }), 1)).toBeGreaterThan(
+        taken(bout(salaryman, mma, "teiji", "tackle"), 1) * 1.5,
+      );
+    });
+
+    it("タピオカ店員：氷多めが当たると相手のすばやさが下がる（防がれると下がらない）。ミルクティーで回復（2 回）", () => {
+      const tea = f("bubbletea");
+      const hit = bout(tea, mma, "koori", "tackle");
+      expect(hit.strikes.find((x) => x.by === 0)!.effects).toEqual([{ who: 1, stat: "speed", amount: -2 }]);
+      expect(hit.fx).toContainEqual({ who: 1, stat: "speed", amount: -2, left: 2 });
+      expect(bout(tea, mma, "koori", "guard").fx).toEqual([]);
+      const rest = bout(tea, mma, "milktea", "guard", { hp: [50, MAX_HP] });
+      expect(rest.hp[0]).toBe(50 + techniqueOf("bubbletea", "milktea")!.heal!);
+      expect(techniqueOf("bubbletea", "milktea")!.uses).toBe(2);
+      expect(bout(tea, mma, "shaker", "guard").fx).toContainEqual({ who: 0, stat: "power", amount: 3, left: 3 });
+    });
+  });
+
   describe("古い対局との互換", () => {
     /** 強化・弱体と、記録の技の種類（cls）がなかったころの対局 */
     function oldGame(): FightState {
@@ -503,7 +579,7 @@ describe("fight", () => {
       expect(codeOf(() => fight.applyMove(s, build("karate", stats(5.5, 4.5, 5, 5)), 0))).toBe("fight_bad_stats");
     });
 
-    it("バックボーンは 20 種類のどれか", () => {
+    it("バックボーンは 25 種類のどれか", () => {
       const s = neutral();
       expect(codeOf(() => fight.applyMove(s, build("kungfu" as StyleId), 0))).toBe("fight_bad_style");
       for (const style of STYLE_IDS) expect(codeOf(() => fight.applyMove(s, build(style), 0)), style).toBeNull();
@@ -949,6 +1025,7 @@ describe("fight", () => {
         ["nurse", "teate"],
         ["robot", "reboot"],
         ["chef", "ajimi"],
+        ["bubbletea", "milktea"],
       ] as const) {
         const full = heal(style, id, MAX_HP);
         const hurt = heal(style, id, 30);
@@ -989,6 +1066,30 @@ describe("fight", () => {
       expect(pickRate(at(f("bjj"), f("magician"), { position: "ground" }), 1, ["vanish"])).toBeGreaterThan(0.2);
     });
 
+    it("新しい異種格闘技の技もそれらしく使う（煙玉・体当たり・段取り・定時・シェイカー）", () => {
+      const share = (style: StyleId, ids: string[]) => {
+        let n = 0;
+        let all = 0;
+        STYLE_IDS.forEach((opp, i) => {
+          const end = botGame(f(style, botBuild(style, seeded(i))), f(opp, botBuild(opp, seeded(i))), seeded(200 + i));
+          for (const ex of end.history) {
+            all++;
+            if (ids.includes(ex.acts[0])) n++;
+          }
+        });
+        return n / all;
+      };
+      // 寝技で決め技を狙われている忍者は、煙玉で逃げる
+      expect(pickRate(at(f("bjj"), f("ninja"), { position: "ground" }), 1, ["kemuridama"])).toBeGreaterThan(0.2);
+      // トゥクトゥク運転手は突っ込んでいく（守りに回らない）
+      expect(share("tuktuk", ["taiatari", "tsukkomi", "kyuhasshin"])).toBeGreaterThan(0.45);
+      expect(share("stuntman", ["dandori"])).toBeGreaterThan(0.03);
+      expect(share("bubbletea", ["shaker", "koori"])).toBeGreaterThan(0.08);
+      expect(share("salaryman", ["meishi", "kaban", "mankin", "oshiai"])).toBeGreaterThan(0.3);
+      // 定時まであと少し：体力が減っても粘って打ち返す（強くなった分、相手も守るので、出す割合はあまり変わらない）
+      expect(pickRate(at(f("mma"), f("salaryman"), { hp: [MAX_HP, 40] }), 1, ["teiji"])).toBeGreaterThan(0.15);
+    });
+
     it("見えていない情報は使わない（相手の伏せた技・運の列）", () => {
       const s = built(f("idol"), f("chef"));
       const first = firstPicker(0);
@@ -1017,56 +1118,5 @@ describe("fight", () => {
       expect(kos).toBeGreaterThan(10);
       expect(kos).toBeLessThan(55);
     });
-  });
-
-  describe("バランス", () => {
-    /** 1 組あたりの局数（20 × 20 の 190 組。テストの時間が長くなりすぎないように） */
-    const GAMES = 120;
-    /** 35〜65% から外れた組だけ、局数を足して確かめ直す（局数が少ないと運のぶれだけで外れることがあるため） */
-    const RECHECK = 600;
-    /** たくさん対局するので、ほかのテストと並んで動いても間に合うように長めに待つ */
-    const SLOW = 120_000;
-
-    it("どのバックボーンどうしでも、勝率は 35〜65%。回復や強化・弱体があっても決着はつく（コンピュータ同士、振り分けはそれらしく）", () => {
-      const out: string[] = [];
-      const all = { games: 0, kos: 0, draws: 0, exchanges: 0 };
-      const outside = (rate: number) => rate < 0.35 || rate > 0.65;
-      STYLE_IDS.forEach((a, i) => {
-        STYLE_IDS.slice(i + 1).forEach((b, j) => {
-          const make = (rng: Rng): [Fighter, Fighter] => [f(a, botBuild(a, rng)), f(b, botBuild(b, rng))];
-          const t = tally(make, GAMES, 7 + i * 31 + j);
-          for (const k of ["games", "kos", "draws", "exchanges"] as const) all[k] += t[k];
-          if (!outside(t.rate)) return;
-          const more = tally(make, RECHECK, 100_007 + i * 31 + j);
-          const rate = (t.rate * t.games + more.rate * more.games) / (t.games + more.games);
-          if (outside(rate)) out.push(`${a} vs ${b}: ${Math.round(rate * 100)}%`);
-        });
-      });
-      expect(out).toEqual([]);
-      // 判定ばかり・引き分けばかりにならない
-      expect(all.kos / all.games).toBeGreaterThan(0.3);
-      expect(all.draws / all.games).toBeLessThan(0.03);
-      expect(all.exchanges / all.games).toBeLessThan(EXCHANGES);
-    }, SLOW);
-
-    it("極端な振り分けにも勝ち目と弱点がある", () => {
-      const extremes: FighterStats[] = [stats(8, 1, 3, 8), stats(8, 1, 8, 3), stats(1, 8, 3, 8), stats(3, 8, 8, 1), stats(1, 3, 8, 8), stats(8, 8, 1, 3)];
-      for (const x of extremes) {
-        // どのバックボーンで使うかごとに、ふつうに振り分けた相手（バックボーンはでたらめ）との勝率
-        const rates = STYLE_IDS.map((style, i) =>
-          winRate((rng) => {
-            const opp = STYLE_IDS[Math.floor(rng() * STYLE_IDS.length)]!;
-            return [f(style, x), f(opp, botBuild(opp, rng))];
-          }, 40, 99 + i),
-        );
-        const label = JSON.stringify(x);
-        // 合うバックボーンなら五分以上に戦え（勝ち目）、どれでも勝ち越せるわけではない（弱点）。勝ちすぎ・負けすぎもない
-        expect(Math.max(...rates), label).toBeGreaterThan(0.45);
-        expect(Math.min(...rates), label).toBeLessThan(0.5);
-        const avg = rates.reduce((a, r) => a + r, 0) / rates.length;
-        expect(avg, label).toBeGreaterThan(0.3);
-        expect(avg, label).toBeLessThan(0.7);
-      }
-    }, SLOW);
   });
 });

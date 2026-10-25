@@ -42,7 +42,21 @@ export const MARTIAL_STYLES = [
   "taichi",
 ] as const;
 /** 異種格闘技のバックボーン（格闘家ではない人たち） */
-export const CROSSOVER_STYLES = ["gamer", "magician", "nurse", "swimmer", "idol", "rapper", "chef", "robot"] as const;
+export const CROSSOVER_STYLES = [
+  "gamer",
+  "magician",
+  "nurse",
+  "swimmer",
+  "idol",
+  "rapper",
+  "chef",
+  "robot",
+  "ninja",
+  "tuktuk",
+  "stuntman",
+  "salaryman",
+  "bubbletea",
+] as const;
 export const STYLE_IDS = [...MARTIAL_STYLES, ...CROSSOVER_STYLES] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 
@@ -156,6 +170,10 @@ export interface Technique {
   swap?: boolean;
   /** 相手の直前の技の種類に強い形になる（打撃 → カウンター、組み → 打撃、守り → 組み。はじめはブロック） */
   read?: boolean;
+  /** かわしが、すばやさに関係なく決まる（忍者の分身） */
+  sure?: boolean;
+  /** 前の攻防で自分が守りの技を出していたら（身を隠していたら）、威力 +ambush（忍者の忍び足） */
+  ambush?: number;
 }
 
 export interface StyleDef {
@@ -163,8 +181,13 @@ export interface StyleDef {
   aff: Record<Position, number>;
   /** 組みどうしになったときの組みの強さ（力・スタミナに足す）。組み技が得意なバックボーンほど大きい */
   grip: number;
-  /** 受けるダメージの倍率（省くと 1）。ロボットは打撃にかたいが組みに弱く、水泳選手は組まれてもぬるっと抜ける */
-  taken?: { strike?: number; grab?: number };
+  /**
+   * 受けるダメージの倍率（省くと 1）。ロボットは打撃にかたいが組みに弱く、水泳選手は組まれてもぬるっと抜け、
+   * スタントマンは受け身で投げのダメージを減らす。guarding は守りの技を出しているときに受ける分（トゥクトゥク運転手は止まると弱い）
+   */
+  taken?: { strike?: number; grab?: number; guarding?: number };
+  /** 疲れの倍率（省くと 1）。サラリーマンは残業で鍛えたので疲れにくい */
+  fatigue?: number;
   /** おすすめの振り分け（キャラ作りで選んだときのはじめの値・コンピュータの目安） */
   build: FighterStats;
   moves: readonly Technique[];
@@ -173,7 +196,7 @@ export interface StyleDef {
 const POS = { S: "standing", C: "clinch", G: "ground" } as const satisfies Record<string, Position>;
 type PosCode = keyof typeof POS;
 const where = (codes: string): Position[] => [...codes].map((c) => POS[c as PosCode]);
-type Extra = Partial<Pick<Technique, "heal" | "uses" | "fx" | "chain" | "wild" | "encore" | "swap" | "read">>;
+type Extra = Partial<Pick<Technique, "heal" | "uses" | "fx" | "chain" | "wild" | "encore" | "swap" | "read" | "sure" | "ambush">>;
 
 /** 技を短く書くための道具。where は "SCG"（立ち・組み合い・寝技）の組み合わせ、to は 1 文字。extra は特別な効果 */
 const strike = (
@@ -224,7 +247,7 @@ const stats = (power: number, guardValue: number, speed: number, stamina: number
  */
 export const STYLES: Record<StyleId, StyleDef> = {
   karate: {
-    aff: { standing: 1.06, clinch: 1.02, ground: 0.94 },
+    aff: { standing: 1.08, clinch: 1.02, ground: 0.94 },
     grip: 0,
     build: stats(5, 5, 6, 4),
     moves: [
@@ -508,6 +531,83 @@ export const STYLES: Record<StyleId, StyleDef> = {
       focus("reboot", "heal", { heal: 25, uses: 1 }),
     ],
   },
+  // 速くて打たれ弱い。分身（2 回）は遅くても打撃を必ずかわし、煙玉（1 回）は組みもかわす。守って身を隠した次の忍び足が重い
+  ninja: {
+    aff: { standing: 1.08, clinch: 0.95, ground: 0.9 },
+    grip: 1,
+    build: stats(5, 3, 8, 4),
+    moves: [
+      strike("shuriken", "projectile", 8, 2, "SC"),
+      strike("shuto", "hook", 13, 1, "SCG"),
+      strike("shinobi", "kick_high", 14, 0, "S", undefined, { ambush: 6 }),
+      grab("kumifuse", "throw", 11, 1, "SC", "G"),
+      guard("mikiri", "dodge", "dodge", 4, 0, "SCG", "S"),
+      guard("bunshin", "dodge", "dodge", 5, 1, "SC", "S", { sure: true, uses: 2 }),
+      guard("kemuridama", "vanish", "vanish", 4, 1, "SCG", "S", { uses: 1 }),
+    ],
+  },
+  // 突進が強い。体当たりは当て続けるほど重く、クラクションで相手をひるませる。ブロックがなく、守りに回ると多くくらう（止まると弱い）
+  tuktuk: {
+    aff: { standing: 1.25, clinch: 1.0, ground: 0.8 },
+    grip: 1.5,
+    taken: { guarding: 1.08 },
+    build: stats(6, 5, 5, 4),
+    moves: [
+      strike("kyuhasshin", "jab", 9, 2, "SCG"),
+      strike("taiatari", "push", 15, 0, "S", undefined, { chain: { per: 4, max: 2, by: "hit" } }),
+      grab("tsukkomi", "takedown", 11, 1, "SC", "G"),
+      guard("brake", "dodge", "dodge", 4, 2, "SCG", "S"),
+      guard("handle", "counter", "catch", 5, 0, "SCG", "S"),
+      focus("horn", "perform", { fx: [foe("speed", -3, 3)] }),
+    ],
+  },
+  // 受け身がうまく、投げ・倒されたときのダメージが少ない。派手な飛び蹴りと、段取りで次の大技を強くする
+  stuntman: {
+    aff: { standing: 1.1, clinch: 0.95, ground: 0.95 },
+    grip: 1,
+    taken: { grab: 0.9 },
+    build: stats(5, 4, 6, 5),
+    moves: [
+      strike("punch", "straight", 13, 1, "SCG"),
+      strike("tobigeri", "kick_high", 17, -1, "S"),
+      strike("senpu", "spin_kick", 21, -2, "S"),
+      grab("dive", "takedown", 10, 0, "SC", "G"),
+      guard("wire", "dodge", "dodge", 5, 3, "SCG", "S"),
+      guard("ukemi", "counter", "catch", 6, 0, "SCG", "S"),
+      focus("dandori", "perform", { fx: [self("power", 4, 2)] }),
+    ],
+  },
+  // 残業で鍛えたスタミナ（疲れにくい）と、満員電車で鍛えた押し合い。名刺を飛ばし、カバンで受け、品よくお辞儀でかわす
+  salaryman: {
+    aff: { standing: 1.05, clinch: 1.12, ground: 1.0 },
+    grip: 2,
+    fatigue: 0.65,
+    build: stats(5, 5, 4, 6),
+    moves: [
+      strike("meishi", "projectile", 9, 2, "SC"),
+      strike("teiji", "straight", 12, 0, "SCG", undefined, { encore: true }),
+      grab("mankin", "clinch", 7, 1, "S", "C"),
+      grab("oshiai", "push", 15, 0, "C", "S"),
+      guard("kaban", "block", "block", 5, 0, "SCG"),
+      guard("ojigi", "dodge", "dodge", 4, 1, "SC", "S"),
+      focus("nemawashi", "perform", { fx: [foe("guard", -3, 3)] }),
+    ],
+  },
+  // タピオカ弾と太いストロー。氷多めが当たると相手が冷えて遅くなる。シェイカーを振って攻撃を上げ、ミルクティー（2 回）で一息つく
+  bubbletea: {
+    aff: { standing: 1.1, clinch: 1.0, ground: 0.95 },
+    grip: 1,
+    build: stats(5, 4, 6, 5),
+    moves: [
+      strike("tapioca", "projectile", 8, 2, "SC"),
+      strike("straw", "swing", 14, 0, "SCG"),
+      strike("koori", "projectile", 9, 1, "SC", undefined, { fx: [foe("speed", -2, 2)] }),
+      grab("takeout", "throw", 12, 0, "SC", "G"),
+      guard("tray", "block", "block", 4, 0, "SCG"),
+      focus("milktea", "heal", { heal: 12, uses: 2 }),
+      focus("shaker", "perform", { fx: [self("power", 3, 3)] }),
+    ],
+  },
 };
 
 /** バックボーンの技を名前で引く。なければ null */
@@ -583,6 +683,11 @@ export function techniqueNow(
   const form = READ_FORMS[readFormOf(history, fighters, seat)];
   const { guard: _, ...rest } = base;
   return { ...rest, ...form };
+}
+
+/** 身を隠してからの技（忍び足）の、今の上乗せ。前の攻防で自分が守りの技を出していたら ambush、でなければ 0 */
+export function ambushBonus(tech: Technique, history: readonly Exchange[], fighters: readonly (Fighter | null)[], seat: Seat): number {
+  return tech.ambush && classIn(history.at(-1), fighters, seat) === "guard" ? tech.ambush : 0;
 }
 
 /** 続けるほど強い技の、今の回数（前の攻防から数える） */
@@ -731,10 +836,11 @@ export const freshness = (stamina: number, exchange: number) =>
   Math.max(0.3, 1 - exchange * (FATIGUE_BASE - FATIGUE_STEP * stamina));
 
 const powerMul = (power: number) => 1 + (power - 5) * POWER_STEP;
-const takenMul = (def: FighterStats, exchange: number, isGrab: boolean) =>
+/** 受けるダメージの倍率。fresh は受ける人の疲れの残り */
+const takenMul = (def: FighterStats, fresh: number, isGrab: boolean) =>
   (1 - (def.guard - 5) * GUARD_STEP * (isGrab ? 0.5 : 1)) *
   (isGrab ? 1 : 1 - (def.speed - 5) * EVADE_STEP) *
-  (1 + TIRED_TAKEN * (1 - freshness(def.stamina, exchange)));
+  (1 + TIRED_TAKEN * (1 - fresh));
 
 /**
  * 強化・弱体を 1 つ足す。同じ人・同じパラメータ・同じ向きは重ねず、大きい方・長い方にそろえる
@@ -777,7 +883,7 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
   /** 今の場面での技。読みは形を変え、続けるほど強い技・威力に幅のある技・アンコールは威力を変える */
   const prepare = (s: Seat): Technique => {
     const t = techniqueNow(b.fighters, history, s, acts[s])!;
-    let power = t.power + (t.chain ? t.chain.per * chainCount(t, history, s) : 0);
+    let power = t.power + (t.chain ? t.chain.per * chainCount(t, history, s) : 0) + ambushBonus(t, history, b.fighters, s);
     if (t.wild) power *= WILD_MIN + WILD_RANGE * luck[4 + s]!;
     if (t.encore) power *= 1 + ENCORE * (1 - b.hp[s] / MAX_HP);
     return power === t.power ? t : { ...t, power };
@@ -792,7 +898,8 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
   let ko: Seat | null = null;
   let moved: Position | null = null;
 
-  const fresh = (s: Seat) => freshness(fighters[s].stats.stamina, t);
+  // 疲れにくいバックボーン（サラリーマン）は、攻防の回数を少なく数える
+  const fresh = (s: Seat) => freshness(fighters[s].stats.stamina, t * (STYLES[fighters[s].style].fatigue ?? 1));
   const speedOf = (s: Seat) => fighters[s].stats.speed * fresh(s) + techs[s].quick + SPEED_LUCK * (luck[s]! - 0.5);
   const gripOf = (s: Seat) => {
     const f = fighters[s];
@@ -809,13 +916,15 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
   const damageOf = (by: Seat, power: number, mul: number, isGrab: boolean) => {
     const att = fighters[by];
     const def = fighters[other(by)];
+    const taken = STYLES[def.style].taken;
     const raw =
       power *
       DAMAGE * powerMul(att.stats.power) *
       STYLES[att.style].aff[pos] *
       fresh(by) *
-      takenMul(def.stats, t, isGrab) *
-      (STYLES[def.style].taken?.[isGrab ? "grab" : "strike"] ?? 1) *
+      takenMul(def.stats, fresh(other(by)), isGrab) *
+      (taken?.[isGrab ? "grab" : "strike"] ?? 1) *
+      (techs[other(by)].cls === "guard" ? (taken?.guarding ?? 1) : 1) *
       mul *
       (1 + WOBBLE * (2 * luck[4 + by]! - 1));
     return Math.max(1, Math.round(raw));
@@ -892,7 +1001,8 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
           answer(def, a, false);
           break;
         case "dodge":
-          if (speedOf(def) >= speedOf(att)) {
+          // 分身は、すばやさに関係なくかわす
+          if (d.sure || speedOf(def) >= speedOf(att)) {
             record(att, "dodged");
             answer(def, a, false);
           } else {

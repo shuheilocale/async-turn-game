@@ -182,12 +182,15 @@
   margin-bottom: 2px;
 }
 
+/* 長い名前（トゥクトゥク運転手など）は、文言に入れた区切り（ゼロ幅スペース）で折り返す。入らないときだけどこでも折る */
 .fight-style-name {
   min-width: 0;
   font-weight: 700;
   font-size: 0.92rem;
   font-feature-settings: "palt";
   line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .fight-style-line {

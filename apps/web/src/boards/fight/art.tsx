@@ -181,6 +181,53 @@ const STYLE_ART: Record<Fight.StyleId, ReactNode> = {
       <path d="M11 21.5h10" className="fight-icon-cut" strokeWidth="1.8" />
     </>
   ),
+  // 手裏剣（4 つの刃と、まん中の穴）
+  ninja: (
+    <>
+      <path d="M16 2.5 19 13l10.5 3L19 19l-3 10.5L13 19 2.5 16 13 13z" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="16" r="1.4" className="fight-icon-cut" strokeWidth="2.4" />
+    </>
+  ),
+  // トゥクトゥク（張り出した屋根と細い柱、横が開いた座席、低い車体と車輪）
+  tuktuk: (
+    <>
+      <path d="M3.5 6.5h18.5c2.5 0 4 1.5 4.5 4" strokeWidth="3" />
+      <path d="M6 7v8M26 10.5l1.5 4.5" strokeWidth="2.2" />
+      <path d="M3.5 14.5h25l1 6.5H3.5z" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="23.5" r="3.4" fill="currentColor" className="fight-icon-cut" strokeWidth="1.6" />
+      <circle cx="24.5" cy="23.5" r="3.4" fill="currentColor" className="fight-icon-cut" strokeWidth="1.6" />
+    </>
+  ),
+  // 撮影のカチンコ（スタントの合図）
+  stuntman: (
+    <>
+      <rect x="5" y="14.5" width="22" height="13" rx="2" fill="currentColor" stroke="none" />
+      <path d="M4.5 9.5 25 4.5l1.2 4.5L5.7 14z" fill="currentColor" stroke="none" />
+      <path d="M8.6 8.5 11.8 12.5M14.8 7 18 11M20.9 5.5 24.1 9.5" className="fight-icon-cut" strokeWidth="2" />
+      <path d="M9 19.5h14" className="fight-icon-cut" strokeWidth="1.6" />
+    </>
+  ),
+  // ワイシャツのえりと、ネクタイ
+  salaryman: (
+    <>
+      <path d="M8.5 4 16 9.5 23.5 4" strokeWidth="2.4" />
+      <path d="M13.8 9.5h4.4l-.9 3.2h-2.6z" fill="currentColor" stroke="none" />
+      <path d="M14.9 13.5h2.2l3.1 11.2-4.2 4.8-4.2-4.8z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // タピオカミルクティー（ふたのあるカップ、太いストロー、底のタピオカ）
+  bubbletea: (
+    <>
+      <path d="M18 18.5 21.5 2.5" strokeWidth="3" />
+      <path d="M8.5 11h15l-2 17.5h-11z" strokeWidth="2.4" />
+      <path d="M6.5 11h19" strokeWidth="3" />
+      <circle cx="13" cy="25" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="25.3" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="25" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="14.6" cy="21.8" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="18.3" cy="21.8" r="1.5" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
 export function StyleIcon({ style, className = "" }: { style: Fight.StyleId; className?: string }) {
