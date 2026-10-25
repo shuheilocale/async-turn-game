@@ -1,165 +1,43 @@
 import { armLength, legLength, type BodyDims } from "./body.ts";
-import { add, clamp, dist as distance, easings, type EaseName, type V3 } from "./math.ts";
-import { chestFrame, edit, headCenter, lerpPose, P, pack, pelvisFrame, shoulderLocal, unpack, type Pose, type PoseDesc } from "./pose.ts";
-import { apply3 } from "./math.ts";
+import { add, clamp, type V3 } from "./math.ts";
+import { edit, headCenter, P, pack, type Pose, type PoseDesc } from "./pose.ts";
 import { clinchPose, downPose, groundBottomPose, groundTopPose, handRoot, stanceOf, withHands } from "./stances.ts";
 import { isDefense, isGrapple, mergeStrikes } from "./ground.ts";
-import type { ActionKind, StageEvent, StageStrike, StyleId } from "./types.ts";
+import { propOf } from "./outfit.ts";
+import { isSelf, isSpecial, mechanical, specialTrack, stretchTime, UNTIL_END, vanishTrack, VANISH_GONE } from "./special.ts";
+import {
+  aim,
+  blockHigh,
+  chestPoint,
+  face,
+  reachFoot,
+  reachHand,
+  shift,
+  shiftPose,
+  slip,
+  targetsOf,
+  TrackBuilder,
+  type AttackCtx,
+  type Built,
+  type Fx,
+  type KeyEdit,
+  type Result,
+  type Side,
+  type Track,
+  type Zone,
+} from "./track.ts";
+import type { ActionKind, FighterStats, StageEvent, StageStrike } from "./types.ts";
 
 export { mergeStrikes };
+export { sampleTrack, shiftPose } from "./track.ts";
+export type { Built, Fx, Key, Side, Track, Zone } from "./track.ts";
 
 /**
  * 技の動き（キーフレーム）と、1 回の攻防（StageEvent）を再生する段取り。
  * 動きはどれも左足が前の構えで、その人の足もと（+Z が相手）から見た位置で作る。
- * キーフレームは「構え（base）からどれだけ技の姿勢に寄せるか」の重み w を持ち、
- * 再生するときは、いまの構え（息づかいや待ちの動きを含む）と w で混ぜる
+ * 動きを書く道具は track.ts、格闘家ではない人たちの技（飛ばす・振る・見せる・回復・消える）は special.ts
  */
 
-export interface Key {
-  t: number;
-  pose: Pose;
-  w: number;
-  /** ひとつ前のキーからこのキーまでの動き方 */
-  ease: EaseName;
-}
-
-export interface Track {
-  keys: Key[];
-  end: number;
-}
-
-/** track の時刻 t の姿勢を out に入れ、重み w を返す */
-export function sampleTrack(track: Track, t: number, out: Pose): number {
-  const keys = track.keys;
-  const first = keys[0]!;
-  if (t <= first.t) {
-    out.set(first.pose);
-    return first.w;
-  }
-  for (let i = 1; i < keys.length; i++) {
-    const b = keys[i]!;
-    if (t < b.t) {
-      const a = keys[i - 1]!;
-      const u = easings[b.ease]((t - a.t) / (b.t - a.t));
-      lerpPose(a.pose, b.pose, u, out);
-      return a.w + (b.w - a.w) * u;
-    }
-  }
-  const last = keys[keys.length - 1]!;
-  out.set(last.pose);
-  return last.w;
-}
-
-/** キーフレームを書くときの道具。d は姿勢、hand で手首の目標を足もとから見た位置で決める */
-interface KeyEdit {
-  d: PoseDesc;
-  /** 手首を、足もとから見た位置に置く（胸がどう動いたあとでも、そこへ届く） */
-  hand(i: 0 | 1, at: V3): void;
-}
-
-class TrackBuilder {
-  readonly keys: Key[] = [];
-  constructor(
-    readonly base: Pose,
-    readonly dims: BodyDims,
-  ) {
-    this.keys.push({ t: 0, pose: base, w: 0, ease: "linear" });
-  }
-
-  /** 構えを書きかえた姿勢を、時刻 t に置く */
-  at(t: number, w: number, edit?: (k: KeyEdit) => void, ease: EaseName = "inOut", from: Pose = this.base): Pose {
-    const pose = edit ? editKey(from, this.dims, edit) : from;
-    return this.pose(t, w, pose, ease);
-  }
-
-  /** 決まった姿勢を、時刻 t に置く（ひとつ前のキーより前にはしない） */
-  pose(t: number, w: number, pose: Pose, ease: EaseName = "inOut") {
-    this.keys.push({ t: Math.max(t, this.keys[this.keys.length - 1]!.t), pose, w, ease });
-    return pose;
-  }
-
-  build(): Track {
-    return { keys: this.keys, end: this.keys[this.keys.length - 1]!.t };
-  }
-}
-
-function editKey(from: Pose, dims: BodyDims, edit: (k: KeyEdit) => void): Pose {
-  const d = unpack(from);
-  const hands: [V3 | null, V3 | null] = [null, null];
-  // 書きかえる前の手首の位置（足もとから見て）。hand で決めなかった手は、胸についてくる
-  edit({ d, hand: (i, at) => (hands[i] = at) });
-  const pose = pack(d);
-  return hands[0] || hands[1] ? withHands(pose, dims, hands) : pose;
-}
-
-// ---- 位置・姿勢をずらす道具 ----
-
-/** 腰と両足を前（+Z）へ dz、横へ dx ずらす（踏み込み・下がる） */
-function shift(d: PoseDesc, dz: number, dx = 0, feet: 0 | 1 | 2 = 2) {
-  d.hip[2] += dz;
-  d.hip[0] += dx;
-  for (const i of [0, 1] as const) {
-    if (feet === 2 || feet === i) {
-      d.foot[i][2] += dz;
-      d.foot[i][0] += dx;
-    }
-  }
-}
-
-/** 姿勢ごと前へずらした写し（位置関係が変わる動きの、最後の姿勢を作るのに使う） */
-export function shiftPose(p: Pose, dz: number): Pose {
-  const out = Float64Array.from(p);
-  out[P.hip + 2] = out[P.hip + 2]! + dz;
-  out[P.foot + 2] = out[P.foot + 2]! + dz;
-  out[P.foot + 5] = out[P.foot + 5]! + dz;
-  return out;
-}
-
-/** 手首が target に届くよう、届かない分だけ前へ踏み込む */
-function reachHand(k: KeyEdit, dims: BodyDims, i: 0 | 1, target: V3, slack = 0.97) {
-  const pose = pack(k.d);
-  const f = chestFrame(pose, dims);
-  const sh = add(f.o, apply3(f.r, shoulderLocal(dims, i)));
-  const short = distance(sh, target) - armLength(dims) * slack;
-  if (short > 0) shift(k.d, Math.min(short, 0.45), 0, 0);
-  k.hand(i, target);
-}
-
-/** 足首が target に届くよう、届かない分だけ軸足ごと踏み込む */
-function reachFoot(d: PoseDesc, dims: BodyDims, i: 0 | 1, target: V3, slack = 0.98) {
-  const pf = pelvisFrame(pack(d));
-  const hipJoint = add(pf.o, apply3(pf.r, [(i === 0 ? 1 : -1) * dims.hipHalf, 0, 0]));
-  const short = distance(hipJoint, target) - (dims.thigh + dims.shin) * slack;
-  if (short > 0) shift(d, Math.min(short, 0.5), 0, i === 0 ? 1 : 0);
-  d.foot[i] = target;
-}
-
-// ---- 相手の体の場所（攻める人の足もとから見て） ----
-
-export type Zone = "head" | "body" | "legs" | "grab";
-
-export interface Side {
-  d: BodyDims;
-  style: StyleId | null;
-  /** いまの構え（左足前の向き） */
-  base: Pose;
-  /** 左右を入れかえて描く人（画面の右の人） */
-  mirror?: boolean;
-}
-
-/** 相手の頭・あご・胴・脚の位置。相手は dist 先でこちらを向いて立っている */
-function targetsOf(def: Side, dist: number) {
-  const h = headCenter(def.base, def.d);
-  const at = (v: V3): V3 => [-v[0] * 0.3, v[1], dist - v[2]];
-  const hip = def.base[P.hip + 1]!;
-  return {
-    head: at(add(h, [0, 0, def.d.headR * 0.7])),
-    chin: at(add(h, [0, -def.d.headR * 0.6, def.d.headR * 0.6])),
-    body: at([0, hip + def.d.pelvisUp + def.d.abdomen * 0.9, def.base[P.hip + 2]! + def.d.chestD + 0.02]),
-    legs: at([0.06, hip * 0.6, def.base[P.foot + 2]! * 0.6 + 0.07]),
-    neck: at(add(h, [0, -def.d.headR * 1.3, -0.02])),
-  };
-}
 
 /** 技の当たる場所 */
 export function zoneOf(kind: ActionKind): Zone {
@@ -170,6 +48,10 @@ export function zoneOf(kind: ActionKind): Zone {
       return "body";
     case "kick_low":
       return "legs";
+    case "projectile":
+    case "heal":
+    case "vanish":
+      return "body";
     case "clinch":
     case "takedown":
     case "throw":
@@ -180,34 +62,6 @@ export function zoneOf(kind: ActionKind): Zone {
   }
 }
 
-export interface Built {
-  track: Track;
-  /** 当たる（または防がれる）瞬間 */
-  impact: number;
-}
-
-type Result = StageStrike["result"];
-
-interface AttackCtx {
-  att: Side;
-  def: Side;
-  dist: number;
-  position: "standing" | "clinch" | "ground";
-  /** 寝技のとき、攻める人が上か */
-  onTop: boolean;
-  result: Result;
-  /** 位置関係が変わるときの、この技のあとの姿勢（攻める人・守る人）。いまの足もとから見た位置に直してある */
-  after: { att: Pose; def: Pose } | null;
-}
-
-// ---- 攻める人の動き ----
-
-/** 外したときは相手の頭の横を通す。防がれたときはガードの手前で止める */
-function aim(t: V3, result: Result, side: number): V3 {
-  if (result === "whiff") return add(t, [side * 0.2, 0.06, 0.02]);
-  if (result === "blocked") return add(t, [0, 0, -0.1]);
-  return t;
-}
 
 /** 立って打つ技 */
 function standingAttack(kind: ActionKind, c: AttackCtx): Built {
@@ -653,48 +507,6 @@ function standingAttack(kind: ActionKind, c: AttackCtx): Built {
   }
 }
 
-/** 胸から見た位置を、足もとから見た位置にする（キーを書いている途中の姿勢で） */
-function chestPoint(d: PoseDesc, dims: BodyDims, v: V3): V3 {
-  const f = chestFrame(pack(d), dims);
-  return add(f.o, apply3(f.r, v));
-}
-
-/** 両腕を上げて頭を守る */
-function blockHigh(k: KeyEdit, d: PoseDesc, dims: BodyDims) {
-  d.neck[0] += 0.15;
-  d.spine[0] += 0.06;
-  d.shrug = [0.02, 0.02];
-  d.elbow = [
-    [0.15, -1, 0.1],
-    [-0.15, -1, 0.1],
-  ];
-  d.fist = [
-    [0.6, 1.2, 0],
-    [0.6, -1.2, 0],
-  ];
-  const head = headCenter(pack(d), dims);
-  k.hand(0, add(head, [0.07, 0.04, 0.13]));
-  k.hand(1, add(head, [-0.07, 0.03, 0.12]));
-}
-
-/** 頭を横へ振り、ひざを沈めてかわす。前かがみの構えでも頭が前へ出ないよう、腰を少し引く */
-function slip(d: PoseDesc, k: number) {
-  d.hip[0] -= 0.08 * k;
-  d.hip[1] -= 0.09 * k;
-  d.hip[2] -= 0.08 * k;
-  d.foot[1][2] -= 0.05 * k;
-  d.spine[2] += 0.24 * k;
-  d.spine[0] += 0.06 * k;
-  d.neck[2] -= 0.1 * k;
-}
-
-/** 腰や胸をどうひねっても、顔は相手（+Z）へ向ける */
-function face(d: PoseDesc, pitch = 0.05) {
-  const yaw = d.hipRot[1] + d.spine[1] + d.chest[1];
-  const tilt = d.hipRot[0] + d.spine[0] + d.chest[0];
-  const roll = d.hipRot[2] + d.spine[2] + d.chest[2];
-  d.neck = [-tilt * 0.85 + pitch, -yaw * 0.9, -roll * 0.6];
-}
 
 /** 寝技で打つ・極める */
 function groundAttack(kind: ActionKind, c: AttackCtx): Built {
@@ -809,9 +621,17 @@ function clinchAttack(kind: ActionKind, c: AttackCtx): Built {
 }
 
 export function attackTrack(kind: ActionKind, c: AttackCtx): Built {
-  if (c.position === "ground") return groundAttack(kind, c);
-  if (c.position === "clinch") return clinchAttack(kind, c);
-  return standingAttack(kind, c);
+  const b = isSpecial(kind)
+    ? specialTrack(kind, c, () => groundAttack("straight", c))
+    : c.position === "ground"
+      ? groundAttack(kind, c)
+      : c.position === "clinch"
+        ? clinchAttack(kind, c)
+        : standingAttack(kind, c);
+  // ロボットは一定の速さでカクッと動き、太極拳はゆっくり大きく動く
+  if (c.att.style === "robot") return mechanical(b);
+  if (c.att.style === "taichi" && !isSelf(kind) && kind !== "perform") return stretchTime(b, 1.25);
+  return b;
 }
 
 // ---- 受ける人の動き ----
@@ -841,6 +661,34 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
   const lead = c.lead;
   const T = (v: number) => lead + v;
   const lying = c.position === "ground" && !c.onTop;
+
+  if (kind === "perform" && result !== "whiff") {
+    // 見せる技：触れられていないので、少しひるむだけ。防いだときは小さく、かわしたときは目をそらす
+    const strong = result === "hit" || result === "countered";
+    const f = strong ? k * 0.75 : 0.35;
+    tb.at(T(-0.08), 0);
+    const flinch = (kk: KeyEdit) => {
+      if (result === "dodged") {
+        kk.d.neck[1] += 0.55;
+        kk.d.neck[0] += 0.1;
+        return;
+      }
+      kk.d.neck[0] -= 0.25 * f;
+      kk.d.neck[1] += 0.2 * f;
+      kk.d.chest[0] -= 0.12 * f;
+      kk.d.spine[0] -= 0.06 * f;
+      if (!lying) shift(kk.d, -0.06 * f);
+      if (strong && !lying) {
+        // 前の手で目の前をかばう
+        kk.d.elbow[0] = [0.6, -0.2, -0.3];
+        kk.hand(0, add(headCenter(pack(kk.d), dims), [0.05, -0.02, 0.17]));
+      }
+    };
+    tb.at(T(0.06), 1, flinch, "out");
+    tb.at(T(0.4), 1, flinch);
+    tb.at(T(0.66), 0);
+    return { track: tb.build(), offset: 0 };
+  }
 
   if (result === "whiff") {
     // 空振り：少しだけ身を引く
@@ -897,7 +745,11 @@ export function reactionTrack(c: ReactCtx): { track: Track; offset: number } {
         return;
       }
       if (zone === "head") slip(kk.d, 1);
-      else {
+      else if (kind === "projectile") {
+        // 飛んでくるものは、横へ身をかわす
+        slip(kk.d, 1);
+        shift(kk.d, 0.04, -0.1);
+      } else {
         shift(kk.d, -0.26);
         kk.d.chest[0] -= 0.12;
         kk.d.hip[1] += 0.01;
@@ -1234,15 +1086,18 @@ export interface Clip {
 }
 
 export interface Limb {
-  part: "hand" | "foot";
+  /** prop は右手の持ち物の先 */
+  part: "hand" | "foot" | "prop";
   side: 0 | 1;
   from: number;
   to: number;
 }
 
-/** 技を出す手足。軌跡（残像）を見せるのに使う。組み技・守りの技はなし */
-export function limbOf(kind: ActionKind, position: Position, impact: number): Limb | null {
+/** 技を出す手足。軌跡（残像）を見せるのに使う。組み技・守りの技・飛ばす技・見せる技などはなし */
+export function limbOf(kind: ActionKind, position: Position, impact: number, style: Side["style"] = null): Limb | null {
   const at = (part: Limb["part"], side: 0 | 1, lead = 0.16): Limb => ({ part, side, from: Math.max(0, impact - lead), to: impact + 0.06 });
+  if (kind === "swing") return position === "ground" ? at("hand", 1, 0.12) : propOf(style) === "none" ? at("hand", 1, 0.2) : at("prop", 1, 0.2);
+  if (isSpecial(kind)) return null;
   if (position === "ground") return kind === "submission" || kind === "throw" || kind === "takedown" || isDefense(kind) ? null : at("hand", 1, 0.12);
   switch (kind) {
     case "jab":
@@ -1288,6 +1143,19 @@ export interface Exchange {
   /** 倒れる人と、倒れ終わる時刻 */
   ko: { who: 0 | 1; at: number; downAt: number } | null;
   end: number;
+  /** 動きに合わせて出す効果（飛ぶもの・煙・きらめき・回復の光など） */
+  fx: Fx[];
+  /** 回復した量（heal）と、強化・弱体の印（effects）を出す時刻 */
+  marks: Mark[];
+}
+
+/** 頭の上に出す印。heal があれば「+n」、stat があれば上向き（dir = 1）・下向き（-1）の印 */
+export interface Mark {
+  at: number;
+  who: 0 | 1;
+  heal?: number;
+  stat?: keyof FighterStats;
+  dir?: 1 | -1;
 }
 
 /** 位置関係ごとの、2 人の足もとの間 */
@@ -1327,10 +1195,24 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
   const sides: [Side, Side] = [ctx.sides[0], ctx.sides[1]];
   let switched = false;
   let switchAt = -1;
+  const fx: Fx[] = [];
+  const marks: Mark[] = [];
+  // 相手の技をかわした（dodged）すぐとなりの「消える」技は、かわす動きとして見せる
+  const dodgeBy = new Map<StageStrike, StageStrike>();
+  const shown = new Set<StageStrike>();
+  strikes.forEach((s, i) => {
+    if (s.result !== "dodged" || isDefense(s.kind) || isSelf(s.kind)) return;
+    const v = [strikes[i + 1], strikes[i - 1]].find((x) => x && x.kind === "vanish" && x.by !== s.by && !shown.has(x));
+    if (!v) return;
+    dodgeBy.set(s, v);
+    shown.add(v);
+  });
 
   const roleOf = (who: 0 | 1, pos: Position, tp: 0 | 1) => (pos === "ground" ? (who === tp ? "top" : "bottom") : null);
 
   strikes.forEach((s, i) => {
+    // かわす動きとして見せた「消える」技は、ここでは出さない
+    if (shown.has(s)) return;
     const a = s.by;
     const d: 0 | 1 = a === 0 ? 1 : 0;
     const zone = zoneOf(s.kind);
@@ -1359,12 +1241,26 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
     // 組み合いの中では、突きは短いアッパーに、蹴りはひざになる（clinchAttack と同じ置きかえ）
     const eff: ActionKind =
       position !== "clinch" ? s.kind : s.kind === "jab" || s.kind === "straight" || s.kind === "counter" ? "uppercut" : s.kind.startsWith("kick") || s.kind === "spin_kick" ? "knee" : s.kind;
-    const limb = limbOf(eff, position, built.impact);
+    const limb = limbOf(eff, position, built.impact, sides[a].style);
     clips.push({ who: a, start: t, track: built.track, ...(limb ? { limb } : {}) });
     const impactAt = t + built.impact;
     let next = t + Math.max(built.impact + 0.45, built.track.end - 0.1);
+    for (const f of built.fx ?? []) fx.push({ ...f, at: t + f.at, until: f.until >= UNTIL_END ? UNTIL_END : t + f.until, who: a, target: d, result: s.result });
+    if (s.heal) marks.push({ at: impactAt, who: a, heal: s.heal });
+    for (const e of s.effects ?? []) marks.push({ at: impactAt + 0.08, who: e.who, stat: e.stat, dir: e.dir });
 
-    if (!isDefense(s.kind)) {
+    const vanish = dodgeBy.get(s);
+    if (vanish && s.result === "dodged") {
+      // 相手の技が当たる瞬間に、煙とともに消えてかわす
+      const v = vanishTrack({ att: sides[d] });
+      // 当たる少し前に消える（拳は煙の中を通り抜ける）
+      const vStart = impactAt - VANISH_GONE - 0.08;
+      clips.push({ who: d, start: vStart, track: v.track });
+      for (const f of v.fx ?? []) fx.push({ ...f, at: vStart + f.at, until: vStart + f.until, who: d, target: a, result: vanish.result });
+      if (vanish.heal) marks.push({ at: impactAt, who: d, heal: vanish.heal });
+      for (const e of vanish.effects ?? []) marks.push({ at: impactAt + 0.08, who: e.who, stat: e.stat, dir: e.dir });
+      next = Math.max(next, vStart + v.track.end - 0.2);
+    } else if (!isDefense(s.kind) && !isSelf(s.kind)) {
       const following = strikes[i + 1];
       if (s.result === "countered") {
         const stuffed = following && following.by === d;
@@ -1479,6 +1375,11 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
     const by = 0.02 - early;
     for (const c of clips) c.start += by;
     for (const i of impacts) i.at += by;
+    for (const f of fx) {
+      f.at += by;
+      if (f.until < UNTIL_END) f.until += by;
+    }
+    for (const m of marks) m.at += by;
     if (ko) {
       ko.at += by;
       ko.downAt += by;
@@ -1486,5 +1387,7 @@ export function buildExchange(ev: StageEvent, ctx: ExchangeCtx): Exchange {
     switchAt += by;
     t += by;
   }
-  return { clips, impacts, switchAt, position, top, dist, ko, end: t };
+  // 攻防の終わりまで続く効果は、終わりで止める
+  for (const f of fx) f.until = Math.min(f.until, t);
+  return { clips, impacts, switchAt, position, top, dist, ko, end: t, fx, marks };
 }

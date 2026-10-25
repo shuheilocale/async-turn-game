@@ -5,6 +5,7 @@ import { chestFrame, headCenter, P, shoulderLocal, unpack } from "./pose.ts";
 import {
   breathRate,
   breathWave,
+  caneSpin,
   clinchPose,
   downPose,
   fatigueOf,
@@ -15,10 +16,32 @@ import {
   rhythmOf,
   stanceOf,
   tiredPose,
+  waveOf,
 } from "./stances.ts";
 import type { StyleId } from "./types.ts";
 
-const STYLES: StyleId[] = ["boxing", "muaythai", "karate", "taekwondo", "judo", "bjj", "wrestling", "mma", "capoeira", "sumo"];
+const STYLES: StyleId[] = [
+  "boxing",
+  "muaythai",
+  "karate",
+  "taekwondo",
+  "judo",
+  "bjj",
+  "wrestling",
+  "mma",
+  "capoeira",
+  "sumo",
+  "kickboxing",
+  "taichi",
+  "gamer",
+  "magician",
+  "nurse",
+  "swimmer",
+  "idol",
+  "rapper",
+  "chef",
+  "robot",
+];
 
 describe("バックボーンごとの構え", () => {
   for (const style of [...STYLES, null]) {
@@ -131,5 +154,76 @@ describe("息づかいと疲れ", () => {
   it("リズムはバックボーンごとに違い、すばやいほど速い", () => {
     expect(rhythmOf("boxing", 0)).toBeGreaterThan(rhythmOf("capoeira", 0));
     expect(rhythmOf("boxing", 1)).toBeGreaterThan(rhythmOf("boxing", -1));
+  });
+});
+
+describe("新しいキャラクターの構えと待ちの動き", () => {
+  const d = bodyOf(NEUTRAL_STATS);
+
+  it("ゲーマーは猫背（胸が前へ倒れる）、マジシャンは胸を張る", () => {
+    const lean = (s: StyleId) => {
+      const p = stanceOf(s, d);
+      return p[P.spine]! + p[P.chest]!;
+    };
+    expect(lean("gamer")).toBeGreaterThan(lean("nurse") + 0.25);
+    expect(lean("magician")).toBeLessThan(lean("nurse"));
+  });
+
+  it("マジシャンのステッキを持つ手は腰の高さで、体の前にある（ステッキを床につく）", () => {
+    const p = stanceOf("magician", d);
+    const hand = handRoot(p, d, 1);
+    expect(hand[1]).toBeLessThan(legLength(d) * 1.12);
+    expect(hand[2]).toBeGreaterThan(0.08);
+  });
+
+  it("水泳選手は腕を体の横に下げ、キックボクシングはボクシングより足幅が広い", () => {
+    const swim = stanceOf("swimmer", d);
+    for (const i of [0, 1] as const) expect(handRoot(swim, d, i)[1]).toBeLessThan(legLength(d) * 1.05);
+    const width = (s: StyleId) => {
+      const f = unpack(stanceOf(s, d)).foot;
+      return f[0][2] - f[1][2];
+    };
+    expect(width("kickboxing")).toBeGreaterThan(width("boxing"));
+  });
+
+  it("ロボットは息で胸がふくらまない（胸の光の点滅で見せる）", () => {
+    for (let t = 0; t < 4; t += 0.5) {
+      const delta = idleDelta("robot", t * 3, t, t, 0.5, 1, false);
+      expect(delta[P.breath]).toBe(0);
+      expect(delta[P.shrug]).toBe(0);
+    }
+  });
+
+  it("ロボットの待ちの動きは、ほとんどの時間止まっていて、ときどきカクッと動く", () => {
+    let still = 0;
+    const n = 400;
+    let prev = idleDelta("robot", 0, 0, 0, 0, 1, false)[P.neck + 1]!;
+    for (let i = 1; i <= n; i++) {
+      const t = i * 0.01;
+      const v = idleDelta("robot", 0, 0, t, 0, 1, false)[P.neck + 1]!;
+      if (Math.abs(v - prev) < 1e-6) still++;
+      prev = v;
+    }
+    expect(still / n).toBeGreaterThan(0.8);
+  });
+
+  it("太極拳はゆっくり、ラッパーはビートに乗って速めにリズムをとる", () => {
+    expect(rhythmOf("taichi", 1)).toBeLessThan(0.2);
+    expect(rhythmOf("rapper", 0)).toBeGreaterThan(rhythmOf("nurse", 0) * 3);
+  });
+
+  it("マジシャンはときどきステッキを回し、アイドルはときどき手を振る（いつもではない）", () => {
+    let spin = 0;
+    let wave = 0;
+    for (let t = 0; t < 22; t += 0.05) {
+      if (caneSpin(t) > 0) spin++;
+      if (waveOf(t) > 0) wave++;
+      expect(caneSpin(t)).toBeLessThan(1);
+      expect(waveOf(t)).toBeLessThan(1);
+    }
+    expect(spin / 440).toBeGreaterThan(0.05);
+    expect(spin / 440).toBeLessThan(0.3);
+    expect(wave / 440).toBeGreaterThan(0.1);
+    expect(wave / 440).toBeLessThan(0.45);
   });
 });

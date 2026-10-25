@@ -210,6 +210,33 @@ export class Effects {
     setTimeout(() => el.remove(), 1300);
   }
 
+  /** 回復した量（緑の「+n」）を、ワールドの位置 at の上に出す */
+  heal(at: THREE.Vector3, amount: number) {
+    const el = this.place(at, "fs-num heal");
+    if (el) el.textContent = `+${amount}`;
+  }
+
+  /**
+   * 強化・弱体の印（文字なし）。パラメータの種類は色と形（攻撃は丸・防御は盾・すばやさは木の葉・スタミナは角丸の四角）、
+   * 上向き・下向きの矢印で強化・弱体を見せる。n は同じ人に重なるときのずらし
+   */
+  buff(at: THREE.Vector3, stat: string, dir: 1 | -1, n: number) {
+    const el = this.place(at, `fs-buff ${stat} ${dir > 0 ? "up" : "down"}`);
+    if (el) el.style.marginLeft = `${(n % 4) * 26 - 13}px`;
+  }
+
+  private place(at: THREE.Vector3, className: string) {
+    const p = this.v.copy(at).project(this.camera);
+    if (p.z > 1) return null;
+    const el = document.createElement("div");
+    el.className = className;
+    el.style.left = `${Math.min(88, Math.max(12, ((p.x + 1) / 2) * 100))}%`;
+    el.style.top = `${Math.max(16, ((1 - p.y) / 2) * 100)}%`;
+    this.overlay.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+    return el;
+  }
+
   /** 画面の真ん中に大きな文字（KO）を出す */
   banner(text: string) {
     const el = document.createElement("div");

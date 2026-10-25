@@ -11,7 +11,28 @@ import type { ActionKind, FighterLook, FighterStats, StageEvent, StageStrike, St
  * Playwright から動かせるよう、window.__fs にも同じ操作を置く
  */
 
-const STYLES: StyleId[] = ["boxing", "muaythai", "karate", "taekwondo", "judo", "bjj", "wrestling", "mma", "capoeira", "sumo"];
+const STYLES: StyleId[] = [
+  "boxing",
+  "muaythai",
+  "karate",
+  "taekwondo",
+  "judo",
+  "bjj",
+  "wrestling",
+  "mma",
+  "capoeira",
+  "sumo",
+  "kickboxing",
+  "taichi",
+  "gamer",
+  "magician",
+  "nurse",
+  "swimmer",
+  "idol",
+  "rapper",
+  "chef",
+  "robot",
+];
 const KINDS: ActionKind[] = [
   "jab",
   "straight",
@@ -31,6 +52,11 @@ const KINDS: ActionKind[] = [
   "block",
   "dodge",
   "counter",
+  "projectile",
+  "swing",
+  "perform",
+  "heal",
+  "vanish",
 ];
 const RESULTS: StageStrike["result"][] = ["hit", "blocked", "dodged", "countered", "whiff"];
 const STAT_KEYS: (keyof FighterStats)[] = ["power", "guard", "speed", "stamina"];
@@ -223,6 +249,43 @@ function Preview() {
             {k}
           </button>
         ))}
+        <button onClick={() => play([{ by, kind: "heal", result: "hit", damage: 0, heal: 12 }], after)}>回復 +12</button>
+        <button
+          onClick={() =>
+            play(
+              [
+                {
+                  by,
+                  kind: "perform",
+                  result: "hit",
+                  damage: 0,
+                  effects: [
+                    { who: by === 0 ? 1 : 0, stat: "power", dir: -1 },
+                    { who: by === 0 ? 1 : 0, stat: "guard", dir: -1 },
+                    { who: by, stat: "speed", dir: 1 },
+                    { who: by, stat: "stamina", dir: 1 },
+                  ],
+                },
+              ],
+              after,
+            )
+          }
+        >
+          強化・弱体
+        </button>
+        <button
+          onClick={() =>
+            play(
+              [
+                { by: by === 0 ? 1 : 0, kind: "straight", result: "dodged", damage: 0 },
+                { by, kind: "vanish", result: "hit", damage: 0 },
+              ],
+              after,
+            )
+          }
+        >
+          消えてかわす
+        </button>
         <button
           onClick={() =>
             play(

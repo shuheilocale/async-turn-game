@@ -24,6 +24,11 @@ const KINDS: ActionKind[] = [
   "block",
   "dodge",
   "counter",
+  "projectile",
+  "swing",
+  "perform",
+  "heal",
+  "vanish",
 ];
 const RESULTS: StageStrike["result"][] = ["hit", "blocked", "dodged", "countered", "whiff"];
 const POSITIONS: Position[] = ["standing", "clinch", "ground"];
@@ -40,35 +45,47 @@ function ctxOf(position: Position, styles: [StyleId, StyleId] = ["boxing", "judo
 }
 
 describe("1 回の攻防の段取り", () => {
-  it("どの技・結果・位置関係でも、壊れない動きを作る", () => {
-    const out = newPose();
-    for (const position of POSITIONS)
-      for (const kind of KINDS)
-        for (const result of RESULTS) {
-          const ev: StageEvent = { id: 1, strikes: [{ by: 0, kind, result, damage: 10 }], position, ko: null };
-          const ex = buildExchange(ev, ctxOf(position));
-          expect(ex.end).toBeGreaterThan(0.3);
-          expect(ex.end).toBeLessThan(6);
-          for (const c of ex.clips) {
-            expect(c.start).toBeGreaterThanOrEqual(-1e-9);
-            let prev = -Infinity;
-            for (const k of c.track.keys) {
-              expect(k.t).toBeGreaterThanOrEqual(prev);
-              prev = k.t;
-              for (const v of k.pose) expect(Number.isFinite(v)).toBe(true);
+  const pairs: [StyleId, StyleId][] = [
+    ["boxing", "judo"],
+    ["magician", "robot"],
+    ["chef", "idol"],
+    ["taichi", "nurse"],
+  ];
+  for (const styles of pairs)
+    it(`${styles.join("・")}：どの技・結果・位置関係でも、壊れない動きを作る`, { timeout: 20000 }, () => {
+      const out = newPose();
+      for (const position of POSITIONS)
+        for (const kind of KINDS)
+          for (const result of RESULTS) {
+            const ev: StageEvent = { id: 1, strikes: [{ by: 0, kind, result, damage: 10 }], position, ko: null };
+            const ex = buildExchange(ev, ctxOf(position, styles));
+            for (const f of ex.fx) {
+              expect(f.at).toBeGreaterThanOrEqual(0);
+              expect(f.until).toBeGreaterThanOrEqual(f.at);
+              expect(f.until).toBeLessThanOrEqual(ex.end + 1e-9);
             }
-            // 途中の時刻でも姿勢が数になる
-            const w = sampleTrack(c.track, c.track.end * 0.37, out);
-            expect(w).toBeGreaterThanOrEqual(0);
-            expect(w).toBeLessThanOrEqual(1);
-            for (const v of out) expect(Number.isFinite(v)).toBe(true);
+            expect(ex.end).toBeGreaterThan(0.3);
+            expect(ex.end).toBeLessThan(6);
+            for (const c of ex.clips) {
+              expect(c.start).toBeGreaterThanOrEqual(-1e-9);
+              let prev = -Infinity;
+              for (const k of c.track.keys) {
+                expect(k.t).toBeGreaterThanOrEqual(prev);
+                prev = k.t;
+                for (const v of k.pose) expect(Number.isFinite(v)).toBe(true);
+              }
+              // 途中の時刻でも姿勢が数になる
+              const w = sampleTrack(c.track, c.track.end * 0.37, out);
+              expect(w).toBeGreaterThanOrEqual(0);
+              expect(w).toBeLessThanOrEqual(1);
+              for (const v of out) expect(Number.isFinite(v)).toBe(true);
+            }
+            for (const imp of ex.impacts) {
+              expect(imp.at).toBeGreaterThan(0);
+              expect(imp.at).toBeLessThan(ex.end);
+            }
           }
-          for (const imp of ex.impacts) {
-            expect(imp.at).toBeGreaterThan(0);
-            expect(imp.at).toBeLessThan(ex.end);
-          }
-        }
-  });
+    });
 
   it("当たった・防がれた技では、当たる瞬間を 1 回だけ知らせる。空振り・守りの技は受ける人の動きだけ", () => {
     const hit = buildExchange({ id: 1, strikes: [{ by: 1, kind: "hook", result: "hit", damage: 12 }], position: "standing", ko: null }, ctxOf("standing"));

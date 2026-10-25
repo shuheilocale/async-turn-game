@@ -93,6 +93,99 @@
   font-size: 34px;
 }
 
+/* 回復した量：緑の「+n」 */
+.fs-num.heal {
+  --seat-color: #23b46a;
+  font-size: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fs-num.heal {
+    --seat-color: #4fe08f;
+    -webkit-text-stroke-color: #0e1a14;
+  }
+}
+
+/* 強化・弱体の印：パラメータの色と形の札に、上向き・下向きの矢印 */
+.fs-buff {
+  --buff: #888;
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background: var(--buff);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.5px #fff, 0 3px 10px rgb(0 0 0 / 0.3);
+  animation: fs-buff 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.fs-buff::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-left: 3px solid #fff;
+  border-top: 3px solid #fff;
+  transform: translate(-50%, -25%) rotate(45deg);
+}
+
+.fs-buff.down::after {
+  transform: translate(-50%, -75%) rotate(225deg);
+}
+
+.fs-buff.down {
+  filter: saturate(0.55) brightness(0.85);
+}
+
+/* 攻撃：赤い丸 */
+.fs-buff.power {
+  --buff: #e5484d;
+}
+
+/* 防御：青い盾 */
+.fs-buff.guard {
+  --buff: #3b82f6;
+  border-radius: 4px 4px 50% 50% / 4px 4px 60% 60%;
+}
+
+/* すばやさ：黄色い木の葉の形（2 つの角がとがる） */
+.fs-buff.speed {
+  --buff: #e6a700;
+  border-radius: 12px 3px;
+}
+
+/* スタミナ：緑の角丸の四角 */
+.fs-buff.stamina {
+  --buff: #22a565;
+  border-radius: 7px;
+}
+
+@keyframes fs-buff {
+  0% {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.4;
+  }
+  15% {
+    opacity: 1;
+    translate: 0 -6px;
+    scale: 1.15;
+  }
+  30% {
+    translate: 0 -10px;
+    scale: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -34px;
+  }
+}
+
 @keyframes fs-num {
   0% {
     opacity: 0;
@@ -153,6 +246,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fs-num,
+  .fs-buff,
   .fs-banner {
     animation-duration: 0.01s;
     animation-delay: 0s;
@@ -236,6 +330,67 @@
   }
 }
 
+/* 新しい人たちの服の色・帽子・持ち物 */
+.fs2-limb.paint-seat {
+  stroke: var(--accent);
+}
+
+.fs2-limb.paint-white {
+  stroke: #e8e5dc;
+}
+
+.fs2-limb.paint-black {
+  stroke: #1d2029;
+}
+
+.fs2-limb.paint-metal {
+  stroke: #a9b2c0;
+}
+
+.fs2-head.paint-metal {
+  fill: #a9b2c0;
+}
+
+.fs2-hat {
+  fill: var(--fig);
+  stroke: var(--fig);
+}
+
+.fs2-hat.black,
+.fs2-hat .black {
+  fill: #1d2029;
+  stroke: #1d2029;
+}
+
+.fs2-hat.white {
+  fill: #f2f0ea;
+  stroke: #d6d2c8;
+  stroke-width: 1;
+}
+
+.fs2-hat .fs2-band {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.fs2-hat .fs2-wire {
+  fill: none;
+  stroke: #1d2029;
+}
+
+.fs2-prop {
+  stroke: #1d2029;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  fill: #1d2029;
+}
+
+.fs2-light {
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
 .fs2-num {
   font-family: var(--font-num);
   font-weight: 700;
@@ -254,5 +409,22 @@
 @media (prefers-reduced-motion: reduce) {
   .fs2-breath {
     animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .fs2-limb.paint-black {
+    stroke: #4a5062;
+  }
+
+  .fs2-hat.black,
+  .fs2-hat .black,
+  .fs2-prop {
+    fill: #4a5062;
+    stroke: #4a5062;
+  }
+
+  .fs2-hat .fs2-wire {
+    stroke: #6a7184;
   }
 }

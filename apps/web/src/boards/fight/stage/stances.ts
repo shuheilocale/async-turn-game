@@ -436,6 +436,300 @@ export function stanceOf(style: StyleId | null, d: BodyDims): Pose {
         },
         d,
       );
+    case "kickboxing":
+      // ボクシングより足幅を広くとり、前足は軽く。ガードは高く、少し前へ
+      return build(
+        {
+          lead: [0.11, 0.23],
+          rear: [-0.14, -0.22],
+          leadLift: 0.012,
+          rearLift: 0.03,
+          leadHeel: 0.25,
+          rearHeel: 0.45,
+          leadYaw: -0.28,
+          rearYaw: -0.7,
+          crouch: 0.06,
+          hipYaw: -0.45,
+          hipPitch: 0.04,
+          spinePitch: 0.08,
+          chestPitch: 0.07,
+          chin: 0.12,
+          hands: [
+            [0.12, -0.12, 0.25],
+            [-0.12, -0.11, 0.15],
+          ],
+          elbows: [
+            [0.35, -1, -0.2],
+            [-0.35, -1, -0.2],
+          ],
+          fists: [
+            [0.25, 0.4, 0],
+            [0.25, -0.4, 0],
+          ],
+        },
+        d,
+      );
+    case "taichi":
+      // 背すじを立て、ひざをゆるめる。前の手のひらを胸の前に、後ろの手はおへその前に
+      return build(
+        {
+          lead: [0.11, 0.17],
+          rear: [-0.13, -0.13],
+          leadYaw: -0.05,
+          rearYaw: -0.6,
+          crouch: 0.08,
+          hipYaw: -0.32,
+          hipPitch: 0.02,
+          spinePitch: -0.02,
+          chestPitch: 0.0,
+          chin: 0.0,
+          hands: [
+            [0.07, -0.2, 0.27],
+            [-0.05, -0.43, 0.21],
+          ],
+          elbows: [
+            [0.4, -1, -0.5],
+            [-0.4, -1, -0.5],
+          ],
+          fists: [
+            [-0.5, 0.9, 0],
+            [0.3, -1.2, 0],
+          ],
+        },
+        d,
+      );
+    case "gamer":
+      // 少し猫背で首が前へ出る。両手はおなかの前で、見えないコントローラーを持つ
+      return build(
+        {
+          lead: [0.11, 0.06],
+          rear: [-0.11, -0.06],
+          leadYaw: 0.1,
+          rearYaw: -0.25,
+          crouch: 0.03,
+          hipYaw: -0.12,
+          hipPitch: 0.02,
+          spinePitch: 0.2,
+          chestPitch: 0.2,
+          chin: 0.25,
+          hands: [
+            [0.07, -0.4, 0.17],
+            [-0.07, -0.41, 0.17],
+          ],
+          elbows: [
+            [0.8, -1, -0.2],
+            [-0.8, -1, -0.2],
+          ],
+          fists: [
+            [0.4, 0.3, 0],
+            [0.4, -0.3, 0],
+          ],
+        },
+        d,
+      );
+    case "magician":
+      // 背すじを伸ばして胸を張り、右手のステッキを前の床につく。左手は胸の前に
+      return build(
+        {
+          lead: [0.09, 0.08],
+          rear: [-0.09, -0.06],
+          leadYaw: 0.2,
+          rearYaw: -0.5,
+          crouch: 0.02,
+          hipYaw: -0.25,
+          spinePitch: -0.04,
+          chestPitch: -0.04,
+          chin: -0.02,
+          hands: [
+            [0.1, -0.33, 0.13],
+            [-0.17, -0.58, 0.1],
+          ],
+          elbows: [
+            [1, -0.6, -0.3],
+            [-0.5, -1, 0.1],
+          ],
+          fists: [
+            [0.4, 1.0, 0],
+            [0.3, -0.4, 0],
+          ],
+        },
+        d,
+      );
+    case "nurse":
+      // 落ち着いて肩幅に立ち、手は軽く開いて胸の下に。いつでも手を差しのべられる構え
+      return build(
+        {
+          lead: [0.11, 0.1],
+          rear: [-0.12, -0.08],
+          leadYaw: 0,
+          rearYaw: -0.4,
+          crouch: 0.035,
+          hipYaw: -0.2,
+          spinePitch: 0.03,
+          chestPitch: 0.02,
+          chin: 0.04,
+          hands: [
+            [0.12, -0.31, 0.2],
+            [-0.12, -0.33, 0.16],
+          ],
+          elbows: [
+            [0.5, -1, -0.3],
+            [-0.5, -1, -0.3],
+          ],
+          fists: [
+            [0.1, 0.8, 0],
+            [0.1, -0.8, 0],
+          ],
+        },
+        d,
+      );
+    case "swimmer":
+      // 足をそろえ気味に立ち、腕は力を抜いて体の横に下げる
+      return build(
+        {
+          lead: [0.1, 0.05],
+          rear: [-0.1, -0.03],
+          leadYaw: 0.05,
+          rearYaw: -0.2,
+          crouch: 0.025,
+          hipYaw: -0.1,
+          spinePitch: 0.02,
+          chin: 0.03,
+          hands: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          handsAbs: [
+            [0.25, leg * 0.98, 0.07],
+            [-0.25, leg * 0.98, 0.04],
+          ],
+          elbows: [
+            [0.3, -1, -0.6],
+            [-0.3, -1, -0.6],
+          ],
+          fists: [
+            [0.1, 0.4, 0],
+            [0.1, -0.4, 0],
+          ],
+        },
+        d,
+      );
+    case "idol":
+      // 足を軽く寄せ、両手は胸の前で「がんばる」のこぶし。右手にペンライト
+      return build(
+        {
+          lead: [0.06, 0.09],
+          rear: [-0.1, -0.05],
+          leadHeel: 0.15,
+          leadLift: 0.006,
+          leadYaw: 0.15,
+          rearYaw: -0.35,
+          crouch: 0.03,
+          hipYaw: -0.15,
+          hipRoll: 0.04,
+          spinePitch: 0.0,
+          chestPitch: -0.02,
+          chin: 0.02,
+          hands: [
+            [0.1, -0.25, 0.14],
+            [-0.11, -0.24, 0.15],
+          ],
+          elbows: [
+            [0.5, -1, -0.4],
+            [-0.5, -1, -0.4],
+          ],
+          fists: [
+            [0.6, 0.8, 0],
+            [0.3, -0.8, 0],
+          ],
+        },
+        d,
+      );
+    case "rapper":
+      // 足を開いて少し反り、肩の力を抜く。左手はゆるく下げ、右手は胸の前で言葉に合わせて動かす
+      return build(
+        {
+          lead: [0.15, 0.08],
+          rear: [-0.15, -0.08],
+          leadYaw: 0.3,
+          rearYaw: -0.5,
+          crouch: 0.05,
+          hipYaw: -0.2,
+          hipPitch: -0.03,
+          spinePitch: -0.05,
+          chestPitch: 0.02,
+          chin: 0.08,
+          hands: [
+            [0.2, -0.5, 0.06],
+            [-0.12, -0.25, 0.2],
+          ],
+          elbows: [
+            [0.6, -1, -0.4],
+            [-0.6, -1, -0.2],
+          ],
+          fists: [
+            [0.2, 0.6, 0],
+            [0.4, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    case "chef":
+      // 右手のフライパンを腰の横に構え、左手は前へ。どっしりと立つ
+      return build(
+        {
+          lead: [0.12, 0.12],
+          rear: [-0.13, -0.1],
+          leadYaw: -0.05,
+          rearYaw: -0.5,
+          crouch: 0.045,
+          hipYaw: -0.3,
+          spinePitch: 0.04,
+          chestPitch: 0.02,
+          chin: 0.05,
+          hands: [
+            [0.11, -0.27, 0.22],
+            [-0.2, -0.42, 0.14],
+          ],
+          elbows: [
+            [0.5, -1, -0.3],
+            [-0.6, -1, -0.2],
+          ],
+          fists: [
+            [0.2, 0.8, 0],
+            [0.2, -0.6, 0],
+          ],
+        },
+        d,
+      );
+    case "robot":
+      // まっすぐ立ち、両腕はひじを直角に曲げて前へ（箱のような構え）
+      return build(
+        {
+          lead: [0.12, 0.07],
+          rear: [-0.12, -0.07],
+          leadYaw: 0,
+          rearYaw: -0.15,
+          crouch: 0.035,
+          hipYaw: -0.08,
+          spinePitch: 0.0,
+          chestPitch: 0.0,
+          chin: 0.0,
+          hands: [
+            [0.15, -0.3, 0.26],
+            [-0.15, -0.3, 0.24],
+          ],
+          elbows: [
+            [0.2, -1, -0.1],
+            [-0.2, -1, -0.1],
+          ],
+          fists: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+        },
+        d,
+      );
     default:
       // まだ決まっていない人（シルエット）。肩幅に立ち、軽くこぶしを上げる
       return build(
@@ -722,9 +1016,47 @@ export function rhythmOf(style: StyleId | null, speed: number) {
     case "bjj":
     case "wrestling":
       return 0.55 * quick;
+    case "kickboxing":
+      return 1.25 * quick;
+    case "taichi":
+      return 0.13;
+    case "gamer":
+      return 0.9 * quick;
+    case "magician":
+    case "nurse":
+      return 0.3;
+    case "swimmer":
+      return 0.42 * quick;
+    case "idol":
+      return 1.05;
+    case "rapper":
+      // 90 BPM くらいのビート（肩はその半分の速さで揺らす）
+      return 1.5;
+    case "chef":
+      return 0.45;
+    case "robot":
+      return 0.5;
     default:
       return 0.4;
   }
+}
+
+/** 0〜1 のでたらめに見える数（同じ n なら同じ値） */
+const hash = (n: number) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/** マジシャンがステッキを回している途中か（0〜1 の進み、回していなければ 0）。5.5 秒ごとに 0.7 秒 */
+export function caneSpin(t: number) {
+  const u = (((t % 5.5) + 5.5) % 5.5) / 0.7;
+  return u > 0 && u < 1 ? u : 0;
+}
+
+/** アイドルが手を振っている途中か（0〜1 の進み、振っていなければ 0）。4.6 秒ごとに 1.3 秒 */
+export function waveOf(t: number) {
+  const u = ((((t + 2) % 4.6) + 4.6) % 4.6) / 1.3;
+  return u > 0 && u < 1 ? u : 0;
 }
 
 const inc = (p: Pose, at: number, x: number) => {
@@ -752,9 +1084,11 @@ export function idleDelta(
   out: Pose = newPose(),
 ): Pose {
   out.fill(0);
-  // 息：吸うと胸がふくらみ、肩が上がり、胸が少し起きる。疲れると大きく荒く
-  const b = breathWave(breath);
-  const a = 1 + 1.6 * fatigue;
+  // 息：吸うと胸がふくらみ、肩が上がり、胸が少し起きる。疲れると大きく荒く。
+  // ロボットは息をしない（胸の光の点滅で見せる）
+  const robot = style === "robot";
+  const b = robot ? 0 : breathWave(breath);
+  const a = robot ? 0 : 1 + 1.6 * fatigue;
   out[P.breath] = b * a;
   out[P.shrug] = out[P.shrug + 1] = 0.009 * a * (b + 1);
   out[P.chest] = -0.03 * a * b;
@@ -769,7 +1103,7 @@ export function idleDelta(
   // 小さなゆらぎ（同じ動きのくり返しに見えないように）
   const w1 = wobble(t * 0.7, 1);
   const w2 = wobble(t * 0.6, 2);
-  addV(out, P.neck, 0.015 * w2 * e, 0.03 * w1 * e, 0);
+  if (!robot) addV(out, P.neck, 0.015 * w2 * e, 0.03 * w1 * e, 0);
   switch (style) {
     case "boxing": {
       // つま先で小さく上下に弾む。肩も少し揺らす
@@ -867,6 +1201,125 @@ export function idleDelta(
       // ほとんど動かず、重心をわずかに左右へ
       inc(out, P.hip, 0.012 * s * e);
       inc(out, P.hip + 1, -0.004 * (c + 1) * e);
+      break;
+    }
+    case "kickboxing": {
+      // リズムよく前後に揺れ、前に出るときに前足を軽く浮かせる
+      inc(out, P.hip + 2, 0.03 * s * e);
+      inc(out, P.hip + 1, 0.009 * Math.abs(Math.sin(beat)) * e);
+      inc(out, P.foot + 1, 0.02 * Math.max(0, s) * e);
+      inc(out, P.footRot, 0.14 * Math.max(0, s) * e);
+      inc(out, P.foot + 2, 0.03 * s * e);
+      inc(out, P.chest, 0.025 * s * e);
+      inc(out, P.chest + 1, 0.03 * Math.sin(beat / 2) * e);
+      for (const i of [0, 1]) addV(out, P.hand + i * 3, 0, 0.01 * Math.sin(beat + i * 1.3) * e, 0.012 * c * e);
+      break;
+    }
+    case "taichi": {
+      // ゆっくり円を描く手（雲手）。手と一緒に、重心を左右へ静かに移す
+      const r = 0.075 * e;
+      addV(out, P.hand, -r * c, r * 0.8 * s, 0.02 * s * e);
+      addV(out, P.hand + 3, r * c, -r * 0.8 * s, -0.02 * s * e);
+      inc(out, P.hip, 0.035 * c * e);
+      inc(out, P.hip + 1, -0.012 * (1 - Math.abs(c)) * e);
+      inc(out, P.hipRot + 1, 0.12 * c * e);
+      inc(out, P.chest + 1, 0.06 * c * e);
+      inc(out, P.fist + 1, 0.3 * s * e);
+      inc(out, P.fist + 4, 0.3 * s * e);
+      break;
+    }
+    case "gamer": {
+      // 指先だけが細かく動く（見えないボタンを押す）。ときどき首を小さく縦に振る
+      const tap = Math.sin(t * 23) * Math.sin(t * 7.3);
+      const tap2 = Math.sin(t * 19 + 1) * Math.sin(t * 5.1 + 2);
+      addV(out, P.fist, 0.22 * tap * e, 0, 0.1 * tap2 * e);
+      addV(out, P.fist + 3, 0.22 * tap2 * e, 0, -0.1 * tap * e);
+      addV(out, P.hand, 0.004 * tap2 * e, 0.005 * tap * e, 0);
+      addV(out, P.hand + 3, 0.004 * tap * e, 0.005 * tap2 * e, 0);
+      inc(out, P.neck, 0.05 * Math.max(0, Math.sin(beat * 2)) ** 4 * e);
+      inc(out, P.hip, 0.006 * s * e);
+      break;
+    }
+    case "magician": {
+      // 優雅にゆっくり揺れ、ときどき右手のステッキをくるりと回す
+      inc(out, P.hip, 0.008 * s * e);
+      inc(out, P.chest + 1, 0.03 * s * e);
+      // 回しかけで止まって見えないよう、動きを小さくするときは回さない
+      const spin = energy > 0.5 ? caneSpin(t) : 0;
+      if (spin > 0) {
+        const lift = Math.sin(Math.PI * spin);
+        inc(out, P.fist + 3, -2 * Math.PI * smoothstep(spin));
+        addV(out, P.hand + 3, 0, 0.12 * lift * e, 0.04 * lift * e);
+      }
+      break;
+    }
+    case "nurse": {
+      // 静かに体重を移し、ときどき小さくうなずく
+      inc(out, P.hip, 0.01 * s * e);
+      inc(out, P.hipRot + 1, 0.03 * s * e);
+      inc(out, P.neck, 0.04 * Math.max(0, Math.sin(t * 0.9)) ** 8 * e);
+      break;
+    }
+    case "swimmer": {
+      // かかとで軽く弾み、片腕ずつ大きく回す（回していない腕は前後に振る）
+      const left = Math.sin(beat / 2) > 0;
+      const k = Math.sin(beat);
+      const kc = Math.cos(beat);
+      // 肩を中心に、腕の長さくらいの円を描く（前から上、後ろへ）
+      const big = 0.5 * e;
+      addV(out, P.hand + (left ? 0 : 3), (left ? -0.03 : 0.03) * (1 - kc) * e, big * (1 - kc), big * k);
+      addV(out, P.hand + (left ? 3 : 0), 0, 0.02 * e, 0.1 * k * e);
+      inc(out, P.shrug + (left ? 0 : 1), 0.02 * (1 - kc) * e);
+      inc(out, P.chest + 1, (left ? -1 : 1) * 0.06 * (1 - kc) * e);
+      inc(out, P.hip + 1, 0.01 * Math.abs(Math.sin(beat * 2)) * e);
+      for (const i of [0, 1]) inc(out, P.footRot + i * 3, 0.06 * Math.abs(Math.sin(beat * 2)) * e);
+      break;
+    }
+    case "idol": {
+      // リズムに合わせて軽く弾み、腰を左右に。ときどき右手を大きく振る
+      inc(out, P.hip + 1, 0.012 * Math.abs(Math.sin(beat)) * e);
+      inc(out, P.hip, 0.012 * Math.sin(beat / 2) * e);
+      inc(out, P.hipRot + 2, 0.03 * Math.sin(beat / 2) * e);
+      inc(out, P.neck + 2, -0.06 * Math.sin(beat / 2) * e);
+      for (const i of [0, 1]) inc(out, P.foot + i * 3 + 1, 0.008 * Math.max(0, Math.sin(beat + i * Math.PI)) * e);
+      const wave = waveOf(t);
+      if (wave > 0) {
+        const up = Math.sin(Math.PI * wave) ** 0.6;
+        addV(out, P.hand + 3, -0.12 * up * e + 0.08 * Math.sin(wave * 26) * up * e, 0.42 * up * e, 0.02 * up * e);
+        inc(out, P.elbow + 3 + 1, 1.2 * up * e);
+      }
+      break;
+    }
+    case "rapper": {
+      // ビートに乗って肩を交互に揺らし、首でリズムをとる。右手は言葉に合わせて上下
+      const half = Math.sin(beat / 2);
+      inc(out, P.shrug, 0.018 * Math.max(0, half) * e);
+      inc(out, P.shrug + 1, 0.018 * Math.max(0, -half) * e);
+      inc(out, P.chest + 2, 0.05 * half * e);
+      inc(out, P.chest + 1, 0.05 * half * e);
+      inc(out, P.hip + 1, -0.012 * Math.abs(Math.sin(beat)) * e);
+      inc(out, P.neck, 0.08 * Math.abs(Math.sin(beat)) * e);
+      addV(out, P.hand + 3, 0.02 * half * e, 0.035 * Math.abs(Math.sin(beat)) * e, 0.02 * c * e);
+      break;
+    }
+    case "chef": {
+      // どっしり。フライパンを持つ手を、ときどき小さくあおる
+      inc(out, P.hip, 0.008 * s * e);
+      const toss = Math.max(0, Math.sin(t * 1.4)) ** 10;
+      addV(out, P.hand + 3, 0, 0.05 * toss * e, 0.03 * toss * e);
+      inc(out, P.fist + 3, -0.3 * toss * e);
+      break;
+    }
+    case "robot": {
+      // 機械らしく、ときどき首や腕がカクッと小さく動く（あいだは止まっている）
+      const step = Math.floor(t * 0.9);
+      const u = smoothstep((t * 0.9 - step) / 0.09);
+      const at = (n: number, k: number) => lerp(hash(n * 7 + k), hash((n + 1) * 7 + k), u);
+      inc(out, P.neck + 1, 0.22 * (at(step, 1) - 0.5) * e);
+      inc(out, P.neck, 0.08 * (at(step, 2) - 0.5) * e);
+      addV(out, P.hand, 0, 0.03 * (at(step, 3) - 0.5) * e, 0.03 * (at(step, 4) - 0.5) * e);
+      addV(out, P.hand + 3, 0, 0.03 * (at(step, 5) - 0.5) * e, 0.03 * (at(step, 6) - 0.5) * e);
+      inc(out, P.chest + 1, 0.06 * (at(step, 0) - 0.5) * e);
       break;
     }
     default: {

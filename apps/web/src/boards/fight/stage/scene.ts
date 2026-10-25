@@ -6,8 +6,11 @@ import { Effects, Trail } from "./effects.ts";
 import { clamp, damp, easings } from "./math.ts";
 import { basePoseOf, buildExchange, distOf, powerOf, sampleTrack, type Exchange, type Impact, type Position, type Side } from "./moves.ts";
 import { addPose, lerpPose, mirrorPose, newPose, P, type Pose } from "./pose.ts";
-import { createKit, FighterRig, type Kit } from "./rig.ts";
-import { breathRate, fatigueOf, idleDelta, rhythmOf, tiredPose } from "./stances.ts";
+import { createKit, FighterRig, NO_CUES, type Kit, type RigCues } from "./rig.ts";
+import { breathRate, breathWave, fatigueOf, idleDelta, rhythmOf, tiredPose } from "./stances.ts";
+import { StageFx } from "./fx.ts";
+import { ROCKET_RETURN } from "./special.ts";
+import type { Fx } from "./track.ts";
 import type { FighterLook, FighterStageProps, StageEvent, StyleId } from "./types.ts";
 
 /**
@@ -90,6 +93,8 @@ class Actor {
   placed = false;
   mirror = false;
   glow = 0;
+  /** 技に合わせて変えている見た目 */
+  cues: RigCues = NO_CUES;
 
   constructor(
     kit: Kit,
@@ -203,6 +208,11 @@ interface Playing {
   ex: Exchange;
   t: number;
   fired: boolean[];
+  /** 動きに合わせた効果・頭の上の印を出したか */
+  fxFired: boolean[];
+  marksFired: boolean[];
+  /** 続く効果の、次に粒を出すまでの時間 */
+  fxAcc: number[];
   switched: boolean;
   downed: boolean;
   timer: ReturnType<typeof setTimeout>;
@@ -242,6 +252,8 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
   for (const a of actors) scene.add(a.rig.root);
   const effects = new Effects(overlay, camera);
   scene.add(effects.group);
+  const sfx = new StageFx(camera);
+  scene.add(sfx.group);
   // 技を出す手足の軌跡（1 人に 1 本）
   const trails = actors.map(() => {
     const t = new Trail(camera);
@@ -385,6 +397,9 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
       ex,
       t: 0,
       fired: ex.impacts.map(() => false),
+      fxFired: ex.fx.map(() => false),
+      marksFired: ex.marks.map(() => false),
+      fxAcc: ex.fx.map(() => 0),
       switched: false,
       downed: false,
       // 画面の外にあって描いていないときも、攻防は終わらせる
@@ -456,6 +471,16 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     const at = imp.zone === "head" ? def.rig.worldOf("head", tv) : imp.zone === "legs" ? def.rig.worldOf("hip", tv).setY(0.5) : def.rig.worldOf("chest", tv);
     const k = powerOf(imp.damage);
     const reduce = options.reduceMotion;
+    if (imp.kind === "perform") {
+      // 触れずに見せる技：火花やゆれはなく、相手のまわりに小さなきらめきだけ
+      if (imp.result === "hit" || imp.result === "countered") {
+        sparkle(def.rig.worldOf("head", tv2), 5, imp.by === 0 ? theme.p0 : theme.p1, 0.22);
+        if (imp.damage > 0) effects.number(def.rig.worldOf("head", tv2).add(tv3.set(0, 0.26, 0)), `${imp.damage}`, imp.by, imp.damage >= 15);
+      }
+      focusAt.copy(at);
+      focusBoost = 0.6;
+      return;
+    }
     if (imp.result === "hit" || imp.kind === "counter") {
       effects.flash(at, imp.zone === "grab" ? "#ffe2b0" : "#ffd96e", imp.by === 0 ? theme.p0 : theme.p1, k);
       if (!reduce && imp.zone !== "grab") {
@@ -474,9 +499,10 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     focusBoost = 1;
   }
 
-  function stepExchange(dt: number) {
+  /** 攻防の時計を進める。進んだ時間（当たった瞬間は止まる）を返す */
+  function stepExchange(dt: number): number {
     const p = playing;
-    if (!p) return;
+    if (!p) return dt;
     if (hitStop > 0) {
       hitStop -= dt;
       dt *= 0.08;
@@ -490,6 +516,22 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
         fire(imp);
       }
     });
+    p.ex.fx.forEach((f, i) => {
+      if (!p.fxFired[i] && p.t >= f.at) {
+        p.fxFired[i] = true;
+        startFx(f);
+      }
+    });
+    p.ex.marks.forEach((m, i) => {
+      if (p.marksFired[i] || p.t < m.at) return;
+      p.marksFired[i] = true;
+      const head = actors[m.who].rig.worldOf("head", tv).add(tv2.set(0, 0.3, 0));
+      if (m.heal) effects.heal(head, m.heal);
+      else if (m.stat && m.dir) {
+        const n = p.ex.marks.slice(0, i).filter((x) => x.who === m.who && x.stat).length;
+        effects.buff(head, m.stat, m.dir, n);
+      }
+    });
     if (!p.switched && p.t >= p.ex.switchAt) applySwitch(p);
     if (p.ex.ko && !p.downed && p.t >= p.ex.ko.downAt) {
       p.downed = true;
@@ -501,6 +543,194 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
     }
     if (p.ex.ko && p.t >= p.ex.ko.at + 0.35 && p.t - dt < p.ex.ko.at + 0.35) effects.banner("K.O.");
     if (p.t >= p.ex.end) finish();
+    return dt;
+  }
+
+  // ---- 新しい技の効果 ----
+
+  const seatColor = (who: 0 | 1) => ((actors[who].shown?.seat ?? who) === 0 ? theme.p0 : theme.p1);
+  /** 骨の左右（左右を入れかえて描く人は、手の左右も入れかわる） */
+  const boneSide = (a: Actor, side: 0 | 1 | undefined): 0 | 1 => ((a.mirror ? 1 - (side ?? 1) : (side ?? 1)) as 0 | 1);
+  const tvA = new THREE.Vector3();
+  const tvB = new THREE.Vector3();
+  const tvC = new THREE.Vector3();
+  const rnd = (k: number) => (Math.random() - 0.5) * k;
+
+  /** at のまわりに、きらめきを count 個 */
+  function sparkle(at: THREE.Vector3, count: number, color: string, r = 0.3) {
+    if (options.reduceMotion) count = Math.ceil(count / 2);
+    for (let i = 0; i < count; i++) {
+      const p = tvC.copy(at).add(tvB.set(rnd(r * 2), rnd(r * 1.6), rnd(r * 2)));
+      sfx.spawn("star", p, tvB.set(0, 0.25, 0), { color: i % 2 ? "#ffffff" : color, size: 0.09 + Math.random() * 0.07, life: 0.55 + Math.random() * 0.25, spin: rnd(6) });
+    }
+  }
+
+  /** a から相手のほうへの向き（水平） */
+  function towardFoe(f: Fx, out: THREE.Vector3) {
+    return out.subVectors(actors[f.target].world, actors[f.who].world).setY(0).normalize();
+  }
+
+  function startFx(f: Fx) {
+    const a = actors[f.who];
+    const color = seatColor(f.who);
+    switch (f.type) {
+      case "shot": {
+        const def = actors[f.target];
+        const side = boneSide(a, f.side);
+        const from = a.rig.strikePoint("hand", side, new THREE.Vector3());
+        if (f.shot === "orb") from.lerp(a.rig.strikePoint("hand", (1 - side) as 0 | 1, tvA), 0.5).add(towardFoe(f, tvB).multiplyScalar(0.08));
+        const to = def.rig.worldOf("chest", new THREE.Vector3());
+        // 空振りは相手の横を通す
+        if (f.result === "whiff") to.add(tvB.set(-AX.z, 0.12, AX.x).multiplyScalar(0.3));
+        const home = f.shot === "rocket" ? () => a.rig.strikePoint("hand", side, tvA) : null;
+        sfx.launch(f.shot ?? "orb", from, to, f.until - f.at, f.result, color, home, ROCKET_RETURN);
+        if (f.shot === "cards") sparkle(from, 3, color, 0.08);
+        break;
+      }
+      case "smoke": {
+        // 煙：体のまわりにもくもくと広がる
+        const at = a.rig.worldOf("hip", tvA).add(tvB.set(0, 0.25, 0));
+        const n = options.reduceMotion ? 7 : 15;
+        for (let i = 0; i < n; i++) {
+          const p = tvC.copy(at).add(tvB.set(rnd(0.5), rnd(1.0), rnd(0.5)));
+          sfx.spawn("smoke", p, tvB.set(rnd(0.6), 0.25 + Math.random() * 0.3, rnd(0.6)), {
+            color: theme.dark ? "#a3abbd" : i % 3 ? "#b7bdca" : "#d3d7e0",
+            size: 0.38 + Math.random() * 0.26,
+            life: 0.7 + Math.random() * 0.4,
+            grow: 0.9,
+            spin: rnd(1.5),
+            alpha: 0.92,
+          });
+        }
+        sparkle(at, 4, color, 0.35);
+        break;
+      }
+      case "sparkle":
+        sparkle(a.rig.worldOf("head", tvA).add(tvB.set(0, -0.15, 0)), 9, color, 0.35);
+        break;
+      case "palm": {
+        const hand = a.rig.strikePoint("hand", boneSide(a, f.side), tvA);
+        effects.flash(hand, "#fff4c9", color, 0.6);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  /** 続く効果（ハート・音符・光の枠・回復の光・湯気・再起動）。u は 0〜1 の進み */
+  function sustainFx(f: Fx, i: number, u: number, dt: number) {
+    const p = playing!;
+    const a = actors[f.who];
+    const color = seatColor(f.who);
+    const env = Math.min(1, u * 6, (1 - u) * 5);
+    const every = (sec: number) => {
+      p.fxAcc[i]! -= dt;
+      if (p.fxAcc[i]! > 0) return false;
+      p.fxAcc[i] = (options.reduceMotion ? sec * 2 : sec) * (0.7 + Math.random() * 0.6);
+      return true;
+    };
+    switch (f.type) {
+      case "hearts": {
+        if (!every(0.07)) break;
+        const dir = towardFoe(f, tvA);
+        const from = a.rig.worldOf("head", tvB).addScaledVector(dir, 0.14);
+        const v = tvC.copy(dir).multiplyScalar(1.0 + Math.random() * 0.5).add(tvA.set(rnd(0.5), 0.35 + Math.random() * 0.3, rnd(0.5)));
+        const hue = ["#ff5fa2", color, "#ffd0e4"][Math.floor(Math.random() * 3)]!;
+        sfx.spawn("heart", from, v, { color: hue, size: 0.1 + Math.random() * 0.06, life: 0.85, sway: 0.4, spin: rnd(2) });
+        break;
+      }
+      case "notes": {
+        if (!every(0.1)) break;
+        const dir = towardFoe(f, tvA);
+        const from = a.rig.worldOf("head", tvB).addScaledVector(dir, 0.16).add(tvC.set(0, -0.06, 0));
+        const v = tvC.copy(dir).multiplyScalar(0.9 + Math.random() * 0.4).add(tvA.set(rnd(0.4), 0.3 + Math.random() * 0.3, rnd(0.4)));
+        sfx.spawn("note", from, v, { color: Math.random() < 0.5 ? color : theme.dark ? "#ffffff" : "#2a2f3c", size: 0.11 + Math.random() * 0.05, life: 1.0, sway: 0.6, spin: rnd(1.5), additive: false });
+        break;
+      }
+      case "frame": {
+        const dir = towardFoe(f, tvA);
+        const at = a.rig.worldOf("chest", tvB).addScaledVector(dir, 0.34).add(tvC.set(0, 0.16, 0));
+        sfx.showFrame(at, env, color);
+        if (every(0.06)) sfx.spawn("pixel", tvC.copy(at).add(tvA.set(rnd(0.5), rnd(0.3), rnd(0.2))), tvA.set(0, 0.15, 0), { color: Math.random() < 0.5 ? color : "#ffffff", size: 0.03, life: 0.35, additive: true });
+        break;
+      }
+      case "palm": {
+        if (!every(0.045)) break;
+        const hand = a.rig.strikePoint("hand", boneSide(a, f.side), tvB);
+        const v = towardFoe(f, tvA).multiplyScalar(1.6 + Math.random()).add(tvC.set(rnd(0.6), rnd(0.5), rnd(0.6)));
+        sfx.spawn("star", hand, v, { color: Math.random() < 0.5 ? "#fff3c4" : color, size: 0.09, life: 0.5, spin: rnd(6) });
+        break;
+      }
+      case "heal": {
+        const chest = a.rig.worldOf("chest", tvB);
+        sfx.showAura(chest, env, "#7dffb2");
+        if (!every(0.05)) break;
+        const hip = a.rig.worldOf("hip", tvA);
+        const ang = Math.random() * Math.PI * 2;
+        const at = tvC.set(hip.x + Math.cos(ang) * 0.3, hip.y - 0.3 + Math.random() * 0.9, hip.z + Math.sin(ang) * 0.3);
+        sfx.spawn("orb", at, tvA.set(0, 0.5 + Math.random() * 0.4, 0), {
+          color: theme.dark ? (Math.random() < 0.5 ? "#7dffb2" : "#d8ffe6") : Math.random() < 0.5 ? "#2fc274" : "#8fe8b6",
+          size: 0.06 + Math.random() * 0.05,
+          life: 0.8,
+          additive: theme.dark,
+        });
+        break;
+      }
+      case "steam": {
+        if (!every(0.12)) break;
+        const at = a.rig.worldOf("head", tvA).addScaledVector(towardFoe(f, tvB), 0.16).add(tvC.set(rnd(0.08), -0.08, rnd(0.08)));
+        sfx.spawn("smoke", at, tvB.set(rnd(0.1), 0.35, rnd(0.1)), { color: "#ffffff", size: 0.07, life: 0.9, grow: 1.4, alpha: 0.7, sway: 0.2 });
+        break;
+      }
+      case "reboot": {
+        // 後半に、足もとから頭へ光の輪が 2 本走る
+        const k = clamp((u - 0.45) / 0.5, 0, 1);
+        const hip = a.rig.worldOf("hip", tvA);
+        const top = a.rig.worldOf("head", tvB).y + 0.15;
+        const ys: [number, number] = [0.05 + (top - 0.05) * k, 0.05 + (top - 0.05) * clamp(k * 1.4 - 0.3, 0, 1)];
+        sfx.showRings(hip, ys, u > 0.45 && u < 0.98 ? 1 : 0, colorsOf(a).seat);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  /** 攻防の効果のうち、体の見た目を変えるもの（消える・手を飛ばす・ウインク・包帯など）と、続く効果 */
+  function cuesOf(a: Actor, dt: number): RigCues {
+    const p = playing;
+    if (!p) return NO_CUES;
+    const c: RigCues = { ...NO_CUES };
+    p.ex.fx.forEach((f, i) => {
+      if (f.who !== a.seat || p.t < f.at || p.t >= f.until) return;
+      const u = clamp((p.t - f.at) / Math.max(0.01, f.until - f.at), 0, 1);
+      switch (f.type) {
+        case "hide":
+          c.hidden = true;
+          break;
+        case "detach":
+          c.detached = boneSide(a, f.side);
+          break;
+        case "wink":
+          c.wink = Math.min(1, u * 8, (1 - u) * 8);
+          break;
+        case "bandage":
+          c.bandage = boneSide(a, f.side);
+          break;
+        case "spoon":
+          c.spoon = boneSide(a, f.side);
+          break;
+        case "reboot":
+          // 目の光が消え、ちらついてから戻る
+          c.lamp = u < 0.4 ? 0.05 : u < 0.62 ? (Math.sin(p.t * 70) > 0 ? 1 : 0.1) : 1;
+          sustainFx(f, i, u, dt);
+          break;
+        default:
+          sustainFx(f, i, u, dt);
+      }
+    });
+    return c;
   }
 
   /** いまの攻防の、この人の技の姿勢を（重なる順に）入れる */
@@ -675,8 +905,8 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
           if (local < c.limb.from || local > c.limb.to) continue;
           // 左右を入れかえて描く人は、手足の左右も入れかわる
           const side = (a.mirror ? 1 - c.limb.side : c.limb.side) as 0 | 1;
-          at = a.rig.strikePoint(c.limb.part, side, tv);
-          width = c.limb.part === "hand" ? 0.045 : 0.065;
+          at = c.limb.part === "prop" ? a.rig.propTip(tv) : a.rig.strikePoint(c.limb.part, side, tv);
+          width = c.limb.part === "hand" ? 0.045 : c.limb.part === "prop" ? 0.07 : 0.065;
         }
       trails[i]!.push(at, (a.shown?.seat ?? a.seat) === 0 ? theme.p0 : theme.p1, width);
     });
@@ -724,12 +954,19 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
   let warned = false;
 
   function update(dt: number) {
-    stepExchange(dt);
+    const exDt = stepExchange(dt);
     layout(dt);
     const energy = options.reduceMotion ? 0.35 : 1;
+    sfx.showFrame(tv, 0, "#fff");
+    sfx.showRings(tv, [0, 0], 0, "#fff");
+    sfx.showAura(tv, 0, "#fff");
     for (const a of actors) {
       if (!a.rig.root.visible) continue;
       updateActor(a, dt);
+      a.rig.setMirror(a.mirror);
+      a.cues = props.mode === "fight" ? cuesOf(a, dt) : NO_CUES;
+      a.rig.setCues(a.cues);
+      a.rig.tick(a.time, breathWave(a.breath));
       const downed = isDowned(a);
       const role = props.mode === "fight" ? roleOf(a.seat) : null;
       const pos = props.mode === "fight" ? position : "standing";
@@ -740,10 +977,14 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
       a.compose(base, dt, energy, lying);
     }
     scene.updateMatrixWorld();
-    actors.forEach((a, i) => a.rig.root.visible && updateBlob(a, i));
+    actors.forEach((a, i) => {
+      blobs[i]!.visible = a.rig.root.visible && !a.cues.hidden;
+      if (blobs[i]!.visible) updateBlob(a, i);
+    });
     updateTrails();
     updateCamera(dt);
     effects.update(dt);
+    sfx.update(dt, playing ? exDt : dt);
   }
 
   function schedule() {
@@ -819,6 +1060,7 @@ export function createStage(host: HTMLElement, overlay: HTMLElement, options: St
       kit.dispose();
       arena.dispose();
       effects.dispose();
+      sfx.dispose();
       blobTex.dispose();
       blobMat.dispose();
       blobGeo.dispose();
