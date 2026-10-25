@@ -30,7 +30,13 @@ export type StyleId =
   | "tuktuk"
   | "stuntman"
   | "salaryman"
-  | "bubbletea";
+  | "bubbletea"
+  | "kendo"
+  | "luchador"
+  | "firefighter"
+  | "dj"
+  | "investor"
+  | "dino";
 
 /** パラメータ（それぞれ 1〜8、合計 20）。体格の見た目にも使う */
 export interface FighterStats {
