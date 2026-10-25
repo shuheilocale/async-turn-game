@@ -153,6 +153,23 @@
   gap: 8px;
 }
 
+/*
+ * バックボーンは 14 人・17 人と多いので、スマホでは並びの高さを抑えて中だけをスクロールする
+ * （パラメータの振り分けまで遠くならないように）。下に続きがあることは、下の端をうすくして見せる。
+ * 中のスクロールが端まで来たら、そのままページがスクロールする（指が並びの上にあっても先へ進める）
+ */
+@media (max-width: 560px) {
+  .fight-styles {
+    grid-auto-rows: max-content;
+    max-height: min(52svh, 460px);
+    margin: -3px;
+    padding: 3px 3px 22px;
+    overflow-y: auto;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+  }
+}
+
 .fight .fight-style-card {
   display: grid;
   align-content: start;

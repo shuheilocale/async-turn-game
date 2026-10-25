@@ -228,6 +228,61 @@ const STYLE_ART: Record<Fight.StyleId, ReactNode> = {
       <circle cx="18.3" cy="21.8" r="1.5" fill="currentColor" stroke="none" />
     </>
   ),
+  // 剣道の面（面金の格子と、肩にたれる面垂れ）
+  kendo: (
+    <>
+      <path d="M8 13c0-5.5 3.5-9 8-9s8 3.5 8 9v5.5c0 3.5-3.5 6-8 6s-8-2.5-8-6z" fill="currentColor" stroke="none" />
+      <path d="M16 7.5v14M11 11.5h10M10.5 15.5h11M11 19.5h10" className="fight-icon-cut" strokeWidth="1.4" />
+      <path d="M8.5 21.5 5 28M23.5 21.5 27 28" strokeWidth="3" />
+    </>
+  ),
+  // ルチャのマスク（目と口の穴と、額から伸びる模様）
+  luchador: (
+    <>
+      <path d="M16 3C10 3 6 7.5 6 14c0 6.5 4 11.5 10 15 6-3.5 10-8.5 10-15 0-6.5-4-11-10-11z" fill="currentColor" stroke="none" />
+      <path d="M9.8 13.2 13.8 15M22.2 13.2 18.2 15" className="fight-icon-cut" strokeWidth="2.6" />
+      <path d="M16 5.5v5.5M13.5 21.5h5" className="fight-icon-cut" strokeWidth="1.6" />
+    </>
+  ),
+  // 消防のヘルメット（前の盾と、広いつば）
+  firefighter: (
+    <>
+      <path d="M6 20c0-7.5 4.5-13 10-13s10 5.5 10 13z" fill="currentColor" stroke="none" />
+      <path d="M3 22.5h22.5c2 0 3.5 1.2 3.5 3" strokeWidth="3" />
+      <path d="M12.5 12h7v5.5l-3.5 2-3.5-2z" className="fight-icon-cut" strokeWidth="1.6" />
+    </>
+  ),
+  // レコードと、針を落とすアーム
+  dj: (
+    <>
+      <circle cx="13" cy="18" r="10" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="18" r="6" className="fight-icon-cut" strokeWidth="1.2" />
+      <circle cx="13" cy="18" r="0.8" className="fight-icon-cut" strokeWidth="2.6" />
+      <path d="M28 3.5V13l-3.5 3.5" strokeWidth="2.4" />
+      <circle cx="28" cy="3.5" r="1.8" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // 右肩上がりの棒グラフと、のびる矢印（こつこつ積み立てる）
+  investor: (
+    <>
+      <path d="M4 27.5h24" strokeWidth="2.4" />
+      <rect x="6" y="19.5" width="4.5" height="6" rx="1" fill="currentColor" stroke="none" />
+      <rect x="13.5" y="15.5" width="4.5" height="10" rx="1" fill="currentColor" stroke="none" />
+      <rect x="21" y="11.5" width="4.5" height="14" rx="1" fill="currentColor" stroke="none" />
+      <path d="M5 14 11.5 9l4.5 2.5L25 4.5" strokeWidth="2.2" />
+      <path d="M20.5 4h5v5" strokeWidth="2.2" />
+    </>
+  ),
+  // 恐竜の着ぐるみの頭（目と、歯と、背中のとげ、首もとのファスナー）
+  dino: (
+    <>
+      <path d="M8 28V15C8 8.5 12 4.5 18 4.5h2.5C25 4.5 28.5 8 28.5 12.5v2c0 2-1.5 3.5-3.5 3.5h-7v10z" fill="currentColor" stroke="none" />
+      <circle cx="21" cy="10" r="0.9" className="fight-icon-cut" strokeWidth="2.6" />
+      <path d="M21 18v2.2M25 18v2.2" strokeWidth="1.8" />
+      <path d="M8 10.5 3.5 12.5 8 15.5zM8 17.5l-4.5 2L8 22.5z" fill="currentColor" stroke="none" />
+      <path d="M13 17v9" className="fight-icon-cut" strokeWidth="1.3" strokeDasharray="1.2 1.6" />
+    </>
+  ),
 };
 
 export function StyleIcon({ style, className = "" }: { style: Fight.StyleId; className?: string }) {

@@ -12,6 +12,7 @@ import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Rng
  * 守りには、ブロック（受けて小さく返す）・かわす（すばやさが相手以上なら無傷）・カウンター（大きく返すが組みにとても弱い）
  * ・返し（組み技を返すが、打撃はまともにくらう）・ため（回復や強化・弱体。打撃を少しくらいながらでも決まり、組まれると決まらない）
  * ・消える（打撃も組みもかわす。回数に限りがある）がある。
+ * バックボーンによっては、受けるダメージの倍率や疲れ方などの特性もある。
  * 打撃どうしは打ち合いで、速い方が先に当てる。組みどうしは組み合いで、力の強い方だけが決まる。守りどうしは何も起きない（ためは決まる）。
  *
  * 位置関係（立ち・組み合い・寝技）は 2 人で 1 つ。組み技で組み合い・寝技になり、押し離す技・かわし・
@@ -40,6 +41,8 @@ export const MARTIAL_STYLES = [
   "sumo",
   "kickboxing",
   "taichi",
+  "kendo",
+  "luchador",
 ] as const;
 /** 異種格闘技のバックボーン（格闘家ではない人たち） */
 export const CROSSOVER_STYLES = [
@@ -56,6 +59,10 @@ export const CROSSOVER_STYLES = [
   "stuntman",
   "salaryman",
   "bubbletea",
+  "firefighter",
+  "dj",
+  "investor",
+  "dino",
 ] as const;
 export const STYLE_IDS = [...MARTIAL_STYLES, ...CROSSOVER_STYLES] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
@@ -121,12 +128,16 @@ export type MoveClass = "strike" | "grab" | "guard";
  */
 export type GuardKind = "block" | "dodge" | "counter" | "catch" | "focus" | "vanish";
 
-/** 技が決まったときに付く強化・弱体。to = self は自分、foe は相手。turns は続く攻防の数（次の攻防から数える） */
+/**
+ * 技が決まったときに付く強化・弱体。to = self は自分、foe は相手。turns は続く攻防の数（次の攻防から数える）。
+ * stack = 続いているうちに重ねると、残りが延びて少しずつ大きくなる（投資家の積み立て。上限あり）
+ */
 export interface FxSpec {
   to: "self" | "foe";
   stat: StatKey;
   amount: number;
   turns: number;
+  stack?: boolean;
 }
 
 /** 続いている強化・弱体。amount が正なら強化、負なら弱体。left は残りの攻防の数 */
@@ -174,6 +185,10 @@ export interface Technique {
   sure?: boolean;
   /** 前の攻防で自分が守りの技を出していたら（身を隠していたら）、威力 +ambush（忍者の忍び足） */
   ambush?: number;
+  /** 前の攻防で自分の見せ技（perform）が決まっていたら、威力 +drop（DJ のビートドロップ） */
+  drop?: number;
+  /** ブロックの上から当たる分（省くと CHIP）。小さいほど固い（消防士の防火服） */
+  chip?: number;
 }
 
 export interface StyleDef {
@@ -183,10 +198,11 @@ export interface StyleDef {
   grip: number;
   /**
    * 受けるダメージの倍率（省くと 1）。ロボットは打撃にかたいが組みに弱く、水泳選手は組まれてもぬるっと抜け、
-   * スタントマンは受け身で投げのダメージを減らす。guarding は守りの技を出しているときに受ける分（トゥクトゥク運転手は止まると弱い）
+   * スタントマンは受け身で投げのダメージを減らす。消防士はどちらにもかたく、恐竜の着ぐるみは厚い着ぐるみで打撃に強い。
+   * guarding は守りの技を出しているときに受ける分（トゥクトゥク運転手は止まると弱い）
    */
   taken?: { strike?: number; grab?: number; guarding?: number };
-  /** 疲れの倍率（省くと 1）。サラリーマンは残業で鍛えたので疲れにくい */
+  /** 疲れの倍率（省くと 1）。サラリーマンは残業で鍛えたので、消防士は訓練で疲れにくく、恐竜の着ぐるみは暑くて疲れやすい */
   fatigue?: number;
   /** おすすめの振り分け（キャラ作りで選んだときのはじめの値・コンピュータの目安） */
   build: FighterStats;
@@ -196,7 +212,9 @@ export interface StyleDef {
 const POS = { S: "standing", C: "clinch", G: "ground" } as const satisfies Record<string, Position>;
 type PosCode = keyof typeof POS;
 const where = (codes: string): Position[] => [...codes].map((c) => POS[c as PosCode]);
-type Extra = Partial<Pick<Technique, "heal" | "uses" | "fx" | "chain" | "wild" | "encore" | "swap" | "read" | "sure" | "ambush">>;
+type Extra = Partial<
+  Pick<Technique, "heal" | "uses" | "fx" | "chain" | "wild" | "encore" | "swap" | "read" | "sure" | "ambush" | "drop" | "chip">
+>;
 
 /** 技を短く書くための道具。where は "SCG"（立ち・組み合い・寝技）の組み合わせ、to は 1 文字。extra は特別な効果 */
 const strike = (
@@ -229,7 +247,13 @@ const guard = (
 ): Technique => ({ id, kind, cls: "guard", guard: type, power, quick, where: where(at), ...(to && { to: POS[to] }), ...extra });
 /** ため（回復・強化・弱体）の技。どの位置でも使える */
 const focus = (id: string, kind: ActionKind, extra: Extra): Technique => guard(id, kind, "focus", 0, 0, "SCG", undefined, extra);
-const self = (stat: StatKey, amount: number, turns: number): FxSpec => ({ to: "self", stat, amount, turns });
+const self = (stat: StatKey, amount: number, turns: number, stack = false): FxSpec => ({
+  to: "self",
+  stat,
+  amount,
+  turns,
+  ...(stack && { stack }),
+});
 const foe = (stat: StatKey, amount: number, turns: number): FxSpec => ({ to: "foe", stat, amount, turns });
 
 const stats = (power: number, guardValue: number, speed: number, stamina: number): FighterStats => ({
@@ -241,8 +265,8 @@ const stats = (power: number, guardValue: number, speed: number, stamina: number
 
 /**
  * バックボーンごとの得意さと技。技の名前（文言）は画面側の i18n/games/fight.ts にある。
- * 打撃系（ボクシング・空手・テコンドー・カポエラ・キックボクシング）は立ちで強く、組み系（ムエタイの首相撲・柔道・相撲・太極拳）は
- * 組み合いで、寝技系（柔術・レスリング）は寝技で強い。総合格闘技はどこでも平均的。
+ * 打撃系（ボクシング・空手・テコンドー・カポエラ・キックボクシング・剣道）は立ちで強く、組み系（ムエタイの首相撲・柔道・相撲・太極拳・
+ * ルチャ・リブレ）は組み合いで、寝技系（柔術・レスリング）は寝技で強い。総合格闘技はどこでも平均的。
  * 異種格闘技の人たちは、格闘技の技の代わりに職業の道具や得意なことで戦う（回復・強化・弱体・読み・消える など）
  */
 export const STYLES: Record<StyleId, StyleDef> = {
@@ -303,12 +327,12 @@ export const STYLES: Record<StyleId, StyleDef> = {
     ],
   },
   judo: {
-    aff: { standing: 1.04, clinch: 1.38, ground: 1.23 },
+    aff: { standing: 1.08, clinch: 1.38, ground: 1.23 },
     grip: 3,
     build: stats(6, 6, 3, 5),
     moves: [
       grab("seoi", "throw", 17, 0, "SC", "G"),
-      grab("osoto", "throw", 15, 1, "C", "G"),
+      grab("osoto", "throw", 16, 1, "C", "G"),
       grab("kumite", "clinch", 5, 1, "S", "C"),
       strike("tsukihanashi", "push", 7, 1, "SCG", "S"),
       grab("kesa", "submission", 15, 0, "G"),
@@ -361,7 +385,7 @@ export const STYLES: Record<StyleId, StyleDef> = {
     grip: 3.5,
     build: stats(6, 4, 4, 6),
     moves: [
-      grab("tackle", "takedown", 12, 0, "SC", "G"),
+      grab("tackle", "takedown", 13, 0, "SC", "G"),
       grab("suplex", "throw", 17, -1, "C", "G"),
       guard("sprawl", "counter", "catch", 8, 0, "SC", "S"),
       grab("pin", "submission", 14, 0, "G"),
@@ -410,6 +434,35 @@ export const STYLES: Record<StyleId, StyleDef> = {
       guard("suishu", "counter", "catch", 9, 0, "SCG"),
       guard("unshu", "block", "block", 6, 0, "SCG"),
       guard("kinkei", "dodge", "dodge", 5, 1, "SC", "S"),
+    ],
+  },
+  // 竹刀の間合い。立ちの打ちが速く強いが、寝技では突きしか届かない。打ったあとの残心で次の打ちを強くする
+  kendo: {
+    aff: { standing: 1.27, clinch: 1.12, ground: 0.78 },
+    grip: 1,
+    build: stats(6, 4, 6, 4),
+    moves: [
+      strike("men", "swing", 18, -1, "S"),
+      strike("kote", "swing", 9, 2, "SC"),
+      strike("do", "swing", 14, 0, "SC"),
+      strike("tsuki", "straight", 13, 1, "SCG", "S"),
+      grab("tsubazeriai", "clinch", 6, 0, "SC", "C"),
+      guard("shinaiuke", "block", "block", 5, 0, "SCG"),
+      focus("zanshin", "perform", { fx: [self("power", 3, 3)] }),
+    ],
+  },
+  // 派手な空中技と、組みの強さ。ロープワークで速くかわし、観客をあおって攻撃を上げる
+  luchador: {
+    aff: { standing: 1.15, clinch: 1.1, ground: 0.92 },
+    grip: 3,
+    build: stats(5, 4, 6, 5),
+    moves: [
+      strike("chop", "hook", 13, 0, "SCG"),
+      strike("dropkick", "kick_high", 17, -1, "S"),
+      grab("tope", "takedown", 13, 1, "S", "G"),
+      grab("huracanrana", "throw", 16, 0, "SC", "G"),
+      guard("ropework", "dodge", "dodge", 2, 3, "SCG", "S"),
+      focus("crowd", "perform", { fx: [self("power", 4, 2)] }),
     ],
   },
   // 読みと反応の速さ。読みは相手の直前の技に強い形になり、コンボは当て続けるほど重い
@@ -608,6 +661,68 @@ export const STYLES: Record<StyleId, StyleDef> = {
       focus("shaker", "perform", { fx: [self("power", 3, 3)] }),
     ],
   },
+  // 鍛えた体と防火服。打撃にも組み技にもかたく、疲れにくい。防火服の上からはほとんど通らない。放水で相手の足を止め、ひと息（2 回）で整える
+  firefighter: {
+    aff: { standing: 1.05, clinch: 1.08, ground: 1.0 },
+    grip: 2,
+    taken: { strike: 0.95, grab: 0.95 },
+    fatigue: 0.9,
+    build: stats(5, 5, 4, 6),
+    moves: [
+      strike("housui", "projectile", 9, 1, "SC", undefined, { fx: [foe("speed", -2, 2)] }),
+      strike("kyujo", "push", 12, 0, "SCG", "S"),
+      grab("carry", "throw", 15, -1, "SC", "G"),
+      grab("hinan", "push", 13, 0, "C", "S"),
+      guard("boukafuku", "block", "block", 4, 0, "SCG", undefined, { chip: 0.08 }),
+      focus("hitoiki", "heal", { heal: 14, uses: 2 }),
+    ],
+  },
+  // 音で場を動かす。スクラッチで相手を遅くし、フロアを沸かして攻撃を上げ、見せ技を決めた次のビートドロップが重い
+  dj: {
+    aff: { standing: 1.2, clinch: 1.05, ground: 0.9 },
+    grip: 1,
+    build: stats(5, 4, 6, 5),
+    moves: [
+      strike("fader", "jab", 8, 2, "SC"),
+      strike("beatdrop", "straight", 14, 0, "SCG", undefined, { drop: 9 }),
+      grab("hightouch", "jab", 9, 1, "SC"),
+      guard("step", "dodge", "dodge", 4, 1, "SCG", "S"),
+      guard("headphone", "block", "block", 4, 0, "SCG"),
+      focus("scratch", "perform", { fx: [foe("speed", -3, 2)] }),
+      focus("floor", "perform", { fx: [self("power", 3, 3)] }),
+    ],
+  },
+  // こつこつ型。積み立ては重ねるほど防御が長く続いて大きくなり、空売りで相手の攻撃を下げ、配当（2 回）で回復する。
+  // 電卓で守りのすきを計算して崩す（組みの仲間）
+  investor: {
+    aff: { standing: 1.15, clinch: 1.0, ground: 0.95 },
+    grip: 1,
+    build: stats(5, 4, 6, 5),
+    moves: [
+      strike("coin", "projectile", 12, 1, "SCG"),
+      grab("dentaku", "swing", 12, 0, "SC"),
+      guard("sonkiri", "dodge", "dodge", 4, 3, "SCG", "S"),
+      focus("tsumitate", "perform", { fx: [self("guard", 2, 3, true)] }),
+      focus("karauri", "perform", { fx: [foe("power", -3, 3)] }),
+      focus("haitou", "heal", { heal: 12, uses: 2 }),
+    ],
+  },
+  // 厚い着ぐるみで打撃に強いが、暑くて疲れやすい。しっぽの大振りと、のしかかり。ガオーで相手をひるませる
+  dino: {
+    aff: { standing: 1.0, clinch: 1.15, ground: 1.1 },
+    grip: 2,
+    taken: { strike: 0.92 },
+    fatigue: 1.5,
+    build: stats(6, 5, 3, 6),
+    moves: [
+      strike("shippo", "swing", 18, -2, "SC"),
+      strike("pesh", "swing", 9, 1, "SCG"),
+      grab("kapu", "clinch", 7, 0, "SC", "C"),
+      grab("noshikakari", "takedown", 14, -1, "SCG", "G"),
+      guard("mofu", "block", "block", 5, 0, "SCG"),
+      focus("gao", "perform", { fx: [foe("power", -3, 3)] }),
+    ],
+  },
 };
 
 /** バックボーンの技を名前で引く。なければ null */
@@ -688,6 +803,12 @@ export function techniqueNow(
 /** 身を隠してからの技（忍び足）の、今の上乗せ。前の攻防で自分が守りの技を出していたら ambush、でなければ 0 */
 export function ambushBonus(tech: Technique, history: readonly Exchange[], fighters: readonly (Fighter | null)[], seat: Seat): number {
   return tech.ambush && classIn(history.at(-1), fighters, seat) === "guard" ? tech.ambush : 0;
+}
+
+/** 見せ技の次の技（ビートドロップ）の、今の上乗せ。前の攻防で自分の見せ技（perform）が決まっていたら drop、でなければ 0 */
+export function dropBonus(tech: Technique, history: readonly Exchange[], seat: Seat): number {
+  if (!tech.drop) return 0;
+  return history.at(-1)?.strikes?.some((x) => x.by === seat && x.kind === "perform" && x.result === "hit") ? tech.drop : 0;
 }
 
 /** 続けるほど強い技の、今の回数（前の攻防から数える） */
@@ -828,6 +949,9 @@ const WILD_MIN = 0.4;
 const WILD_RANGE = 1.2;
 /** 体力が少ないほど強い技（アンコール）の、体力 0 のときの上乗せ */
 const ENCORE = 1;
+/** 重ねると大きくなる強化（積み立て）の、大きさと残りの上限 */
+const STACK_MAX = 4;
+const STACK_TURNS = 5;
 /** 1 回の攻防で使う運の数 */
 const LUCK_PER_EXCHANGE = 6;
 
@@ -844,14 +968,18 @@ const takenMul = (def: FighterStats, fresh: number, isGrab: boolean) =>
 
 /**
  * 強化・弱体を 1 つ足す。同じ人・同じパラメータ・同じ向きは重ねず、大きい方・長い方にそろえる
- * （逆向きどうしは別々に続き、足し合わせて効く）
+ * （逆向きどうしは別々に続き、足し合わせて効く）。
+ * stack なら（積み立て）、続いているうちに重ねると 1 ずつ大きくなり（STACK_MAX まで）、残りも足し合わせて延びる（STACK_TURNS まで）
  */
-export function addEffect(list: Effect[], e: Effect): Effect[] {
+export function addEffect(list: Effect[], e: Effect, stack = false): Effect[] {
   const i = list.findIndex((x) => x.who === e.who && x.stat === e.stat && Math.sign(x.amount) === Math.sign(e.amount));
   if (i < 0) return [...list, e];
   const old = list[i]!;
-  const amount = Math.sign(e.amount) * Math.max(Math.abs(old.amount), Math.abs(e.amount));
-  return list.map((x, j) => (j === i ? { ...x, amount, left: Math.max(old.left, e.left) } : x));
+  const sign = Math.sign(e.amount);
+  const [amount, left] = stack
+    ? [sign * Math.min(STACK_MAX, Math.max(Math.abs(old.amount) + 1, Math.abs(e.amount))), Math.min(STACK_TURNS, old.left + e.left)]
+    : [sign * Math.max(Math.abs(old.amount), Math.abs(e.amount)), Math.max(old.left, e.left)];
+  return list.map((x, j) => (j === i ? { ...x, amount, left } : x));
 }
 
 /** 1 回の攻防を決めるのに要るもの */
@@ -880,10 +1008,14 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
     style: b.fighters[s].style,
     stats: boostedStats(b.fighters[s].stats, fxBefore, s),
   })) as [Fighter, Fighter];
-  /** 今の場面での技。読みは形を変え、続けるほど強い技・威力に幅のある技・アンコールは威力を変える */
+  /** 今の場面での技。読みは形を変え、続けるほど強い技・身を隠した次の技・見せ技の次の技・威力に幅のある技・アンコールは威力を変える */
   const prepare = (s: Seat): Technique => {
     const t = techniqueNow(b.fighters, history, s, acts[s])!;
-    let power = t.power + (t.chain ? t.chain.per * chainCount(t, history, s) : 0) + ambushBonus(t, history, b.fighters, s);
+    let power =
+      t.power +
+      (t.chain ? t.chain.per * chainCount(t, history, s) : 0) +
+      ambushBonus(t, history, b.fighters, s) +
+      dropBonus(t, history, s);
     if (t.wild) power *= WILD_MIN + WILD_RANGE * luck[4 + s]!;
     if (t.encore) power *= 1 + ENCORE * (1 - b.hp[s] / MAX_HP);
     return power === t.power ? t : { ...t, power };
@@ -898,7 +1030,7 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
   let ko: Seat | null = null;
   let moved: Position | null = null;
 
-  // 疲れにくいバックボーン（サラリーマン）は、攻防の回数を少なく数える
+  // 疲れにくいバックボーン（サラリーマン・消防士）は攻防の回数を少なく、疲れやすいバックボーン（恐竜の着ぐるみ）は多く数える
   const fresh = (s: Seat) => freshness(fighters[s].stats.stamina, t * (STYLES[fighters[s].style].fatigue ?? 1));
   const speedOf = (s: Seat) => fighters[s].stats.speed * fresh(s) + techs[s].quick + SPEED_LUCK * (luck[s]! - 0.5);
   const gripOf = (s: Seat) => {
@@ -997,7 +1129,7 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
     } else if (a.cls === "strike") {
       switch (d.guard!) {
         case "block":
-          record(att, "blocked", damageOf(att, a.power, CHIP, false));
+          record(att, "blocked", damageOf(att, a.power, d.chip ?? CHIP, false));
           answer(def, a, false);
           break;
         case "dodge":
@@ -1066,8 +1198,10 @@ export function resolve(b: Bout, acts: [string, string], luck: readonly number[]
       }
       for (const spec of tech.fx ?? []) {
         const who = spec.to === "self" ? s : other(s);
-        fx = addEffect(fx, { who, stat: spec.stat, amount: spec.amount, left: spec.turns });
-        changed.push({ who, stat: spec.stat, amount: spec.amount });
+        fx = addEffect(fx, { who, stat: spec.stat, amount: spec.amount, left: spec.turns }, spec.stack);
+        // 重ねて大きくなる強化は、重ねたあとの大きさを記録する
+        const now = spec.stack ? fx.find((e) => e.who === who && e.stat === spec.stat && Math.sign(e.amount) === Math.sign(spec.amount)) : undefined;
+        changed.push({ who, stat: spec.stat, amount: now?.amount ?? spec.amount });
       }
       if (changed.length > 0) x.effects = changed;
     }
@@ -1109,6 +1243,8 @@ const BOT_POSITION = 18;
 const BOT_KO = 25;
 /** 強化・弱体 1 ポイントが 1 攻防あたりダメージ何点ぶんか */
 const BOT_FX: Record<StatKey, number> = { power: 0.6, guard: 0.6, speed: 0.7, stamina: 0.3 };
+/** 見せ技を決めて、次の攻防の技（ビートドロップ）を重くしておく値打ち（上乗せの威力 1 あたり、ダメージ何点ぶんか） */
+const BOT_DROP = 0.6;
 /** 回数に限りのある技を使う重み（残りの攻防が多いほど、体力に余裕があるほど、取っておく値打ちがある） */
 const BOT_SAVE = 6;
 /** 1 回の攻防の読み合いを解くくり返しの数 */
@@ -1193,7 +1329,7 @@ export function equilibrium(payoff: number[][], iterations = BOT_ITERATIONS): [n
 /**
  * 技を選ぶ。まず 1 回の攻防を「2 人が同時に選ぶ読み合い」とみて、自分の得（与えたダメージ − 受けたダメージ ＋ 回復
  * ＋ 得意な位置に持ち込めたか ＋ 強化・弱体 ＋ KO）を全部の組み合わせで出し、つり合いの割合を求める。
- * 回数に限りのある技（回復・消える）は、残りの攻防が多いほど取っておく。
+ * 回数に限りのある技（回復・消える）は、残りの攻防が多いほど取っておく。次の攻防の技を重くする見せ技（DJ）は、その分も見込む。
  * そのうえで、相手がこれまでに出した技の種類（同じ位置での記録）に合わせて、勝ちやすい技へ少し寄せる
  */
 function botPick(v: FightView, seat: Seat, rng: Rng): string {
@@ -1214,6 +1350,11 @@ function botPick(v: FightView, seat: Seat, rng: Rng): string {
   /** 回数に限りのある技を使う重み */
   const save = (tech: Technique, s: Seat) =>
     tech.uses === undefined ? 0 : (BOT_SAVE * after * v.hp[s]) / ((EXCHANGES - 1) * MAX_HP);
+  /** s の見せ技が決まり、次の攻防で重くなる技（ビートドロップ）を出せるなら、その上乗せの値打ち */
+  const dropNext = (s: Seat, ex: Exchange) =>
+    after > 0 && ex.strikes.some((x) => x.by === s && x.kind === "perform" && x.result === "hit")
+      ? BOT_DROP * Math.max(0, ...usableMoves(fighters[s].style, ex.position).map((m) => m.drop ?? 0))
+      : 0;
   const mine = availableMoves(fighters[seat].style, v.position, history, seat);
   const theirs = availableMoves(fighters[opp].style, v.position, history, opp);
 
@@ -1223,7 +1364,15 @@ function botPick(v: FightView, seat: Seat, rng: Rng): string {
       const ex = resolve(bout, acts, NO_LUCK, firstPicker(v.exchange));
       const dealt = v.hp[opp] - ex.hp[opp];
       const lost = v.hp[seat] - ex.hp[seat];
-      let value = dealt - lost + BOT_POSITION * left * (edge(ex.position) - edge(v.position)) + fxWorth(ex.fx) - save(m, seat) + save(o, opp);
+      let value =
+        dealt -
+        lost +
+        BOT_POSITION * left * (edge(ex.position) - edge(v.position)) +
+        fxWorth(ex.fx) +
+        dropNext(seat, ex) -
+        dropNext(opp, ex) -
+        save(m, seat) +
+        save(o, opp);
       if (ex.ko === opp) value += BOT_KO;
       else if (ex.ko === seat) value -= BOT_KO;
       else if (lastOne) value += BOT_KO * (lead(ex.hp) - lead(v.hp));

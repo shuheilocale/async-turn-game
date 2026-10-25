@@ -8,6 +8,7 @@ import {
   botBuild,
   chainCount,
   CROSSOVER_STYLES,
+  dropBonus,
   EXCHANGES,
   fight,
   firstPicker,
@@ -132,10 +133,12 @@ const record = (acts: [string, string], extra: Partial<Exchange> = {}): Exchange
 
 describe("fight", () => {
   describe("バックボーンと技", () => {
-    it("バックボーンは 25 種類（格闘技 12・異種格闘技 13）で、それぞれ技が 6〜7 個。技の名前（id）はバックボーンの中で重ならない", () => {
-      expect(STYLE_IDS).toHaveLength(25);
-      expect(MARTIAL_STYLES).toHaveLength(12);
-      expect(CROSSOVER_STYLES).toHaveLength(13);
+    it("バックボーンは 31 種類（格闘技 14・異種格闘技 17）で、それぞれ技が 6〜7 個。技の名前（id）はバックボーンの中で重ならない", () => {
+      expect(STYLE_IDS).toHaveLength(31);
+      expect(MARTIAL_STYLES).toHaveLength(14);
+      expect(CROSSOVER_STYLES).toHaveLength(17);
+      for (const style of ["kendo", "luchador"] as const) expect(MARTIAL_STYLES).toContain(style);
+      for (const style of ["firefighter", "dj", "investor", "dino"] as const) expect(CROSSOVER_STYLES).toContain(style);
       expect([...STYLE_IDS]).toEqual([...MARTIAL_STYLES, ...CROSSOVER_STYLES]);
       expect(MARTIAL_STYLES).toContain("kickboxing");
       expect(MARTIAL_STYLES).toContain("taichi");
@@ -191,6 +194,34 @@ describe("fight", () => {
       expect(techniqueOf("salaryman", "kaban")?.guard).toBe("block");
       expect(techniqueOf("bubbletea", "straw")?.kind).toBe("swing");
       expect(techniqueOf("bubbletea", "milktea")?.kind).toBe("heal");
+    });
+
+    it("剣道家・ルチャドール・消防士・DJ・投資家・恐竜の着ぐるみの技は、3D の舞台と決めた動きで出る", () => {
+      const kinds: Record<string, Record<string, string>> = {
+        kendo: { men: "swing", kote: "swing", do: "swing", tsuki: "straight", tsubazeriai: "clinch", shinaiuke: "block", zanshin: "perform" },
+        luchador: { chop: "hook", dropkick: "kick_high", tope: "takedown", huracanrana: "throw", ropework: "dodge", crowd: "perform" },
+        firefighter: { housui: "projectile", carry: "throw", boukafuku: "block", kyujo: "push", hitoiki: "heal" },
+        dj: { scratch: "perform", beatdrop: "straight", floor: "perform", step: "dodge", headphone: "block", hightouch: "jab" },
+        investor: { coin: "projectile", tsumitate: "perform", karauri: "perform", sonkiri: "dodge", haitou: "heal", dentaku: "swing" },
+        dino: { shippo: "swing", kapu: "clinch", noshikakari: "takedown", gao: "perform", mofu: "block" },
+      };
+      for (const [style, moves] of Object.entries(kinds)) {
+        for (const [id, kind] of Object.entries(moves)) expect(techniqueOf(style as StyleId, id)?.kind, `${style} ${id}`).toBe(kind);
+      }
+      // ためは perform・heal（打撃を少しくらいながらでも決まる）
+      for (const [style, id] of [
+        ["kendo", "zanshin"],
+        ["luchador", "crowd"],
+        ["firefighter", "hitoiki"],
+        ["dj", "scratch"],
+        ["dj", "floor"],
+        ["investor", "tsumitate"],
+        ["investor", "karauri"],
+        ["investor", "haitou"],
+        ["dino", "gao"],
+      ] as const) {
+        expect(techniqueOf(style, id)?.guard, `${style} ${id}`).toBe("focus");
+      }
     });
 
     it("回復・回数に限りのある技・強化と弱体は、上限と続く長さが決まっている（強すぎない）", () => {
@@ -517,6 +548,119 @@ describe("fight", () => {
     });
   });
 
+  describe("剣道家・ルチャドール・消防士・DJ・投資家・恐竜の着ぐるみ", () => {
+    const mma = f("mma");
+
+    it("剣道家は立ちで強く、寝技に弱い。残心で攻撃が上がる", () => {
+      const tsuki = (pos: Position) => taken(bout(f("kendo"), mma, "tsuki", "tackle", { position: pos }), 1);
+      expect(tsuki("standing")).toBeGreaterThan(tsuki("ground") * 1.5);
+      expect(STYLES.kendo.aff.standing).toBeGreaterThan(STYLES.mma.aff.standing);
+      expect(STYLES.kendo.aff.ground).toBeLessThan(STYLES.mma.aff.ground);
+      // 寝技で使える技は少ない（竹刀の届く突きと、受けと、残心だけ）
+      expect(usableMoves("kendo", "ground").map((m) => m.id).sort()).toEqual(["shinaiuke", "tsuki", "zanshin"]);
+      expect(bout(f("kendo"), mma, "zanshin", "guard").fx).toContainEqual({ who: 0, stat: "power", amount: 3, left: 3 });
+      // 小手は速く、面は大技
+      expect(techniqueOf("kendo", "kote")!.quick).toBeGreaterThanOrEqual(2);
+      expect(techniqueOf("kendo", "men")!.power).toBe(Math.max(...STYLES.kendo.moves.map((m) => m.power)));
+    });
+
+    it("ルチャドールは組みに強い（組み合いで競り勝ちやすい）。観客をあおると攻撃が上がる", () => {
+      // 同じパラメータで、組みどうしになったとき
+      const scramble = (style: StyleId, act: string) => resultOf(bout(f(style), mma, act, "tackle"), 0);
+      expect(scramble("luchador", "huracanrana")).toBe("hit");
+      expect(scramble("boxing", "clinch")).toBe("countered");
+      expect(STYLES.luchador.grip).toBeGreaterThanOrEqual(3);
+      expect(bout(f("luchador"), mma, "crowd", "guard").fx).toContainEqual({ who: 0, stat: "power", amount: 4, left: 2 });
+      // ロープワークは速いかわしで、立ちに戻る
+      const rope = bout(f("luchador"), mma, "ropework", "pound", { position: "ground" });
+      expect(resultOf(rope, 1)).toBe("dodged");
+      expect(rope.position).toBe("standing");
+    });
+
+    it("消防士は打撃にも組み技にもかたく、疲れにくい。防火服はブロックよりさらに通さない", () => {
+      const fire = f("firefighter");
+      // 組みに来たところに打撃をくらう・守っているところを組まれる（受ける側のパラメータは同じ）
+      expect(taken(bout(mma, fire, "straight", "carry"), 1)).toBeLessThan(taken(bout(mma, f("karate"), "straight", "ashibarai"), 1));
+      expect(taken(bout(mma, fire, "tackle", "boukafuku"), 1)).toBeLessThan(taken(bout(mma, f("karate"), "tackle", "uke"), 1));
+      // 防火服の上からは、ほとんど通らない
+      const heavy = f("mma", stats(8, 4, 4, 4));
+      expect(taken(bout(heavy, fire, "highkick", "boukafuku"), 1)).toBeLessThan(taken(bout(heavy, f("nurse"), "highkick", "uketome"), 1) / 2);
+      expect(resultOf(bout(heavy, fire, "highkick", "boukafuku"), 0)).toBe("blocked");
+      expect(STYLES.firefighter.fatigue).toBeLessThan(1);
+      // 放水が当たると相手のすばやさが下がる。ひと息で回復（回数に限り）
+      expect(bout(fire, mma, "housui", "tackle").fx).toContainEqual({ who: 1, stat: "speed", amount: -2, left: 2 });
+      expect(bout(fire, mma, "hitoiki", "guard", { hp: [50, MAX_HP] }).hp[0]).toBe(50 + techniqueOf("firefighter", "hitoiki")!.heal!);
+      expect(techniqueOf("firefighter", "hitoiki")!.uses).toBe(2);
+      // 救助の体当たりで押し離す
+      expect(bout(fire, mma, "kyujo", "choke", { position: "ground" }).position).toBe("standing");
+    });
+
+    it("DJ のビートドロップは、前の攻防で見せ技（スクラッチ・フロアを沸かす）を決めていると重い", () => {
+      const dj = f("dj");
+      const plain = taken(bout(dj, mma, "beatdrop", "tackle"), 1);
+      const scratched = bout(dj, mma, "scratch", "guard");
+      expect(resultOf(scratched, 0)).toBe("hit");
+      expect(scratched.fx).toContainEqual({ who: 1, stat: "speed", amount: -3, left: 2 });
+      expect(dropBonus(techniqueOf("dj", "beatdrop")!, [scratched], 0)).toBeGreaterThan(0);
+      // スクラッチで遅くなった分を除いて比べるため、相手の弱体は外しておく
+      const prepared = { ...scratched, fx: [] };
+      expect(taken(bout(dj, mma, "beatdrop", "tackle", { history: [prepared] }), 1)).toBeGreaterThan(plain * 1.4);
+      // 組まれて見せ技が決まらなかったときは、ふつう
+      const grabbed = bout(dj, mma, "floor", "tackle");
+      expect(resultOf(grabbed, 0)).toBe("whiff");
+      expect(dropBonus(techniqueOf("dj", "beatdrop")!, [grabbed], 0)).toBe(0);
+      // フロアを沸かすと攻撃が上がる。ハイタッチは守っている相手をつかまえる（組み）
+      expect(bout(dj, mma, "floor", "guard").fx).toContainEqual({ who: 0, stat: "power", amount: 3, left: 3 });
+      expect(techniqueOf("dj", "hightouch")!.cls).toBe("grab");
+      expect(resultOf(bout(dj, mma, "hightouch", "guard"), 0)).toBe("hit");
+    });
+
+    it("投資家の積み立ては、続いているうちに重ねると長く続き、少しずつ大きくなる（上限あり）", () => {
+      const inv = f("investor");
+      let s = built(inv, mma);
+      s = exchange(s, "tsumitate", "guard");
+      expect(activeEffects(s.history)).toEqual([{ who: 0, stat: "guard", amount: 2, left: 3 }]);
+      // 残り 2 のところに重ねると 2 + 3 で 5 攻防になり、防御も 1 上がる
+      s = exchange(s, "tsumitate", "guard");
+      expect(activeEffects(s.history)).toEqual([{ who: 0, stat: "guard", amount: 3, left: 5 }]);
+      s = exchange(s, "tsumitate", "guard");
+      expect(activeEffects(s.history)).toEqual([{ who: 0, stat: "guard", amount: 4, left: 5 }]);
+      expect(s.history.at(-1)!.strikes.find((x) => x.by === 0)!.effects).toEqual([{ who: 0, stat: "guard", amount: 4 }]);
+      for (let i = 0; i < 3; i++) s = exchange(s, "tsumitate", "guard");
+      const [e] = activeEffects(s.history);
+      expect(e!.amount).toBeLessThanOrEqual(4);
+      expect(e!.left).toBeLessThanOrEqual(5);
+      // ふつうの強化・弱体は重ねても長い方にそろうだけ
+      expect(addEffect([{ who: 0, stat: "guard", amount: 2, left: 1 }], { who: 0, stat: "guard", amount: 2, left: 2 })).toEqual([
+        { who: 0, stat: "guard", amount: 2, left: 2 },
+      ]);
+      // 空売りで相手の攻撃が下がる。配当で回復（回数に限り）。電卓は守りを崩す（組み）
+      expect(bout(inv, mma, "karauri", "guard").fx).toContainEqual({ who: 1, stat: "power", amount: -3, left: 3 });
+      expect(bout(inv, mma, "haitou", "guard", { hp: [50, MAX_HP] }).hp[0]).toBe(50 + techniqueOf("investor", "haitou")!.heal!);
+      expect(techniqueOf("investor", "haitou")!.uses).toBe(2);
+      expect(techniqueOf("investor", "dentaku")!.cls).toBe("grab");
+    });
+
+    it("恐竜の着ぐるみは打撃に強いが、暑くて疲れやすい。ガオーで相手の攻撃が下がる", () => {
+      const dino = f("dino");
+      expect(taken(bout(mma, dino, "straight", "kapu"), 1)).toBeLessThan(taken(bout(mma, f("karate"), "straight", "ashibarai"), 1) * 0.95);
+      // 組み技はふつう
+      expect(taken(bout(mma, dino, "tackle", "mofu"), 1)).toBe(taken(bout(mma, f("karate"), "tackle", "uke"), 1));
+      expect(STYLES.dino.fatigue).toBeGreaterThan(1);
+      /** 最後の攻防で、組みに来た相手に打撃を当てたダメージの、はじめに対する割合 */
+      const keep = (style: StyleId, actId: string) => {
+        const late = (round: number) => {
+          const s = { ...built(f(style), mma), history: Array(round).fill(null) as Exchange[] };
+          return taken(exchange(s, actId, "tackle").history.at(-1)!, 1);
+        };
+        return late(7) / late(0);
+      };
+      expect(keep("dino", "pesh")).toBeLessThan(keep("mma", "straight") - 0.05);
+      expect(bout(dino, mma, "gao", "guard").fx).toContainEqual({ who: 1, stat: "power", amount: -3, left: 3 });
+      expect(techniqueOf("dino", "shippo")!.power).toBe(Math.max(...STYLES.dino.moves.map((m) => m.power)));
+    });
+  });
+
   describe("古い対局との互換", () => {
     /** 強化・弱体と、記録の技の種類（cls）がなかったころの対局 */
     function oldGame(): FightState {
@@ -579,7 +723,7 @@ describe("fight", () => {
       expect(codeOf(() => fight.applyMove(s, build("karate", stats(5.5, 4.5, 5, 5)), 0))).toBe("fight_bad_stats");
     });
 
-    it("バックボーンは 25 種類のどれか", () => {
+    it("バックボーンは 31 種類のどれか", () => {
       const s = neutral();
       expect(codeOf(() => fight.applyMove(s, build("kungfu" as StyleId), 0))).toBe("fight_bad_style");
       for (const style of STYLE_IDS) expect(codeOf(() => fight.applyMove(s, build(style), 0)), style).toBeNull();
@@ -1026,6 +1170,8 @@ describe("fight", () => {
         ["robot", "reboot"],
         ["chef", "ajimi"],
         ["bubbletea", "milktea"],
+        ["firefighter", "hitoiki"],
+        ["investor", "haitou"],
       ] as const) {
         const full = heal(style, id, MAX_HP);
         const hurt = heal(style, id, 30);
@@ -1088,6 +1234,47 @@ describe("fight", () => {
       expect(share("salaryman", ["meishi", "kaban", "mankin", "oshiai"])).toBeGreaterThan(0.3);
       // 定時まであと少し：体力が減っても粘って打ち返す（強くなった分、相手も守るので、出す割合はあまり変わらない）
       expect(pickRate(at(f("mma"), f("salaryman"), { hp: [MAX_HP, 40] }), 1, ["teiji"])).toBeGreaterThan(0.15);
+    });
+
+    it("6 人の新しいキャラの技もそれらしく使う（剣道の打ち・ルチャの飛び技・放水・積み立て・しっぽ・ビートドロップ）", () => {
+      const share = (style: StyleId, ids: string[]) => {
+        let n = 0;
+        let all = 0;
+        STYLE_IDS.forEach((opp, i) => {
+          const end = botGame(f(style, botBuild(style, seeded(i))), f(opp, botBuild(opp, seeded(i))), seeded(300 + i));
+          for (const ex of end.history) {
+            all++;
+            if (ids.includes(ex.acts[0])) n++;
+          }
+        });
+        return n / all;
+      };
+      expect(share("kendo", ["men", "kote", "do", "tsuki"])).toBeGreaterThan(0.35);
+      expect(share("luchador", ["tope", "huracanrana"])).toBeGreaterThan(0.15);
+      expect(share("firefighter", ["housui"])).toBeGreaterThan(0.05);
+      expect(share("investor", ["tsumitate", "karauri"])).toBeGreaterThan(0.04);
+      expect(share("dino", ["shippo"])).toBeGreaterThan(0.05);
+      // DJ は見せ技（スクラッチ・フロアを沸かす）で場を作り、ビートドロップが重くなった攻防では、ふだんより多く打ち込む。
+      // 相手も重いのを読んで守るので、差は大きくない（つり合いの選び方）
+      const beat = techniqueOf("dj", "beatdrop")!;
+      const count = { all: 0, perform: 0, boosted: 0, dropBoosted: 0, drop: 0 };
+      STYLE_IDS.forEach((opp, i) => {
+        const end = botGame(f("dj", botBuild("dj", seeded(i))), f(opp, botBuild(opp, seeded(i))), seeded(300 + i));
+        end.history.forEach((ex, k) => {
+          const boosted = dropBonus(beat, end.history.slice(0, k), 0) > 0;
+          const isDrop = ex.acts[0] === "beatdrop";
+          count.all++;
+          if (ex.acts[0] === "scratch" || ex.acts[0] === "floor") count.perform++;
+          if (boosted) count.boosted++;
+          if (boosted && isDrop) count.dropBoosted++;
+          if (isDrop) count.drop++;
+        });
+      });
+      expect(count.perform / count.all).toBeGreaterThan(0.1);
+      expect(count.boosted).toBeGreaterThan(10);
+      const rateBoosted = count.dropBoosted / count.boosted;
+      const rateOther = (count.drop - count.dropBoosted) / (count.all - count.boosted);
+      expect(rateBoosted).toBeGreaterThan(rateOther);
     });
 
     it("見えていない情報は使わない（相手の伏せた技・運の列）", () => {

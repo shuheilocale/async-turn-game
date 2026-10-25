@@ -26,6 +26,7 @@ const {
   activeEffects,
   ambushBonus,
   chainCount,
+  dropBonus,
   techniqueNow,
   techniqueOf,
   usableMoves,
@@ -86,6 +87,11 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
   const canBuild = you !== null && !v.built[me];
   const [style, setStyle] = useState<StyleId | null>(null);
   const [group, setGroup] = useState<StyleGroup>("martial");
+  // スマホではバックボーンの並びの中だけをスクロールするので、タブを替えたら頭に戻す
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (list.current) list.current.scrollTop = 0;
+  }, [group]);
   const [stats, setStats] = useState<FighterStats>({ power: 5, guard: 5, speed: 5, stamina: 5 });
   /** ポイントを自分で動かしたか。動かしていなければ、バックボーンを選ぶとおすすめの振り分けにする */
   const [custom, setCustom] = useState(false);
@@ -175,6 +181,7 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
           </div>
         </div>
         <div
+          ref={list}
           id="fight-styles"
           className="fight-styles"
           role="radiogroup"
@@ -562,7 +569,12 @@ function MoveList({
         const m = techniqueNow(fighters, history, seat, base.id) ?? base;
         const left = usesLeft(base, history, seat);
         const here = usable.has(m.id) && left !== 0;
-        const tags = moveTags(t, m, { left, chain: chainCount(base, history, seat), ambush: ambushBonus(base, history, fighters, seat) });
+        const tags = moveTags(t, m, {
+          left,
+          chain: chainCount(base, history, seat),
+          ambush: ambushBonus(base, history, fighters, seat),
+          drop: dropBonus(base, history, seat),
+        });
         // 守りに回ると多くくらうバックボーン（トゥクトゥク運転手）は、守りの技にそのことを添える
         if (m.cls === "guard" && (STYLES[style].taken?.guarding ?? 1) > 1) tags.push(t("game.fight.tag.exposed"));
         const label = t(`game.fight.move.${style}.${m.id}`);
@@ -630,13 +642,20 @@ function MoveList({
 
 /**
  * 技の小さな札：速い・遅い、決まったあとの位置、回復・強化・弱体、残りの回数、特別な効果。
- * left は残りの回数（限りがなければ null）、chain は続けるほど強い技の今の回数、ambush は身を隠した次の技の今の上乗せ
+ * left は残りの回数（限りがなければ null）、chain は続けるほど強い技の今の回数、ambush は身を隠した次の技の今の上乗せ、
+ * drop は見せ技の次の技（ビートドロップ）の今の上乗せ
  */
-function moveTags(t: T, m: Technique, { left, chain, ambush }: { left: number | null; chain: number; ambush: number }): string[] {
+function moveTags(
+  t: T,
+  m: Technique,
+  { left, chain, ambush, drop }: { left: number | null; chain: number; ambush: number; drop: number },
+): string[] {
   const tags: string[] = [];
   if (m.read) tags.push(t("game.fight.tag.read", { cls: t(`game.fight.cls.${m.cls}`) }));
   if (m.sure) tags.push(t("game.fight.tag.sure"));
+  if (m.chip !== undefined) tags.push(t("game.fight.tag.tough"));
   if (m.ambush) tags.push(ambush > 0 ? t("game.fight.tag.ambushNow", { n: ambush }) : t("game.fight.tag.ambush"));
+  if (m.drop) tags.push(drop > 0 ? t("game.fight.tag.dropNow", { n: drop }) : t("game.fight.tag.drop"));
   if (m.quick >= 1) tags.push(t("game.fight.fast"));
   if (m.quick <= -1) tags.push(t("game.fight.slow"));
   if (m.to) tags.push(t("game.fight.toPos", { pos: t(`game.fight.pos.${m.to}`) }));
@@ -644,6 +663,7 @@ function moveTags(t: T, m: Technique, { left, chain, ambush }: { left: number | 
   for (const fx of m.fx ?? []) {
     const stat = t(`game.fight.stat.${fx.stat}`);
     tags.push(t(fx.to === "self" ? "game.fight.tag.selfUp" : "game.fight.tag.foeDown", { stat }));
+    if (fx.stack) tags.push(t("game.fight.tag.stack"));
   }
   if (m.swap) tags.push(t("game.fight.tag.swap"));
   if (m.chain) tags.push(chain > 0 ? t("game.fight.tag.chainNow", { n: chain * m.chain.per }) : t("game.fight.tag.chain"));
