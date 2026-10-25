@@ -176,6 +176,7 @@ function BuildPhase({ state, you, names, interactive, onSelect }: BoardProps) {
                 onClick={() => setGroup(g)}
               >
                 {t(`game.fight.group.${g}`)}
+                <span className="fight-group-count num">{STYLE_GROUPS[g].length}</span>
                 {style && groupOf(style) === g && <span className="fight-group-dot" aria-hidden />}
               </button>
             ))}

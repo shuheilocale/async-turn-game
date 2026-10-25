@@ -109,8 +109,10 @@
 }
 
 /* 格闘技・異種格闘技の切り替え */
+/* 2 つ目の種類があることに気づけるよう、幅いっぱいに並べて人数も出す */
 .fight-groups {
   display: flex;
+  flex: 1 1 100%;
   gap: 3px;
   padding: 3px;
   border-radius: 12px;
@@ -119,15 +121,34 @@
 
 .fight .fight-group {
   position: relative;
-  min-height: 40px;
-  padding: 4px 14px;
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 10px;
   border: none;
   border-radius: 9px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 700;
   box-shadow: none;
+}
+
+.fight-group-count {
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.fight .fight-group.on .fight-group-count {
+  background: var(--seat-color);
+  color: #fff;
 }
 
 .fight .fight-group.on {
