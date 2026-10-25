@@ -86,6 +86,101 @@ const STYLE_ART: Record<Fight.StyleId, ReactNode> = {
       <path d="M8 15v11M12 15v13M16 15v13M20 15v13M24 15v11" strokeWidth="2" />
     </>
   ),
+  // キックボクシングのすね当て（2 本のベルト）
+  kickboxing: (
+    <>
+      <path d="M11 3h10c2 0 3 1 3 3v15c0 4.5-3.5 8-8 8s-8-3.5-8-8V6c0-2 1-3 3-3z" fill="currentColor" stroke="none" />
+      <path d="M8.5 10h15M8.5 17h15" className="fight-icon-cut" strokeWidth="2" />
+    </>
+  ),
+  // 太極図
+  taichi: (
+    <>
+      <circle cx="16" cy="16" r="12" strokeWidth="2.4" />
+      <path d="M16 4a12 12 0 0 1 0 24a6 6 0 0 1 0-12a6 6 0 0 0 0-12z" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="10" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="22" r="0.6" className="fight-icon-cut" strokeWidth="2.6" />
+    </>
+  ),
+  // ゲームのコントローラ（十字キーとボタン）
+  gamer: (
+    <>
+      <path
+        d="M8 10h16c3 0 5 3 5.5 7l.5 4c.3 3-2.5 4.5-4.5 2.5L22 20H10l-3.5 3.5C4.5 25.5 1.7 24 2 21l.5-4C3 13 5 10 8 10z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path d="M9 14.5v5M6.5 17h5" className="fight-icon-cut" strokeWidth="1.8" />
+      <circle cx="21.5" cy="15.5" r="0.5" className="fight-icon-cut" strokeWidth="2.4" />
+      <circle cx="24.5" cy="18.5" r="0.5" className="fight-icon-cut" strokeWidth="2.4" />
+    </>
+  ),
+  // シルクハットと、きらめき
+  magician: (
+    <>
+      <path d="M10 7h12v15H10z" fill="currentColor" stroke="none" />
+      <path d="M4 23.5h24" strokeWidth="3" />
+      <path d="M10 18h12" className="fight-icon-cut" strokeWidth="2" />
+      <path d="M26 3v5M23.5 5.5h5" strokeWidth="1.8" />
+    </>
+  ),
+  // ばんそうこう（包帯）
+  nurse: (
+    <g transform="rotate(-40 16 16)">
+      <rect x="3" y="10.5" width="26" height="11" rx="5.5" fill="currentColor" stroke="none" />
+      <rect x="12" y="12.5" width="8" height="7" rx="1.5" className="fight-icon-cut" strokeWidth="1.6" />
+      <path d="M7 14.5v.01M7 17.5v.01M25 14.5v.01M25 17.5v.01" className="fight-icon-cut" strokeWidth="1.6" />
+    </g>
+  ),
+  // 水泳のゴーグルと、波
+  swimmer: (
+    <>
+      <circle cx="10" cy="13" r="5" strokeWidth="2.6" />
+      <circle cx="22" cy="13" r="5" strokeWidth="2.6" />
+      <path d="M15 13h2M5 13H2.5M27 13h2.5" strokeWidth="2.2" />
+      <path d="M3 25c2.5-2 5 2 7.5 0s5 2 7.5 0 5 2 7.5 0 2.5 1 3.5 0" strokeWidth="2" />
+    </>
+  ),
+  // 星と、きらめき（ステージの明かり）
+  idol: (
+    <>
+      <path d="m14 5 2.6 6 6.4.6-4.9 4.2 1.5 6.3L14 18.8l-5.6 3.3 1.5-6.3L5 11.6l6.4-.6z" fill="currentColor" stroke="none" />
+      <path d="M25 19v6M22 22h6M25 4v3M23.5 5.5h3" strokeWidth="1.8" />
+    </>
+  ),
+  // マイク
+  rapper: (
+    <>
+      <circle cx="20" cy="10" r="6" fill="currentColor" stroke="none" />
+      <path d="M16.5 7.5l7 5M17 12.5l5-5" className="fight-icon-cut" strokeWidth="1.3" />
+      <path d="M16 14 7.5 24.5" strokeWidth="4" />
+      <path d="M7 25c-2.5 2-2 5.5 2 4" strokeWidth="1.8" />
+    </>
+  ),
+  // コック帽
+  chef: (
+    <>
+      <path
+        d="M9 18c-4 0-6-3-5-6s4-4 6-3c1-3 3.5-5 6-5s5 2 6 5c2-1 5 0 6 3s-1 6-5 6z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <rect x="9" y="19.5" width="14" height="7" rx="1.5" strokeWidth="2.4" />
+      <path d="M13 18v-4M16 18v-5M19 18v-4" className="fight-icon-cut" strokeWidth="1.5" />
+    </>
+  ),
+  // ロボットの頭（アンテナと目）
+  robot: (
+    <>
+      <rect x="6" y="10" width="20" height="16" rx="3" fill="currentColor" stroke="none" />
+      <path d="M16 10V6" strokeWidth="2.2" />
+      <circle cx="16" cy="4.5" r="2" fill="currentColor" stroke="none" />
+      <path d="M3.5 15v6M28.5 15v6" strokeWidth="2.6" />
+      <circle cx="11.5" cy="16.5" r="1" className="fight-icon-cut" strokeWidth="2.6" />
+      <circle cx="20.5" cy="16.5" r="1" className="fight-icon-cut" strokeWidth="2.6" />
+      <path d="M11 21.5h10" className="fight-icon-cut" strokeWidth="1.8" />
+    </>
+  ),
 };
 
 export function StyleIcon({ style, className = "" }: { style: Fight.StyleId; className?: string }) {
@@ -96,8 +191,11 @@ export function StyleIcon({ style, className = "" }: { style: Fight.StyleId; cla
   );
 }
 
-/** 技の種類の印。打撃はこぶし、組みはつかむ手、守りは盾（かわしは曲がった矢印、カウンターは稲妻、返しは回る矢印） */
-type MoveArt = Fight.MoveClass | Fight.GuardKind;
+/**
+ * 技の種類の印。打撃はこぶし、組みはつかむ手、守りは盾（かわしは曲がった矢印、カウンターは稲妻、返しは回る矢印、
+ * ためはきらめき、回復のためはハート、消えるは煙の輪）
+ */
+type MoveArt = Fight.MoveClass | Fight.GuardKind | "heal";
 const MOVE_ART: Record<MoveArt, ReactNode> = {
   strike: (
     <>
@@ -141,12 +239,27 @@ const MOVE_ART: Record<MoveArt, ReactNode> = {
       <path d="M7 21v-4h4" strokeWidth="2.4" />
     </>
   ),
+  focus: (
+    <>
+      <path d="M12 3c.8 4.5 2.5 6.2 7 7-4.5.8-6.2 2.5-7 7-.8-4.5-2.5-6.2-7-7 4.5-.8 6.2-2.5 7-7z" fill="currentColor" stroke="none" />
+      <path d="M19 16v4M17 18h4" strokeWidth="1.6" />
+    </>
+  ),
+  heal: (
+    <path d="M12 20.5C6 16.5 3.5 13.3 3.5 10a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2c0 3.3-2.5 6.5-8.5 10.5z" fill="currentColor" stroke="none" />
+  ),
+  vanish: (
+    <>
+      <circle cx="12" cy="12" r="7.5" strokeWidth="2.2" strokeDasharray="3 3.2" />
+      <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
 export function MoveIcon({ tech, className = "" }: { tech: Fight.Technique; className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={`fight-icon ${className}`} aria-hidden>
-      {MOVE_ART[tech.guard ?? tech.cls]}
+      {MOVE_ART[tech.guard === "focus" && tech.kind === "heal" ? "heal" : (tech.guard ?? tech.cls)]}
     </svg>
   );
 }
@@ -184,6 +297,15 @@ export function PositionIcon({ position, className = "" }: { position: Fight.Pos
   return (
     <svg viewBox="0 0 32 22" className={`fight-icon ${className}`} aria-hidden>
       {POSITION_ART[position]}
+    </svg>
+  );
+}
+
+/** 続いている強化（上向き）・弱体（下向き）の小さな矢印 */
+export function FxArrow({ up, className = "" }: { up: boolean; className?: string }) {
+  return (
+    <svg viewBox="0 0 12 12" className={`fight-icon fight-fx-arrow ${className}`} aria-hidden>
+      <path d={up ? "M6 10V2.5M2.5 6 6 2.5 9.5 6" : "M6 2v7.5M2.5 6 6 9.5 9.5 6"} strokeWidth="2" />
     </svg>
   );
 }
