@@ -93,6 +93,8 @@ export interface StageStrike {
   /** 技を出した人 */
   by: 0 | 1;
   kind: ActionKind;
+  /** ルールの技の ID（例：剣道家の "men"）。同じ動きの技を描き分けるのに使う。なければ効果の付き方から推し量る */
+  act?: string;
   /** hit = 当たった、blocked = 防がれた、dodged = かわされた、countered = 返された、whiff = 空振り */
   result: "hit" | "blocked" | "dodged" | "countered" | "whiff";
   /** 与えたダメージ（表示用） */

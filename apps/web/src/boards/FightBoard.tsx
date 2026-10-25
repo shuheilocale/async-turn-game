@@ -51,8 +51,9 @@ const sumOf = (s: FighterStats) => STAT_KEYS.reduce((a, k) => a + s[k], 0);
 function toEvent(ex: Fight.Exchange, id: number): StageEvent {
   return {
     id,
-    strikes: ex.strikes.map(({ by, kind, result, damage, heal, effects }) => ({
+    strikes: ex.strikes.map(({ by, act, kind, result, damage, heal, effects }) => ({
       by,
+      act,
       kind,
       result,
       damage,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bodyOf, NEUTRAL_STATS } from "./body.ts";
 import { basePoseOf, buildExchange, distOf, type ExchangeCtx, type Position, type Side } from "./moves.ts";
 import { newPose, P } from "./pose.ts";
-import { boostsSelf, healOf, performOf, ROCKET_RETURN, SHOT_FLIGHT, shotOf, VANISH_GONE } from "./special.ts";
+import { boostsSelf, healOf, iceShot, performOf, ROCKET_RETURN, SHOT_FLIGHT, shotOf, VANISH_GONE } from "./special.ts";
 import type { ActionKind, StageEvent, StageStrike, StyleId } from "./types.ts";
 
 function ctxOf(styles: [StyleId, StyleId], position: Position = "standing"): ExchangeCtx {
@@ -321,6 +321,11 @@ describe("剣道家・ルチャドール・消防士・DJ・投資家・恐竜�
     expect(boostsSelf({ by: 0, damage: 0, result: "hit" })).toBe(true);
     expect(boostsSelf({ by: 0, damage: 0, result: "dodged" })).toBe(false);
     expect(boostsSelf(undefined)).toBe(false);
+    // 技の ID があれば、外れても見分けられる
+    expect(boostsSelf({ by: 0, damage: 0, result: "dodged", act: "floor" })).toBe(true);
+    expect(boostsSelf({ by: 0, damage: 0, result: "hit", act: "karauri" })).toBe(false);
+    expect(iceShot("bubbletea", { kind: "projectile", act: "koori" })).toBe(true);
+    expect(iceShot("bubbletea", { kind: "projectile", act: "tapioca", effects: [{ who: 1, stat: "speed", dir: -1 }] })).toBe(false);
   });
 
   it("消防士の放水は、筒先から水の線を走らせ（飛ぶものは出さない）、線が届いた瞬間に当たる。寝技でも水を出す", () => {

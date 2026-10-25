@@ -47,10 +47,11 @@ export function signatureTrack(kind: ActionKind, c: AttackCtx): Built | null {
 }
 
 /**
- * 剣道家の振る技（面・小手・胴）はどれも swing で来る。強化・弱体の付き方で見分ける：
+ * 剣道家の振る技（面・小手・胴）はどれも swing で来る。技の ID があればそれで、なければ強化・弱体の付き方で見分ける：
  * 相手の攻撃を下げる技を小手、守り・スタミナを下げる技を胴とみなし、それ以外（外れたときを含む）は面
  */
-export function kendoCutOf(s?: Pick<StageStrike, "by" | "effects">): "men" | "kote" | "do" {
+export function kendoCutOf(s?: Pick<StageStrike, "by" | "effects" | "act">): "men" | "kote" | "do" {
+  if (s?.act === "men" || s?.act === "kote" || s?.act === "do") return s.act;
   const foe = (s?.effects ?? []).filter((e) => e.who !== s!.by && e.dir < 0);
   if (foe.some((e) => e.stat === "power")) return "kote";
   if (foe.some((e) => e.stat === "guard" || e.stat === "stamina")) return "do";

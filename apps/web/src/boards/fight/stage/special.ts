@@ -59,10 +59,12 @@ export const SHOT_FLIGHT: Record<ShotKind, number> = { cards: 0.2, rocket: 0.24,
 
 /**
  * タピオカ店員の飛ばす技は 2 つ（タピオカ弾・氷多め）あり、どちらも projectile で来る。
- * 当たって強化・弱体（effects）が付いた技を「氷多め」とみなし、氷のかけらを飛ばす
+ * 技の ID があればそれで、なければ当たって強化・弱体（effects）が付いた技を「氷多め」とみなし、氷のかけらを飛ばす
  */
-export const iceShot = (style: StyleId | null, strike: Pick<StageStrike, "kind" | "effects">) =>
-  style === "bubbletea" && strike.kind === "projectile" && (strike.effects?.length ?? 0) > 0;
+export const iceShot = (style: StyleId | null, strike: Pick<StageStrike, "kind" | "effects" | "act">) =>
+  style === "bubbletea" &&
+  strike.kind === "projectile" &&
+  (strike.act !== undefined ? strike.act === "koori" : (strike.effects?.length ?? 0) > 0);
 /** ロケットパンチが腕に戻るまで */
 export const ROCKET_RETURN = 0.3;
 
@@ -71,8 +73,11 @@ export const ROCKET_RETURN = 0.3;
  * 見せる技が 2 つあるバックボーンで、どちらかを見分けるのに使う。強化・弱体が付いていなければ、
  * 当たって（hit）ダメージがないときを自分を強める技とみなす（外れた・防がれたのは相手へ向けた技）
  */
-export function boostsSelf(s?: Pick<StageStrike, "by" | "damage" | "effects" | "result">): boolean {
+export function boostsSelf(s?: Pick<StageStrike, "by" | "damage" | "effects" | "result" | "act">): boolean {
   if (!s) return false;
+  // 技の ID が分かれば、それで決める（外れたときも見分けられる）
+  if (s.act === "floor" || s.act === "tsumitate") return true;
+  if (s.act === "scratch" || s.act === "karauri") return false;
   const fx = s.effects ?? [];
   if (fx.length) return fx.every((e) => e.who === s.by && e.dir > 0);
   return s.damage <= 0 && s.result === "hit";

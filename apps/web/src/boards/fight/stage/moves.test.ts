@@ -186,6 +186,9 @@ describe("剣道家・ルチャドール・消防士・DJ・投資家・恐竜�
     expect(kendoCutOf({ by: 1, effects: [{ who: 0, stat: "stamina", dir: -1 }] })).toBe("do");
     expect(kendoCutOf({ by: 0 })).toBe("men");
     expect(kendoCutOf(undefined)).toBe("men");
+    // 技の ID があれば、外れて効果が付かなくてもその技で描く
+    expect(kendoCutOf({ by: 0, act: "kote" })).toBe("kote");
+    expect(kendoCutOf({ by: 0, act: "do" })).toBe("do");
     // 面は頭、小手・胴は胴に当たる
     expect(zoneOf("swing", "kendo")).toBe("head");
     expect(zoneOf("swing", "kendo", { by: 0, effects: [{ who: 1, stat: "guard", dir: -1 }] })).toBe("body");
