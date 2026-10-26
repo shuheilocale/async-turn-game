@@ -6,11 +6,10 @@ import { asLang, coopText, errorText, freeText, translator, useI18n, type T } fr
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import {
-  addFriendUrl,
   followGame,
-  isFriend,
   lineIdToken,
   lineSession,
+  officialAccountUrl,
   openInLine,
   pickAndSend,
   postToChat,
@@ -18,7 +17,7 @@ import {
 } from "../line.ts";
 import { freeNotice, inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
-import { savedFriendHintClosed, savedGames, savedNotified } from "../storage.ts";
+import { savedGames, savedNoticeHintClosed, savedNotified } from "../storage.ts";
 
 /** 相手の手を待つ間、何ミリ秒ごとに盤面を確認するか */
 const POLL_MS = 5000;
@@ -290,7 +289,7 @@ export function Play({ id }: { id: string }) {
           </section>
         )}
 
-        {view.you !== null && <FriendHint />}
+        {view.you !== null && <NoticeHint id={id} token={token} />}
 
         {message && <p className="message">{message}</p>}
       </div>
@@ -360,38 +359,41 @@ export function Play({ id }: { id: string }) {
 }
 
 /**
- * LINE の中で開いていて、公式アカウントが設定されているときだけ出す「友だち追加すると知らせが届く」の案内。
- * 閉じたら（この端末では）もう出さない。友だちだと分かれば出さない
+ * LINE の中で開いていて、公式アカウントが設定されているときだけ出す「知らせを受け取るには」の案内。
+ * 知らせは 2 人と公式アカウントのグループに届くので、グループで開いていれば「このグループに招待して」、
+ * 1 対 1 のトーク（やトークの外）なら「グループを作って、そこから遊んで」。
+ * この対局の 2 人がそろったグループがもうあれば出さない。閉じたら（この端末では）もう出さない
  */
-function FriendHint() {
+function NoticeHint({ id, token }: { id: string; token: string | undefined }) {
   const { t } = useI18n();
   const [oaId, setOaId] = useState<string | null>(null);
-  const [closed, setClosed] = useState(savedFriendHintClosed.get);
+  const [closed, setClosed] = useState(savedNoticeHintClosed.get);
+  const inGroup = ["group", "room"].includes(lineSession()?.chatType ?? "");
 
   useEffect(() => {
     if (!lineSession() || closed) return;
     let alive = true;
     (async () => {
-      const { lineOaId } = await api.config();
-      if (lineOaId && (await isFriend()) !== true && alive) setOaId(lineOaId);
+      const { lineOaId, noticeGroup } = await api.config(id, token);
+      if (lineOaId && !noticeGroup && alive) setOaId(lineOaId);
     })().catch(() => {});
     return () => {
       alive = false;
     };
-  }, [closed]);
+  }, [closed, id, token]);
 
   if (!oaId || closed) return null;
   return (
-    <section className="panel invite friend-hint">
-      <p>{t("play.friend.lead")}</p>
-      <div className="friend-hint-actions">
-        <button className="primary" onClick={() => openInLine(addFriendUrl(oaId))}>
-          {t("play.friend.add")}
+    <section className="panel invite notice-hint">
+      <p>{t(inGroup ? "play.notice.group" : "play.notice.chat")}</p>
+      <div className="notice-hint-actions">
+        <button className="primary" onClick={() => openInLine(officialAccountUrl(oaId))}>
+          {t("play.notice.open")}
         </button>
         <button
           className="ghost-button"
           onClick={() => {
-            savedFriendHintClosed.set(true);
+            savedNoticeHintClosed.set(true);
             setClosed(true);
           }}
         >

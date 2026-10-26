@@ -1,3 +1,5 @@
+// Cloudflare の型パッケージを丸ごと入れずに済むよう、ExecutionContext は Hono の型を使う
+import type { ExecutionContext } from "hono";
 import { createApp } from "./app.ts";
 import { d1Db, type D1Database } from "./d1.ts";
 import { lineVerifier, parseChannelIds } from "./line.ts";
@@ -12,16 +14,14 @@ interface Env {
   LIFF_ID: string;
   /** 公開している URL。知らせのカードのアイコン（/icons/<ゲームID>.png）に使う */
   APP_ORIGIN?: string;
-  /** LINE の公式アカウントの ID（@xxxx）。画面に友だち追加の案内を出す。なければ出さない */
+  /** LINE の公式アカウントの ID（@xxxx）。画面に公式アカウントを入れたグループの案内を出す。なければ出さない */
   LINE_OA_ID?: string;
   /** Messaging API のチャネルアクセストークン（長期）。secret で入れる。なければ知らせを送らない */
   LINE_MESSAGING_TOKEN?: string;
+  /** Messaging API のチャネルシークレット。secret で入れる。Webhook の署名を確かめる。なければ Webhook を受け付けない */
+  LINE_MESSAGING_SECRET?: string;
 }
 
-// Cloudflare の型パッケージを丸ごと入れずに済むよう、使う分だけ書いておく
-interface ExecutionContext {
-  waitUntil(promise: Promise<unknown>): void;
-}
 
 let cached: { db: D1Database; store: GameStore; app: ReturnType<typeof createApp> } | undefined;
 
@@ -34,6 +34,7 @@ function setup(env: Env) {
       app: createApp(store, {
         verifyLine: lineVerifier(parseChannelIds(env.LINE_CHANNEL_IDS)),
         lineOaId: env.LINE_OA_ID,
+        messaging: { secret: env.LINE_MESSAGING_SECRET, token: env.LINE_MESSAGING_TOKEN },
       }),
     };
   }
@@ -46,8 +47,9 @@ function setup(env: Env) {
  * 知らせの予定は Cron Trigger（wrangler.jsonc の triggers.crons）で scheduled が呼ばれたときに処理する
  */
 export default {
-  fetch(request: Request, env: Env) {
-    return setup(env).app.fetch(request, env);
+  // ctx も渡す（Webhook が返事を先に返して、処理を waitUntil で続けるため）
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    return setup(env).app.fetch(request, env, ctx);
   },
 
   scheduled(_controller: unknown, env: Env, ctx: ExecutionContext) {

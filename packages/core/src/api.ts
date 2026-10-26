@@ -83,8 +83,13 @@ export interface MoveRequest {
 
 /** 画面に渡す設定（GET /api/config） */
 export interface AppConfig {
-  /** LINE の公式アカウントの ID（@xxxx）。友だち追加すると、時刻になったら知らせが届く。設定されていなければ null */
+  /**
+   * LINE の公式アカウントの ID（@xxxx）。2 人と公式アカウントのグループから遊ぶと（友だち追加なら 1 対 1 で）、
+   * 時刻になったら知らせが届く。設定されていなければ null
+   */
   lineOaId: string | null;
+  /** ?game= で対局を渡したとき（参加者だけ）：その 2 人がそろった、知らせの届くグループがあるか */
+  noticeGroup?: boolean;
 }
 
 export interface ApiError {

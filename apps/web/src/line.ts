@@ -21,6 +21,8 @@ export interface LineSession {
   entryGameId: string | null;
   /** 1 対 1・グループ・複数人のトークから開いたか */
   inChat: boolean;
+  /** 開いたトークの種類（utou：1 対 1／group：グループ／room：複数人）。トーク以外から開いたなら null */
+  chatType: "utou" | "group" | "room" | null;
 }
 
 let session: LineSession | null = null;
@@ -46,11 +48,14 @@ export async function setupLine(): Promise<void> {
     const context = liff.getContext();
     const profile = await liff.getProfile().catch(() => null);
     const entry = location.pathname.match(/^\/(?:g|join)\/([\w-]+)/);
+    const type = context?.type;
+    const chatType = type === "utou" || type === "group" || type === "room" ? type : null;
     session = {
       liff,
       displayName: profile?.displayName ?? null,
       entryGameId: entry?.[1] ?? null,
-      inChat: ["utou", "group", "room"].includes(context?.type ?? ""),
+      inChat: chatType !== null,
+      chatType,
     };
   } catch (e) {
     // LINE の機能が使えなくても、ふつうの Web アプリとしては遊べる
@@ -63,21 +68,8 @@ export type { Card };
 /** トークに送るカード（見た目は @atg/core の flexMessage。サーバの知らせと同じ） */
 export const flex = (card: Card): Messages => [flexMessage(card)] as Messages;
 
-/** 公式アカウントを友だち追加する URL（oaId は @xxxx） */
-export const addFriendUrl = (oaId: string) => `https://line.me/R/ti/p/${encodeURIComponent(oaId)}`;
-
-/**
- * LINE の公式アカウントと友だちか。分からなければ null
- * （LINE の外・LIFF のチャネルに公式アカウントがつながっていない・取れなかった）
- */
-export async function isFriend(): Promise<boolean | null> {
-  if (!session) return null;
-  try {
-    return (await session.liff.getFriendship()).friendFlag;
-  } catch {
-    return null;
-  }
-}
+/** 公式アカウントのページ（友だち追加の画面）の URL（oaId は @xxxx）。グループに招待する前に、どのアカウントか確かめるのに使う */
+export const officialAccountUrl = (oaId: string) => `https://line.me/R/ti/p/${encodeURIComponent(oaId)}`;
 
 /** LINE の中で URL を開く（友だち追加の画面など）。LINE の外ならそのまま移る */
 export function openInLine(url: string) {

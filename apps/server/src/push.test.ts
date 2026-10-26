@@ -262,3 +262,207 @@ describe("時刻になったら LINE で知らせる", () => {
     expect(line.sent[0]!.body.messages[0]!.contents.body.contents).toHaveLength(1);
   });
 });
+
+/** グループで話したことにする（Webhook の message の代わり） */
+async function inGroup(groupId: string, users: string[], at = NOON) {
+  for (const user of users) await store.seeGroupMember(groupId, user, new Date(at).toISOString());
+}
+
+describe("2 人と公式アカウントのグループに知らせる", () => {
+  it("2 人ともメンバーのグループがあれば、2 人分の予定を 1 通にまとめてグループへ送り、2 人の言語で並べる", async () => {
+    const { id } = await setupGame("mochi");
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    await setAlarm(id, [0, 1], NOON);
+    const line = fakeLine();
+    const results = await processAlarms(store, options(line.fetch, NOON));
+    expect(results.map((r) => [r.seat, r.result, r.groupId])).toEqual([
+      [0, "sent", "C-g1"],
+      [1, "sent", "C-g1"],
+    ]);
+    expect(line.sent).toHaveLength(1);
+    const push = line.sent[0]!;
+    expect(push.body.to).toBe("C-g1");
+    const message = push.body.messages[0]!;
+    expect(message.altText).toBe("もちがおなかをすかせています／โมจิหิวแล้ว");
+    const [, texts] = message.contents.body.contents;
+    expect(texts.contents.map((t: { text: string }) => t.text)).toEqual([
+      "ふたりのもち／โมจิของเรา",
+      "もちがおなかをすかせています／โมจิหิวแล้ว",
+    ]);
+    expect(message.contents.footer.contents[0].action.label).toBe("開く／เปิด");
+    expect(await store.alarms(id)).toEqual([]);
+    // 記録は 2 人それぞれに 1 行。グループへ送ったと分かる
+    expect((await store.notices(id)).map((n) => [n.seat, n.lineUserId, n.status, n.groupId])).toEqual([
+      [0, "U-aki", "sent", "C-g1"],
+      [1, "U-som", "sent", "C-g1"],
+    ]);
+  });
+
+  it("2 人の言語が同じなら 1 言語で書く", async () => {
+    const { id } = await setupGame("mochi");
+    await store.setLang(id, 1, "ja");
+    await store.setTimeZone(id, 1, "Asia/Tokyo");
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    await setAlarm(id, [0, 1], NOON);
+    const line = fakeLine();
+    await processAlarms(store, options(line.fetch, NOON));
+    expect(line.sent.map((s) => [s.body.to, s.body.messages[0]!.altText])).toEqual([["C-g1", "もちがおなかをすかせています"]]);
+  });
+
+  it("手番の人への知らせ（stalled）も、その人の名前で 2 言語にしてグループへ送り、記録は 2 人それぞれに残す", async () => {
+    const { id } = await setupGame();
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    const line = fakeLine();
+    await processAlarms(store, options(line.fetch, NOON + 24 * HOUR));
+    expect(line.sent.map((s) => [s.body.to, s.body.messages[0]!.altText])).toEqual([
+      ["C-g1", "あきさん、『マルバツ』であなたの番です／あき ถึงตาคุณแล้วใน โอเอ็กซ์"],
+    ]);
+    expect((await store.notices(id)).map((n) => [n.lineUserId, n.kind, n.groupId])).toEqual([
+      ["U-aki", "stalled", "C-g1"],
+      ["U-som", "stalled", "C-g1"],
+    ]);
+  });
+
+  it("まだ時刻になっていない相手の分も、同じ種類の予定なら 1 通にまとめる（あとから同じ知らせを 2 回送らない）", async () => {
+    const { id } = await setupGame("mochi");
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    const game = (await store.get(id))!;
+    await store.setAlarms(id, game.version, [
+      { seat: 0, at: NOON, kind: "hungry" },
+      { seat: 1, at: NOON + HOUR, kind: "hungry" },
+    ]);
+    const line = fakeLine();
+    await processAlarms(store, options(line.fetch, NOON));
+    expect(line.sent).toHaveLength(1);
+    expect(await store.alarms(id)).toEqual([]);
+    await processAlarms(store, options(line.fetch, NOON + HOUR));
+    expect(line.sent).toHaveLength(1);
+  });
+
+  it("どちらか 1 人しかメンバーでなければ、今までどおり 1 対 1 で送る", async () => {
+    const { id } = await setupGame("mochi");
+    await inGroup("C-g1", ["U-aki"]);
+    await inGroup("C-g2", ["U-som", "U-nok"]);
+    await setAlarm(id, [0, 1], NOON);
+    const line = fakeLine();
+    const results = await processAlarms(store, options(line.fetch, NOON));
+    expect(results.map((r) => [r.result, r.groupId])).toEqual([
+      ["sent", undefined],
+      ["sent", undefined],
+    ]);
+    expect(line.sent.map((s) => [s.body.to, s.body.messages[0]!.altText])).toEqual([
+      ["U-aki", "もちがおなかをすかせています"],
+      ["U-som", "โมจิหิวแล้ว"],
+    ]);
+    expect((await store.notices(id)).map((n) => n.groupId)).toEqual([null, null]);
+  });
+
+  it("2 人がそろったグループが複数あれば、いちばん最近使われた（話した）グループへ送る。抜けたら別のグループへ", async () => {
+    const { id } = await setupGame("mochi");
+    await inGroup("C-old", ["U-aki", "U-som"], NOON - 2 * HOUR);
+    await inGroup("C-new", ["U-aki", "U-som"], NOON - HOUR);
+    await inGroup("C-new", ["U-som"], NOON - 20 * 60_000);
+    const line = fakeLine();
+    await setAlarm(id, [0, 1], NOON);
+    await processAlarms(store, options(line.fetch, NOON));
+    expect(line.sent.map((s) => s.body.to)).toEqual(["C-new"]);
+
+    // C-new から Som が抜けると、C-old へ
+    await store.removeGroupMember("C-new", "U-som");
+    await setAlarm(id, [0, 1], NOON + HOUR);
+    await processAlarms(store, options(line.fetch, NOON + HOUR));
+    expect(line.sent.map((s) => s.body.to)).toEqual(["C-new", "C-old"]);
+  });
+
+  it("グループのときは、2 人のどちらかが夜なら、2 人とも昼になるまで遅らせる（日本とタイなら日本の 10 時）", async () => {
+    const { id } = await setupGame("mochi");
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    const line = fakeLine();
+    // 日本の 23:30・タイの 21:30（日本だけ夜）
+    const night = Date.UTC(2026, 9, 1, 14, 30);
+    await setAlarm(id, [0, 1], night);
+    const results = await processAlarms(store, options(line.fetch, night));
+    const both = Date.UTC(2026, 9, 2, 1); // 日本の 10 時・タイの 8 時
+    expect(results.map((r) => [r.seat, r.result, r.until])).toEqual([
+      [0, "deferred", both],
+      [1, "deferred", both],
+    ]);
+    expect(await store.alarms(id)).toEqual([
+      { seat: 0, at: both, kind: "hungry" },
+      { seat: 1, at: both, kind: "hungry" },
+    ]);
+    // 日本の 8 時（タイは 6 時で夜）でもまだ送らない
+    await processAlarms(store, options(line.fetch, Date.UTC(2026, 9, 1, 23)));
+    expect(line.sent).toHaveLength(0);
+    await processAlarms(store, options(line.fetch, both));
+    expect(line.sent.map((s) => s.body.to)).toEqual(["C-g1"]);
+
+    // 日本の 8:30・タイの 6:30（タイだけ夜）も、タイの 8 時まで遅らせる
+    const early = Date.UTC(2026, 9, 2, 23, 30);
+    await setAlarm(id, [0, 1], early);
+    expect((await processAlarms(store, options(line.fetch, early))).map((r) => [r.result, r.until])).toEqual([
+      ["deferred", Date.UTC(2026, 9, 3, 1)],
+      ["deferred", Date.UTC(2026, 9, 3, 1)],
+    ]);
+    // 日本の 22:30・タイの 20:30（日本だけ夜）は、次の日の日本の 10 時まで
+    const late = Date.UTC(2026, 9, 3, 13, 30);
+    await setAlarm(id, [0, 1], late);
+    expect((await processAlarms(store, options(line.fetch, late))).map((r) => r.until)).toEqual([
+      Date.UTC(2026, 9, 4, 1),
+      Date.UTC(2026, 9, 4, 1),
+    ]);
+  });
+
+  it(`グループへの 1 通は 2 人それぞれに 1 ずつ数え、同じ対局で 1 日 ${LIMIT_PER_GAME} 通・全部で ${LIMIT_PER_PERSON} 通を超えたら送らない`, async () => {
+    const games = [await setupGame("mochi"), await setupGame("mochi"), await setupGame("mochi")];
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    const line = fakeLine();
+    let now = NOON;
+    const sendTo = async (id: string) => {
+      now += 10 * 60_000;
+      await setAlarm(id, [0, 1], now);
+      return (await processAlarms(store, options(line.fetch, now))).map((r) => r.result).join(",");
+    };
+    const first = games[0]!.id;
+    expect([await sendTo(first), await sendTo(first), await sendTo(first), await sendTo(first)]).toEqual([
+      "sent,sent",
+      "sent,sent",
+      "sent,sent",
+      "limited,limited",
+    ]);
+    expect((await store.notices(first)).slice(-2).map((n) => [n.lineUserId, n.status, n.detail, n.groupId])).toEqual([
+      ["U-aki", "limited", "per_game", "C-g1"],
+      ["U-som", "limited", "per_game", "C-g1"],
+    ]);
+    expect(await store.alarms(first)).toEqual([]);
+    expect([await sendTo(games[1]!.id), await sendTo(games[1]!.id), await sendTo(games[1]!.id), await sendTo(games[2]!.id)]).toEqual([
+      "sent,sent",
+      "sent,sent",
+      "sent,sent",
+      "limited,limited",
+    ]);
+    expect((await store.notices(games[2]!.id)).map((n) => n.detail)).toEqual(["per_person", "per_person"]);
+    expect(line.sent).toHaveLength(LIMIT_PER_PERSON);
+  });
+
+  it("1 人が 1 対 1 で受け取った分も、グループの上限に数える（どちらか 1 人が上限なら送らない）", async () => {
+    const pair = await setupGame("mochi");
+    await inGroup("C-g1", ["U-aki", "U-som"]);
+    const line = fakeLine();
+    let now = NOON;
+    // 相手が LINE の外から参加した対局は 1 対 1（同じ対局の上限に当たらないよう、毎回新しい対局で）
+    for (let i = 0; i < LIMIT_PER_PERSON; i++) {
+      now += 10 * 60_000;
+      const { id } = await setupGame("mochi", [true, false]);
+      await setAlarm(id, [0], now);
+      expect((await processAlarms(store, options(line.fetch, now)))[0]!.result).toBe("sent");
+    }
+    now += 10 * 60_000;
+    await setAlarm(pair.id, [0, 1], now);
+    expect((await processAlarms(store, options(line.fetch, now))).map((r) => r.result)).toEqual(["limited", "limited"]);
+    expect((await store.notices(pair.id)).map((n) => [n.lineUserId, n.detail])).toEqual([
+      ["U-aki", "per_person"],
+      ["U-som", "per_person"],
+    ]);
+  });
+});

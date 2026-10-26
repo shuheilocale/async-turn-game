@@ -94,7 +94,7 @@ npm run deploy       # 画面をビルドして Workers に公開する
 | `PORT` | `8787` | サーバのポート |
 | `DB_PATH` | `data/games.db` | 対局データを保存する SQLite ファイル |
 | `ALARM_INTERVAL_MS` | 開発 `60000`・本番 `900000` | 知らせの予定を処理する間隔（`0` で止める）。Workers の Cron Trigger の代わり |
-| `LINE_MESSAGING_TOKEN` / `LINE_OA_ID` / `LIFF_ID` / `APP_ORIGIN` | なし | 「LINE で時刻になったら知らせる」を参照（Workers では `wrangler.jsonc` の vars と secret） |
+| `LINE_MESSAGING_TOKEN` / `LINE_MESSAGING_SECRET` / `LINE_OA_ID` / `LIFF_ID` / `APP_ORIGIN` | なし | 「LINE で時刻になったら知らせる」を参照（Workers では `wrangler.jsonc` の vars と secret） |
 
 これらは Node.js で動かすときだけ使う。Workers では D1 を `wrangler.jsonc` の `DB` という名前でつなぐ。
 
@@ -108,7 +108,8 @@ apps/server/        API サーバ（Hono。本番は Cloudflare Workers + D1、�
   src/app.ts        API の定義
   src/store.ts      保存処理。SQL の実行口（sql.ts）だけを差し替えて使う
   src/alarms.ts     知らせの予定の決め方・夜の判定
-  src/push.ts       時刻になったら LINE の公式アカウントで知らせる（文言の表もここ）
+  src/push.ts       時刻になったら LINE の公式アカウントで知らせる（送り先の決め方・文言の表もここ）
+  src/webhook.ts    公式アカウントの Webhook（公式アカウントを入れたグループとメンバーを記録する）
   src/sqlite.ts     実行口：Node.js 組み込みの SQLite（開発・テスト用）
   src/d1.ts         実行口：Cloudflare D1（本番）
   src/index.ts      Node.js 用の入口
@@ -138,7 +139,8 @@ docs/企画書.md
 | POST | `/api/games/:id/join` | 招待コードで参加 `{ inviteCode, name }` |
 | POST | `/api/games/:id/moves` | 手を指す `{ version, move }` |
 | GET | `/api/games/:id/moves` | 手の記録 |
-| GET | `/api/config` | 画面に渡す設定 `{ lineOaId }`（LINE の公式アカウントの ID。なければ null） |
+| GET | `/api/config` | 画面に渡す設定 `{ lineOaId }`（LINE の公式アカウントの ID。なければ null）。`?game=<対局ID>` と合言葉を付けると、その 2 人がそろったグループがあるか（`noticeGroup`）も返す |
+| POST | `/api/line/webhook` | LINE の公式アカウントの Webhook（`X-Line-Signature` を確かめる） |
 
 ## LINE ミニアプリとして使う
 
@@ -158,38 +160,60 @@ LINE Developers に「LINE ミニアプリ」のチャネルを作ってある�
 
 ## LINE で時刻になったら知らせる
 
-トークの流れに埋もれても気づけるよう、時間がたったらサーバから LINE の公式アカウントで本人に知らせる（Messaging API の push）。
+トークの流れに埋もれても気づけるよう、時間がたったらサーバから LINE の公式アカウントで知らせる（Messaging API の push）。相手に 1 対 1 の友だち追加をさせなくて済むよう、**2 人と公式アカウントの 3 人のグループ**に届ける。2 人はそのグループからミニアプリを開いて遊ぶ（招待や手のカードは、今までどおりアプリを開いたトークに送られる）。
 
 | いつ | だれに | 例 |
 | --- | --- | --- |
 | ゲームが `nextAlarm(state)` を持っていれば、その時刻 | 2 人とも | もちがおなかをすかせた・目をさました・卵がかえった・おとなになれそう・さみしそう |
 | 持っていない、順番のあるゲームで、手番の人が 24 時間指していない | 手番の人に 1 回だけ | 「あきさん、『オセロ』であなたの番です」 |
 
+送り先の決め方（[apps/server/src/push.ts](apps/server/src/push.ts)）
+
+- 対局の 2 人の LINE ユーザー ID が**両方とも**メンバーになっているグループがあれば、そこへ送る（いくつもあれば、いちばん最近だれかが話したもの）
+  - 同じ対局・同じ種類の予定が 2 人分あっても（相手の分がまだ時刻前でも）1 通にまとめる
+  - 2 人の言語が違えば、文を 2 言語で並べる（例：「もちがおなかをすかせています／โมจิหิวแล้ว」）。同じなら 1 言語
+- なければ、今までどおり 1 人ずつ 1 対 1 へ（公式アカウントを友だち追加している人だけ届く）
+- グループとメンバーは公式アカウントの Webhook（`POST /api/line/webhook`、[apps/server/src/webhook.ts](apps/server/src/webhook.ts)）で D1 の `line_groups`・`line_group_members` に記録する
+  - `join`（グループに招待された）：グループを記録し、返信で 3 言語のあいさつ（「このグループで遊ぶ人は、何かひとこと送ってください」）
+  - `message`（グループで話した）：その人をメンバーとして記録する。初めての人にだけ返信で「〇〇さんの対局の知らせを、このグループに届けます」（名前は対局で使っている名前、なければ LINE の名前）
+  - `memberLeft`：メンバーを消す。`leave`：グループごと消す。`memberJoined` は記録しない（話したときに記録する）。1 対 1 のトークには何もしない
+  - 返信は reply API なので無料枠を使わない。署名（`X-Line-Signature`）が合わなければ 401、チャネルシークレットがなければ 503
 - 予定は D1 の `alarms`（対局・席ごとに次の 1 つ）。手を受け取ったとき・参加したとき・次の対局を作ったときに決め直し、終局したら消す（[apps/server/src/alarms.ts](apps/server/src/alarms.ts)）
-- Cron Trigger（`wrangler.jsonc` の `triggers.crons`。15 分ごと）で時刻を過ぎた予定を集めて送り、送ったら消す（[apps/server/src/push.ts](apps/server/src/push.ts)）。送った記録は `notices`
-- 文面は受け取る人の言語（ja・en・th）。文言の表は `push.ts`、ゲーム名は画面と共通の `packages/core/src/names.ts`。カードの見た目は画面から送るものと同じ（`packages/core/src/card.ts`）で、「開く」はミニアプリのその対局を開く
+- Cron Trigger（`wrangler.jsonc` の `triggers.crons`。15 分ごと）で時刻を過ぎた予定を集めて送り、送ったら消す。送った記録は `notices`（グループへ送ったものは `group_id` 付きで 2 人それぞれに 1 行）
+- 文言の表は `push.ts`、ゲーム名は画面と共通の `packages/core/src/names.ts`。カードの見た目は画面から送るものと同じ（`packages/core/src/card.ts`）で、「開く」はミニアプリのその対局を開く
 - タイムゾーンは画面が作成・参加・指すときに送る（`Intl.DateTimeFormat().resolvedOptions().timeZone`）。分からなければ言語から推す（ja→日本、th→タイ、en→UTC）
 
 送る量の決まり
 
-- **夜は送らない**：受け取る人のタイムゾーンで 22 時〜8 時なら、その人の 8 時まで遅らせる（2 人で時刻が違えば人ごと）
-- **送りすぎない**：同じ対局で 1 人に 1 日（24 時間）3 通、全部の対局で 1 人 1 日 6 通まで。超える分は送らずに捨てる（無料枠は月 200 通）。1 日以上遅れた予定も送らずに捨てる
+- **夜は送らない**：受け取る人のタイムゾーンで 22 時〜8 時なら、その人の 8 時まで遅らせる。グループのときは、2 人のどちらかが夜なら 2 人とも昼になるまで（日本とタイなら、日本の 10 時〜タイの 22 時のあいだ）
+- **送りすぎない**：同じ対局で 1 人に 1 日（24 時間）3 通、全部の対局で 1 人 1 日 6 通まで。グループへの 1 通は 2 人それぞれに 1 通と数え、どちらかが上限なら送らない。超える分は送らずに捨てる（無料枠は月 200 通。グループへの push は受け取る人数分に数えられる）。1 日以上遅れた予定も送らずに捨てる
 - LINE とつながっていない人（LINE の外から参加した人）には送らない。友だちでない・失敗したときも、ほかの送信は続ける。同じ予定は条件つきで消して取ってから送るので、2 回は送らない
 - `LINE_MESSAGING_TOKEN` がなければ何もしない（時刻を過ぎた予定があればログに 1 行）
 
 設定のしかた
 
 1. [LINE Developers](https://developers.line.biz/console/) で、LINE ミニアプリと**同じプロバイダー**に Messaging API のチャネル（公式アカウント）を作る。プロバイダーが違うと LINE のユーザー ID が変わり、届かない
-2. チャネルの「Messaging API 設定」で長期のチャネルアクセストークンを発行し、Workers の secret に入れる
+2. チャネルの「Messaging API 設定」で長期のチャネルアクセストークンを発行し、「チャネル基本設定」のチャネルシークレットと一緒に Workers の secret に入れる
 
    ```bash
-   cd apps/server && npx wrangler secret put LINE_MESSAGING_TOKEN
+   cd apps/server
+   npx wrangler secret put LINE_MESSAGING_TOKEN
+   npx wrangler secret put LINE_MESSAGING_SECRET
    ```
 
-3. 公式アカウントの ID（`@xxxx`）を [wrangler.jsonc](apps/server/wrangler.jsonc) の vars の `LINE_OA_ID` に入れて公開する。LINE の中の対局画面に「知らせを受け取るには、公式アカウントを友だち追加してください」の案内とボタンが出る（閉じたらその端末では出さない。`liff.getFriendship()` で友だちと分かれば出さない。分かるのは LINE ミニアプリのチャネルに公式アカウントをつないだときだけ）
-4. 先に `npm run db:migrate`（`0005_alarms.sql`）を流してから `npm run deploy` する
-- 公式アカウントは友だち追加されないと送れない。応答メッセージ・あいさつメッセージは LINE Official Account Manager で好みに
+3. 「Messaging API 設定」で
+   - 「グループトーク・複数人トークへの参加を許可する」をオンにする（LINE Official Account Manager の「設定 → アカウント設定」の「グループ・複数人トークへの参加」でも同じ）
+   - Webhook URL に `https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev/api/line/webhook` を入れて「検証」し、「Webhook の利用」をオンにする
+   - 応答メッセージ（自動応答）はオフにしておくと、グループで話すたびに自動応答が返らない
+4. 公式アカウントの ID（`@xxxx`）を [wrangler.jsonc](apps/server/wrangler.jsonc) の vars の `LINE_OA_ID` に入れて公開する。LINE の中の対局画面に案内とボタン（公式アカウントのページを開く）が出る
+   - グループで開いているとき：「知らせを受け取るには、このグループに公式アカウントを招待してください（グループのメニュー → 招待）」
+   - 1 対 1 のトーク（やトークの外）で開いているとき：「知らせを受け取るには、2 人と公式アカウントのグループを作って、そこから遊んでください」
+   - この対局の 2 人がそろったグループがもうあれば出さない（`/api/config?game=`）。閉じたらその端末では出さない
+5. 先に `npm run db:migrate`（`0005_alarms.sql`・`0006_line_groups.sql`）を流してから `npm run deploy` する
+6. 2 人のグループに公式アカウントを招待し、**2 人ともグループで 1 回ずつ何かひとこと話す**（話した人がメンバーとして記録され、2 人そろうとそのグループに届く）
+
 - 手元の確かめ方：`npm run dev` のサーバは 1 分ごとに予定を処理する。開発のときだけ `POST /api/dev/alarms`（本文 `{ "now": ミリ秒, "fake": true }`）で今すぐ処理できる。`now` を先にするとその時刻として、`fake` なら LINE に送らずに送るはずだった中身を返す（本番の Node.js と Workers にはこの口はない）
+- Webhook も手元で試せる：`LINE_MESSAGING_SECRET` を入れて動かし、その値で署名した偽のイベントを `POST /api/line/webhook` に送る。開発のときに `LINE_MESSAGING_TOKEN` がなければ、返信は LINE に送らずに覚えておき、`GET /api/dev/line` で中身を見られる
 
 ## ゲームを追加するには
 

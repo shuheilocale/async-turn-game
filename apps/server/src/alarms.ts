@@ -82,3 +82,17 @@ export function quietUntil(t: number, timeZone: string): number | null {
   const guess = morning - offsetOf(t, timeZone);
   return morning - offsetOf(guess, timeZone);
 }
+
+/**
+ * t 以降で、timeZones の全員が昼（夜でない）になるいちばん早い時刻。t のときに全員昼なら t。
+ * だれかが夜ならその人の朝まで進め、そこで別の人が夜ならまたその人の朝まで…とくり返す。
+ * 昼は 14 時間あり 2 人の昼は必ず重なるので、2 人なら 2 回進めれば見つかる（念のため回数に上限をおく）
+ */
+export function awakeTogether(t: number, timeZones: string[]): number {
+  for (let i = 0; i < 2 * timeZones.length + 2; i++) {
+    const next = Math.max(t, ...timeZones.map((zone) => quietUntil(t, zone) ?? t));
+    if (next === t) break;
+    t = next;
+  }
+  return t;
+}

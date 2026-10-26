@@ -16,9 +16,10 @@
     "LIFF_ID": "2012180396-nO920f3r",
     // 公開している URL。LINE で知らせるカードのアイコン（/icons/<ゲームID>.png）に使う
     "APP_ORIGIN": "https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev",
-    // LINE の公式アカウントの ID（@xxxx）。入れると、LINE の中の対局画面に友だち追加の案内が出る。空なら出さない
+    // LINE の公式アカウントの ID（@xxxx）。入れると、LINE の中の対局画面に「公式アカウントを入れたグループで遊ぶ」案内が出る。空なら出さない
     "LINE_OA_ID": "@983khmkk"
-    // Messaging API のチャネルアクセストークンは secret で入れる（npx wrangler secret put LINE_MESSAGING_TOKEN）
+    // Messaging API のチャネルアクセストークンとチャネルシークレット（Webhook の署名を確かめる）は secret で入れる
+    // （npx wrangler secret put LINE_MESSAGING_TOKEN / npx wrangler secret put LINE_MESSAGING_SECRET）
   },
   // 時刻を過ぎた知らせの予定を 15 分ごとに処理する（src/worker.ts の scheduled）
   "triggers": {

@@ -39,7 +39,9 @@ function timeZone(): string | undefined {
 }
 
 export const api = {
-  config: () => request<AppConfig>("/config"),
+  /** 対局を渡すと、その 2 人がそろった（知らせの届く）グループがあるかも返る（合言葉が要る） */
+  config: (gameId?: string, token?: string) =>
+    request<AppConfig>(gameId ? `/config?game=${encodeURIComponent(gameId)}` : "/config", {}, token),
   createGame: (req: CreateGameRequest) =>
     request<CreateGameResponse>("/games", { method: "POST", body: JSON.stringify({ timeZone: timeZone(), ...req }) }),
   getGame: (id: string, token?: string) => request<GameView>(`/games/${id}`, {}, token),

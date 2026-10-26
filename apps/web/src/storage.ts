@@ -62,9 +62,9 @@ export const savedCategory = {
 };
 
 /** 対局画面の「公式アカウントを友だち追加すると知らせが届く」の案内を閉じたか */
-export const savedFriendHintClosed = {
-  get: () => read<boolean>("atg:friendHintClosed", false),
-  set: (closed: boolean) => write("atg:friendHintClosed", closed),
+export const savedNoticeHintClosed = {
+  get: () => read<boolean>("atg:noticeHintClosed", false),
+  set: (closed: boolean) => write("atg:noticeHintClosed", closed),
 };
 
 /**

@@ -33,6 +33,13 @@ export interface NoticeRecord {
   status: "sent" | "failed" | "limited";
   detail: string | null;
   sentAt: string;
+  /** グループへ送ったときは、そのグループの ID。1 対 1 なら null */
+  groupId?: string | null;
+}
+
+/** 対局の席と、その人の LINE ユーザー ID（LINE とつながっていなければ null） */
+export interface LinePlayer extends PlayerRecord {
+  lineUserId: string | null;
 }
 
 export interface GameRecord {
@@ -320,13 +327,19 @@ export class GameStore {
 
   /** 時刻（now）を過ぎた予定を、早い順に limit 件 */
   async dueAlarms(now: number, limit: number): Promise<DueAlarm[]> {
-    return this.db.all<DueAlarm>(
-      `SELECT a.game_id AS gameId, g.game_type AS gameType, a.seat AS seat, a.at AS at, a.kind AS kind, a.version AS version,
-              p.name AS name, p.lang AS lang, p.time_zone AS timeZone, p.line_user_id AS lineUserId
-       FROM alarms a JOIN games g ON g.id = a.game_id JOIN players p ON p.game_id = a.game_id AND p.seat = a.seat
-       WHERE a.at <= ? ORDER BY a.at, a.game_id, a.seat LIMIT ?`,
-      now,
-      limit,
+    return this.db.all<DueAlarm>(`${DUE_ALARMS} WHERE a.at <= ? ORDER BY a.at, a.game_id, a.seat LIMIT ?`, now, limit);
+  }
+
+  /** 対局の予定を、時刻を問わず全部（グループへ 2 人分をまとめて送るとき、相手の分も一緒に取るため） */
+  async gameAlarms(id: string): Promise<DueAlarm[]> {
+    return this.db.all<DueAlarm>(`${DUE_ALARMS} WHERE a.game_id = ? ORDER BY a.seat`, id);
+  }
+
+  /** 対局の 2 人と LINE ユーザー ID（席の順） */
+  async linePlayers(id: string): Promise<LinePlayer[]> {
+    return this.db.all<LinePlayer>(
+      "SELECT seat, name, lang, time_zone AS timeZone, line_user_id AS lineUserId FROM players WHERE game_id = ? ORDER BY seat",
+      id,
     );
   }
 
@@ -371,7 +384,7 @@ export class GameStore {
   async recordNotice(n: NoticeRecord): Promise<void> {
     await this.db.batch([
       q(
-        "INSERT INTO notices (game_id, seat, line_user_id, kind, status, detail, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO notices (game_id, seat, line_user_id, kind, status, detail, sent_at, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         n.gameId,
         n.seat,
         n.lineUserId,
@@ -379,6 +392,7 @@ export class GameStore {
         n.status,
         n.detail,
         n.sentAt,
+        n.groupId ?? null,
       ),
     ]);
   }
@@ -397,9 +411,89 @@ export class GameStore {
   /** 対局の知らせの記録（古い順） */
   async notices(id: string): Promise<NoticeRecord[]> {
     return this.db.all<NoticeRecord>(
-      `SELECT game_id AS gameId, seat, line_user_id AS lineUserId, kind, status, detail, sent_at AS sentAt
+      `SELECT game_id AS gameId, seat, line_user_id AS lineUserId, kind, status, detail, sent_at AS sentAt, group_id AS groupId
        FROM notices WHERE game_id = ? ORDER BY id`,
       id,
     );
   }
+
+  // ---------- 公式アカウントを入れたグループ（webhook.ts） ----------
+
+  /** 公式アカウントがグループに招待された（すでにあれば何もしない） */
+  async addLineGroup(groupId: string, at: string): Promise<void> {
+    await this.db.batch([q("INSERT OR IGNORE INTO line_groups (group_id, joined_at) VALUES (?, ?)", groupId, at)]);
+  }
+
+  /** 公式アカウントがグループから抜けた（メンバーの記録も消す） */
+  async removeLineGroup(groupId: string): Promise<void> {
+    await this.db.batch([
+      q("DELETE FROM line_group_members WHERE group_id = ?", groupId),
+      q("DELETE FROM line_groups WHERE group_id = ?", groupId),
+    ]);
+  }
+
+  /**
+   * グループで話した人をメンバーとして記録し、話した時刻（at）を新しくする。グループの記録がなければ一緒に作る
+   * （Webhook を設定する前から公式アカウントがいたグループでも、話せば使えるように）。初めて記録した人なら true
+   */
+  async seeGroupMember(groupId: string, lineUserId: string, at: string): Promise<boolean> {
+    const [, inserted] = await this.db.batch([
+      q("INSERT OR IGNORE INTO line_groups (group_id, joined_at) VALUES (?, ?)", groupId, at),
+      q("INSERT OR IGNORE INTO line_group_members (group_id, line_user_id, seen_at) VALUES (?, ?, ?)", groupId, lineUserId, at),
+      q("UPDATE line_group_members SET seen_at = ? WHERE group_id = ? AND line_user_id = ?", at, groupId, lineUserId),
+    ]);
+    return inserted === 1;
+  }
+
+  /** メンバーがグループを抜けた */
+  async removeGroupMember(groupId: string, lineUserId: string): Promise<void> {
+    await this.db.batch([
+      q("DELETE FROM line_group_members WHERE group_id = ? AND line_user_id = ?", groupId, lineUserId),
+    ]);
+  }
+
+  /** グループの記録とメンバー（記録した順）。なければ null */
+  async lineGroup(groupId: string): Promise<{ groupId: string; members: { lineUserId: string; seenAt: string }[] } | null> {
+    const [group] = await this.db.all<{ groupId: string }>("SELECT group_id AS groupId FROM line_groups WHERE group_id = ?", groupId);
+    if (!group) return null;
+    const members = await this.db.all<{ lineUserId: string; seenAt: string }>(
+      "SELECT line_user_id AS lineUserId, seen_at AS seenAt FROM line_group_members WHERE group_id = ? ORDER BY rowid",
+      groupId,
+    );
+    return { groupId: group.groupId, members };
+  }
+
+  /**
+   * 対局の 2 人が両方ともメンバーになっているグループ。いくつもあれば、いちばん最近だれかが話したもの。
+   * なければ（どちらかが LINE とつながっていない・そろったグループがない）null
+   */
+  async noticeGroupOf(id: string): Promise<string | null> {
+    const [row] = await this.db.all<{ groupId: string }>(
+      `SELECT m0.group_id AS groupId
+       FROM players p0
+       JOIN players p1 ON p1.game_id = p0.game_id AND p1.seat <> p0.seat
+       JOIN line_group_members m0 ON m0.line_user_id = p0.line_user_id
+       JOIN line_group_members m1 ON m1.group_id = m0.group_id AND m1.line_user_id = p1.line_user_id
+       JOIN line_groups g ON g.group_id = m0.group_id
+       WHERE p0.game_id = ? AND p0.seat = 0 AND p0.line_user_id <> p1.line_user_id
+       ORDER BY MAX(m0.seen_at, m1.seen_at) DESC, g.joined_at DESC LIMIT 1`,
+      id,
+    );
+    return row?.groupId ?? null;
+  }
+
+  /** LINE ユーザーが対局でさいごに使った名前。どの対局にも出ていなければ null */
+  async nameOfLineUser(lineUserId: string): Promise<string | null> {
+    const [row] = await this.db.all<{ name: string }>(
+      `SELECT p.name AS name FROM players p JOIN games g ON g.id = p.game_id
+       WHERE p.line_user_id = ? ORDER BY g.updated_at DESC LIMIT 1`,
+      lineUserId,
+    );
+    return row?.name ?? null;
+  }
 }
+
+/** 予定と、受け取る人（dueAlarms・gameAlarms の共通部分） */
+const DUE_ALARMS = `SELECT a.game_id AS gameId, g.game_type AS gameType, a.seat AS seat, a.at AS at, a.kind AS kind, a.version AS version,
+       p.name AS name, p.lang AS lang, p.time_zone AS timeZone, p.line_user_id AS lineUserId
+FROM alarms a JOIN games g ON g.id = a.game_id JOIN players p ON p.game_id = a.game_id AND p.seat = a.seat`;

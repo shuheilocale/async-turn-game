@@ -783,18 +783,18 @@ dialog.sheet::backdrop {
 }
 
 /* 公式アカウントを友だち追加する案内（小さく出す） */
-.friend-hint p {
+.notice-hint p {
   margin: 0;
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
 
-.friend-hint-actions {
+.notice-hint-actions {
   display: flex;
   gap: 8px;
 }
 
-.friend-hint-actions button {
+.notice-hint-actions button {
   flex: 1;
 }
 

@@ -20,11 +20,29 @@ const store = new GameStore(sqliteDb(dbPath));
 
 const root = new Hono();
 const channelIds = parseChannelIds(process.env.LINE_CHANNEL_IDS);
+
+/**
+ * 開発のときだけ：LINE_MESSAGING_TOKEN がなければ、Webhook からの返信（とプロフィールの問い合わせ）を LINE に送らずに覚えておき、
+ * GET /api/dev/line で見られるようにする。署名を確かめるので LINE_MESSAGING_SECRET は入れて動かす
+ */
+const fakeLineCalls: { url: string; body: unknown }[] = [];
+const fakeLine = !production && !process.env.LINE_MESSAGING_TOKEN;
+const fakeLineFetch = (async (url: string, init: RequestInit = {}) => {
+  fakeLineCalls.push({ url, body: init.body ? JSON.parse(String(init.body)) : null });
+  return url.includes("/member/") ? new Response("{}", { status: 404 }) : new Response("{}");
+}) as unknown as typeof globalThis.fetch;
+
 root.route(
   "/",
   createApp(store, {
     ...(channelIds.length ? { verifyLine: lineVerifier(channelIds) } : {}),
     lineOaId: process.env.LINE_OA_ID,
+    messaging: {
+      secret: process.env.LINE_MESSAGING_SECRET,
+      ...(fakeLine
+        ? { token: "dev-fake-token", fetch: fakeLineFetch }
+        : { token: process.env.LINE_MESSAGING_TOKEN }),
+    },
   }),
 );
 
@@ -59,6 +77,9 @@ if (!production) {
     const results = await processAlarms(store, { ...pushOptions(), token: "dev-fake-token", fetch, now });
     return c.json({ results, sent });
   });
+
+  // 開発のときだけ：Webhook から LINE に送るはずだった返信など（LINE_MESSAGING_TOKEN がないとき）
+  root.get("/api/dev/line", (c) => c.json(fakeLineCalls));
 }
 
 // 本番ではビルド済みの画面（apps/web/dist）も同じサーバから配る

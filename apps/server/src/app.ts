@@ -12,6 +12,7 @@ import {
 import { cleanTimeZone, planAlarms } from "./alarms.ts";
 import type { VerifyLine } from "./line.ts";
 import type { GameRecord, GameStore } from "./store.ts";
+import { handleEvents, verifySignature } from "./webhook.ts";
 
 const MAX_NAME = 20;
 
@@ -59,11 +60,20 @@ function toView(game: GameRecord, you: Seat | null): GameView {
 export interface AppOptions {
   /** LINE の ID トークンを確かめる関数。なければ LINE での本人確認は使わない（手元の開発用） */
   verifyLine?: VerifyLine;
-  /** LINE の公式アカウントの ID（@xxxx）。画面で「友だち追加すると知らせが届く」の案内を出すのに使う。なければ出さない */
+  /** LINE の公式アカウントの ID（@xxxx）。画面で「公式アカウントを入れたグループで遊ぶと知らせが届く」の案内を出すのに使う。なければ出さない */
   lineOaId?: string;
+  /** 公式アカウント（Messaging API）の Webhook（/api/line/webhook）に使うもの */
+  messaging?: {
+    /** チャネルシークレット。Webhook の署名を確かめる。なければ Webhook は 503 を返す */
+    secret?: string;
+    /** チャネルアクセストークン。グループへの返信に使う */
+    token?: string;
+    /** テストでは偽物に差し替える */
+    fetch?: typeof fetch;
+  };
 }
 
-export function createApp(store: GameStore, { verifyLine, lineOaId }: AppOptions = {}) {
+export function createApp(store: GameStore, { verifyLine, lineOaId, messaging }: AppOptions = {}) {
   const app = new Hono().basePath("/api");
   const oaId = lineOaId?.trim() ? (lineOaId.trim().startsWith("@") ? lineOaId.trim() : `@${lineOaId.trim()}`) : null;
 
@@ -91,8 +101,48 @@ export function createApp(store: GameStore, { verifyLine, lineOaId }: AppOptions
 
   app.get("/health", (c) => c.json({ ok: true }));
 
-  // 画面に渡す設定
-  app.get("/config", (c) => c.json<AppConfig>({ lineOaId: oaId }));
+  /**
+   * 画面に渡す設定。?game=<対局ID> と、その対局の合言葉（Authorization）を付けると、
+   * その対局の 2 人がそろった（知らせが届く）グループがあるかも返す。参加者でなければ返さない
+   */
+  app.get("/config", async (c) => {
+    const gameId = c.req.query("game");
+    if (!gameId || (await store.seatOf(gameId, bearer(c))) === null) return c.json<AppConfig>({ lineOaId: oaId });
+    return c.json<AppConfig>({ lineOaId: oaId, noticeGroup: (await store.noticeGroupOf(gameId)) !== null });
+  });
+
+  /**
+   * LINE の公式アカウントの Webhook。署名を確かめてからイベントを処理する（webhook.ts）。
+   * Workers では返事を先に返して、処理は waitUntil で続ける。Node.js（とテスト）では処理を待ってから返す
+   */
+  app.post("/line/webhook", async (c) => {
+    if (!messaging?.secret) {
+      console.log("LINE_MESSAGING_SECRET がないので、LINE の Webhook を受け付けません");
+      return c.json({ error: "not_configured" }, 503);
+    }
+    const raw = await c.req.text();
+    if (!(await verifySignature(messaging.secret, raw, c.req.header("X-Line-Signature")))) {
+      return c.json({ error: "bad_signature" }, 401);
+    }
+    let events: unknown;
+    try {
+      events = JSON.parse(raw).events;
+    } catch {
+      return c.json({ error: "bad_body" }, 400);
+    }
+    const work = handleEvents(store, Array.isArray(events) ? events : [], messaging).catch((e) =>
+      console.error("LINE の Webhook を処理できませんでした", e),
+    );
+    let ctx: { waitUntil(p: Promise<unknown>): void } | undefined;
+    try {
+      ctx = c.executionCtx;
+    } catch {
+      // Node.js では executionCtx がない
+    }
+    if (ctx) ctx.waitUntil(work);
+    else await work;
+    return c.json({ ok: true });
+  });
 
   app.post("/games", async (c) => {
     const body = await jsonBody(c);
