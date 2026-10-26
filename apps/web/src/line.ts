@@ -82,6 +82,21 @@ export function openInLine(url: string) {
 export const canPostTo = (s: Pick<LineSession, "inChat" | "chatType" | "entryGameId">, gameId: string) =>
   s.inChat && (s.chatType === "group" || s.chatType === "room" || s.entryGameId === gameId);
 
+/** グループ・複数人トークから開いているか（招待を選ぶ画面を出さず、このトークへ直接送れる） */
+export const inGroupChat = () => session?.chatType === "group" || session?.chatType === "room";
+
+/** 開いているグループへ直接送る（招待など）。グループから開いていなければ、または送れなければ false */
+export async function postToGroup(card: Card): Promise<boolean> {
+  if (!session || !inGroupChat()) return false;
+  try {
+    await session.liff.sendMessages(flex(card));
+    return true;
+  } catch (e) {
+    console.warn("グループに送れませんでした", e);
+    return false;
+  }
+}
+
 export function followGame(fromId: string, toId: string) {
   if (session?.entryGameId === fromId) session.entryGameId = toId;
 }

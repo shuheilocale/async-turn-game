@@ -11,8 +11,10 @@ import {
   lineSession,
   officialAccountUrl,
   openInLine,
+  inGroupChat,
   pickAndSend,
   postToChat,
+  postToGroup,
   type Card,
 } from "../line.ts";
 import { freeNotice, inviteCard, progressCard } from "../notify.ts";
@@ -259,10 +261,12 @@ export function Play({ id }: { id: string }) {
                 className="primary"
                 onClick={async () => {
                   const card = inviteCard(t, view.gameType, id, view.inviteCode!, names[view.you!]);
-                  await sendByPicker(card, true);
+                  // グループから開いていれば、送り先を選ばずにこのグループへ送る（2 人のトークを選び間違えないように）
+                  if (inGroupChat() && (await postToGroup(card))) setMessage(t("play.notified"));
+                  else await sendByPicker(card, true);
                 }}
               >
-                {t("play.invite.line")}
+                {t(inGroupChat() ? "play.invite.here" : "play.invite.line")}
               </button>
             )}
             <button
