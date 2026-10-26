@@ -40,7 +40,7 @@ let clock: ReturnType<typeof vi.spyOn>;
 
 const setup = (secret: string | undefined, profiles: Record<string, string> = {}) => {
   line = fakeLine(profiles);
-  app = createApp(store, { verifyLine, messaging: { secret, token: "tk", fetch: line.fetch } });
+  app = createApp(store, { verifyLine, messaging: { secret, token: "tk", liffId: "LIFF", fetch: line.fetch } });
 };
 
 beforeEach(() => {
@@ -64,11 +64,11 @@ const deliver = (events: object[], signature?: string) => {
 
 const group = (userId?: string) => ({ type: "group", groupId: "C-g1", ...(userId ? { userId } : {}) });
 const join = () => ({ type: "join", replyToken: "rt-join", source: group(), timestamp: NOON });
-const said = (userId: string, source: object = group(userId), replyToken = `rt-${userId}`) => ({
+const said = (userId: string, source: object = group(userId), replyToken = `rt-${userId}`, text = "hi") => ({
   type: "message",
   replyToken,
   source,
-  message: { type: "text", id: "m1", text: "hi", quoteToken: `q-${userId}` },
+  message: { type: "text", id: "m1", text, quoteToken: `q-${userId}` },
   timestamp: NOON,
 });
 
@@ -190,6 +190,28 @@ describe("LINE の Webhook", () => {
     }) as unknown as typeof globalThis.fetch;
     await processAlarms(store, { token: "tk", liffId: "x", fetch, now: NOON, log: () => {} });
     expect(sent).toEqual(["C-g1"]);
+  });
+
+  it("「あそぶ」と送ると、2 人の遊んでいる途中の対局と新しく遊ぶカードのメニューを返す（グループでも 1 対 1 でも）", async () => {
+    const post = (path: string, body: object) =>
+      app.request(`/api${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const created = (await (await post("/games", { gameType: "mochi", name: "あき", seat: 0, idToken: "line:U-aki", lang: "ja" })).json()) as CreateGameResponse;
+    await post(`/games/${created.id}/join`, { inviteCode: created.inviteCode, name: "Som", idToken: "line:U-som", lang: "th" });
+    await deliver([said("U-aki"), said("U-som")]);
+
+    await deliver([said("U-aki", group("U-aki"), "rt-menu", "あそぶ")]);
+    const menu = line.replies().at(-1)!.body;
+    expect(menu.replyToken).toBe("rt-menu");
+    const cards = menu.messages[0].contents.contents;
+    expect(cards).toHaveLength(2);
+    expect(JSON.stringify(cards[1])).toContain(`https://miniapp.line.me/LIFF/g/${created.id}`);
+    // 2 人の言語（日本語とタイ語）で並べる
+    expect(JSON.stringify(cards[1])).toContain("いつでも／ได้ทุกเมื่อ");
+
+    // 1 対 1 のトークでも、その人の対局で返す
+    await deliver([said("U-aki", { type: "user", userId: "U-aki" }, "rt-dm", "メニュー")]);
+    expect(line.replies().at(-1)!.body.replyToken).toBe("rt-dm");
+    expect(line.replies().at(-1)!.body.messages[0].contents.contents).toHaveLength(2);
   });
 
   it("1 対 1 のトークでのメッセージ・userId のないメッセージには何もしない（返事もしない）", async () => {

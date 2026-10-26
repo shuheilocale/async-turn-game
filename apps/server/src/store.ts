@@ -483,6 +483,36 @@ export class GameStore {
   }
 
   /** LINE ユーザーが対局でさいごに使った名前。どの対局にも出ていなければ null */
+  /**
+   * メニュー（「あそぶ」と送ったとき）に出す対局。グループならそのメンバー 2 人がそろって参加している対局、
+   * 1 対 1 のトークならその人の対局を、新しい順に返す（終わったかどうかは呼ぶ側がルールで見る）
+   */
+  async menuGames(
+    chat: { groupId: string } | { lineUserId: string },
+  ): Promise<{ id: string; gameType: string; state: unknown; names: [string | null, string | null]; langs: string[] }[]> {
+    const where =
+      "groupId" in chat
+        ? `(SELECT count(*) FROM players p WHERE p.game_id = g.id AND p.line_user_id IN
+             (SELECT m.line_user_id FROM line_group_members m WHERE m.group_id = ?)) = 2`
+        : "EXISTS (SELECT 1 FROM players p WHERE p.game_id = g.id AND p.line_user_id = ?)";
+    const rows = await this.db.all<{ id: string; game_type: string; state_json: string; n0: string | null; n1: string | null; l0: string | null; l1: string | null }>(
+      `SELECT g.id AS id, g.game_type AS game_type, g.state_json AS state_json,
+         (SELECT name FROM players WHERE game_id = g.id AND seat = 0) AS n0,
+         (SELECT name FROM players WHERE game_id = g.id AND seat = 1) AS n1,
+         (SELECT lang FROM players WHERE game_id = g.id AND seat = 0) AS l0,
+         (SELECT lang FROM players WHERE game_id = g.id AND seat = 1) AS l1
+       FROM games g WHERE ${where} ORDER BY g.updated_at DESC LIMIT 40`,
+      "groupId" in chat ? chat.groupId : chat.lineUserId,
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      gameType: r.game_type,
+      state: JSON.parse(r.state_json),
+      names: [r.n0, r.n1],
+      langs: [r.l0, r.l1].filter((l): l is string => !!l),
+    }));
+  }
+
   async nameOfLineUser(lineUserId: string): Promise<string | null> {
     const [row] = await this.db.all<{ name: string }>(
       `SELECT p.name AS name FROM players p JOIN games g ON g.id = p.game_id

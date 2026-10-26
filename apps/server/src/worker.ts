@@ -34,7 +34,7 @@ function setup(env: Env) {
       app: createApp(store, {
         verifyLine: lineVerifier(parseChannelIds(env.LINE_CHANNEL_IDS)),
         lineOaId: env.LINE_OA_ID,
-        messaging: { secret: env.LINE_MESSAGING_SECRET, token: env.LINE_MESSAGING_TOKEN },
+        messaging: { secret: env.LINE_MESSAGING_SECRET, token: env.LINE_MESSAGING_TOKEN, liffId: env.LIFF_ID, origin: env.APP_ORIGIN },
       }),
     };
   }

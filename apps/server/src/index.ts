@@ -39,6 +39,8 @@ root.route(
     lineOaId: process.env.LINE_OA_ID,
     messaging: {
       secret: process.env.LINE_MESSAGING_SECRET,
+      liffId: process.env.LIFF_ID ?? "2012180396-nO920f3r",
+      origin: process.env.APP_ORIGIN,
       ...(fakeLine
         ? { token: "dev-fake-token", fetch: fakeLineFetch }
         : { token: process.env.LINE_MESSAGING_TOKEN }),

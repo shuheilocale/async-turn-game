@@ -1,3 +1,5 @@
+import { getGame } from "@atg/core";
+import { isMenuWord, MENU_QUICK_REPLY, menuMessage, type MenuGame } from "./menu.ts";
 import type { GameStore } from "./store.ts";
 
 /**
@@ -7,7 +9,8 @@ import type { GameStore } from "./store.ts";
  * - leave：グループから抜けた → グループの記録を消す
  * - message（グループの中で、だれが話したか分かるもの）→ その人をメンバーとして記録。初めての人にだけ返信する
  * - memberLeft → メンバーの記録を消す。memberJoined は記録しない（話したときに記録する）
- * - 1 対 1 のトークでのメッセージには何もしない（返事もしない）
+ * - 「あそぶ」などのことば（menu.ts）を送ると、グループでも 1 対 1 のトークでも、ゲームのメニューを返信する
+ * - 1 対 1 のトークでのそれ以外のメッセージには何もしない（返事もしない）
  * 返信は reply API で送る（push と違って無料枠を使わない）
  */
 
@@ -17,9 +20,9 @@ const MAX_NAME = 20;
 
 /** join のあいさつ。グループには日本語とタイ語の人がいるので、3 言語を短く並べる */
 export const GREETING = [
-  "よろしくお願いします。このグループで遊ぶ人は、何かひとこと送ってください。対局の知らせをここに届けます",
-  "ยินดีที่ได้รู้จัก ใครที่เล่นเกมในกลุ่มนี้ ช่วยส่งข้อความสั้นๆ มาหนึ่งข้อความ แล้วจะส่งการแจ้งเตือนเกมมาที่กลุ่มนี้",
-  "Hello! If you play games in this group, please send any short message. Game reminders will be sent here.",
+  "よろしくお願いします。このグループで遊ぶ人は、何かひとこと送ってください。対局の知らせをここに届けます。「あそぶ」と送ると、ゲームのメニューを出します",
+  "ยินดีที่ได้รู้จัก ใครที่เล่นเกมในกลุ่มนี้ ช่วยส่งข้อความสั้นๆ มาหนึ่งข้อความ แล้วจะส่งการแจ้งเตือนเกมมาที่กลุ่มนี้ ส่งคำว่า \"เล่น\" เพื่อเปิดเมนูเกม",
+  "Hello! If you play games in this group, please send any short message. Game reminders will be sent here. Send \"play\" to open the game menu.",
 ].join("\n\n");
 
 /** 初めて話した人への返信。名前が分からなければ名前なし（返信は話したメッセージを引用するので、だれのことか分かる） */
@@ -63,6 +66,10 @@ export async function verifySignature(secret: string, body: string, signature: s
 export interface WebhookOptions {
   /** Messaging API のチャネルアクセストークン。なければ記録だけして返信しない */
   token?: string;
+  /** メニューのカードで開くミニアプリ（LIFF ID）。なければメニューを返さない */
+  liffId?: string;
+  /** 本番の URL（カードのアイコンに使う） */
+  origin?: string;
   /** テストでは偽物に差し替える */
   fetch?: typeof fetch;
   log?: (line: string) => void;
@@ -73,7 +80,7 @@ interface LineEvent {
   type?: string;
   replyToken?: string;
   source?: { type?: string; userId?: string; groupId?: string; roomId?: string };
-  message?: { quoteToken?: string };
+  message?: { type?: string; text?: string; quoteToken?: string };
   left?: { members?: { userId?: string }[] };
 }
 
@@ -87,7 +94,7 @@ export async function handleEvents(store: GameStore, events: unknown[], options:
   const at = new Date(Date.now()).toISOString();
   const authorization = { Authorization: `Bearer ${options.token}` };
 
-  const reply = async (replyToken: string | undefined, text: string, quoteToken?: string) => {
+  const send = async (replyToken: string | undefined, message: object) => {
     if (!replyToken) return;
     if (!options.token) {
       log("LINE_MESSAGING_TOKEN がないので、グループへの返信は送りません");
@@ -96,9 +103,28 @@ export async function handleEvents(store: GameStore, events: unknown[], options:
     const res = await doFetch(REPLY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authorization },
-      body: JSON.stringify({ replyToken, messages: [{ type: "text", text, ...(quoteToken ? { quoteToken } : {}) }] }),
+      body: JSON.stringify({ replyToken, messages: [message] }),
     });
     if (!res.ok) log(`LINE のグループに返信できませんでした: ${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`);
+  };
+  /** 文の返信。メニューを出すボタン（quick reply）を付ける */
+  const reply = (replyToken: string | undefined, text: string, quoteToken?: string) =>
+    send(replyToken, { type: "text", text, ...(quoteToken ? { quoteToken } : {}), quickReply: MENU_QUICK_REPLY });
+
+  /** ゲームのメニューを返信する。遊んでいる途中の対局だけを並べる */
+  const replyMenu = async (replyToken: string | undefined, chat: { groupId: string } | { lineUserId: string }) => {
+    if (!options.liffId) return;
+    const rows = await store.menuGames(chat);
+    const games: MenuGame[] = [];
+    const langs = new Set<string>();
+    for (const row of rows) {
+      const status = getGame(row.gameType)?.status(row.state);
+      if (status?.kind !== "playing") continue;
+      games.push({ id: row.id, gameType: row.gameType, status, names: row.names });
+      for (const l of row.langs) langs.add(l);
+    }
+    const ls = [...langs].map((l) => (l === "en" || l === "th" ? l : "ja"));
+    await send(replyToken, menuMessage(games, ls.length ? ls : ["ja", "th"], options.liffId, options.origin));
   };
 
   /** 名前：対局で使っている名前、なければ LINE の名前（グループのメンバーのプロフィール）。分からなければ null */
@@ -123,8 +149,16 @@ export async function handleEvents(store: GameStore, events: unknown[], options:
     const source = event.source;
     const kind = source?.type === "group" ? "group" : source?.type === "room" ? "room" : null;
     const chatId = kind === "group" ? source?.groupId : kind === "room" ? source?.roomId : undefined;
-    // 1 対 1 のトーク（source.type が user）など、グループの外のイベントには何もしない
-    if (!kind || !chatId) continue;
+    const menuAsked = event.type === "message" && event.message?.type === "text" && isMenuWord(event.message.text ?? "");
+    // 1 対 1 のトーク（source.type が user）では、メニューのことばにだけ返事をする
+    if (!kind || !chatId) {
+      if (menuAsked && source?.type === "user" && source.userId) {
+        await replyMenu(event.replyToken, { lineUserId: source.userId }).catch((e) =>
+          log(`LINE のメニューを返せませんでした: ${String(e instanceof Error ? e.message : e)}`),
+        );
+      }
+      continue;
+    }
     try {
       switch (event.type) {
         case "join":
@@ -137,9 +171,10 @@ export async function handleEvents(store: GameStore, events: unknown[], options:
         case "message": {
           const userId = source?.userId;
           if (!userId) break;
-          if (await store.seeGroupMember(chatId, userId, at)) {
-            await reply(event.replyToken, memberText(await nameOf(chatId, kind, userId)), event.message?.quoteToken);
-          }
+          const first = await store.seeGroupMember(chatId, userId, at);
+          // メニューのことばなら、初めての人でもメニューを返す（返信は 1 回しかできないので、記録だけして案内は省く）
+          if (menuAsked) await replyMenu(event.replyToken, { groupId: chatId });
+          else if (first) await reply(event.replyToken, memberText(await nameOf(chatId, kind, userId)), event.message?.quoteToken);
           break;
         }
         case "memberLeft":

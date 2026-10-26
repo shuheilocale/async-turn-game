@@ -176,7 +176,8 @@ LINE Developers に「LINE ミニアプリ」のチャネルを作ってある�
 - グループとメンバーは公式アカウントの Webhook（`POST /api/line/webhook`、[apps/server/src/webhook.ts](apps/server/src/webhook.ts)）で D1 の `line_groups`・`line_group_members` に記録する
   - `join`（グループに招待された）：グループを記録し、返信で 3 言語のあいさつ（「このグループで遊ぶ人は、何かひとこと送ってください」）
   - `message`（グループで話した）：その人をメンバーとして記録する。初めての人にだけ返信で「〇〇さんの対局の知らせを、このグループに届けます」（名前は対局で使っている名前、なければ LINE の名前）
-  - `memberLeft`：メンバーを消す。`leave`：グループごと消す。`memberJoined` は記録しない（話したときに記録する）。1 対 1 のトークには何もしない
+  - 「あそぶ」「メニュー」「เล่น」「play」など（[apps/server/src/menu.ts](apps/server/src/menu.ts)）だけを送ると、返信でゲームのメニュー（新しく遊ぶカードと、遊んでいる途中の対局のカード）を横に並べて出す。グループでは 2 人がそろって参加している対局、1 対 1 のトークではその人の対局。リッチメニューはグループに出せないので、ことばで呼ぶ。返信の文には「あそぶ」のボタン（quick reply）を付ける
+  - `memberLeft`：メンバーを消す。`leave`：グループごと消す。`memberJoined` は記録しない（話したときに記録する）。1 対 1 のトークでは、メニューのことば以外には何もしない
   - 返信は reply API なので無料枠を使わない。署名（`X-Line-Signature`）が合わなければ 401、チャネルシークレットがなければ 503
 - 予定は D1 の `alarms`（対局・席ごとに次の 1 つ）。手を受け取ったとき・参加したとき・次の対局を作ったときに決め直し、終局したら消す（[apps/server/src/alarms.ts](apps/server/src/alarms.ts)）
 - Cron Trigger（`wrangler.jsonc` の `triggers.crons`。15 分ごと）で時刻を過ぎた予定を集めて送り、送ったら消す。送った記録は `notices`（グループへ送ったものは `group_id` 付きで 2 人それぞれに 1 行）

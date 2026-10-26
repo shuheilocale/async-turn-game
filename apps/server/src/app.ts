@@ -68,6 +68,9 @@ export interface AppOptions {
     secret?: string;
     /** チャネルアクセストークン。グループへの返信に使う */
     token?: string;
+    /** メニューのカードで開くミニアプリの LIFF ID と、アイコンの URL に使う本番の URL */
+    liffId?: string;
+    origin?: string;
     /** テストでは偽物に差し替える */
     fetch?: typeof fetch;
   };
