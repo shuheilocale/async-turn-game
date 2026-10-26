@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameView, Seat } from "@atg/core";
 import { api, ApiRequestError } from "../api.ts";
 import { boards } from "../boards/index.ts";
-import { asLang, coopText, errorText, translator, useI18n, type T } from "../i18n/index.tsx";
+import { asLang, coopText, errorText, freeText, translator, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
 import { followGame, lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
-import { inviteCard, progressCard } from "../notify.ts";
+import { freeNotice, inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
-import { savedGames } from "../storage.ts";
+import { savedGames, savedNotified } from "../storage.ts";
 
 /** 相手の手を待つ間、何ミリ秒ごとに盤面を確認するか */
 const POLL_MS = 5000;
@@ -78,8 +78,17 @@ export function Play({ id }: { id: string }) {
     setNotice(null);
   }, [view?.version]);
 
-  const myTurn =
-    !!view && view.status.kind === "playing" && view.status.turn === view.you && !view.waitingForOpponent;
+  /** 順番のないゲーム（2 人ともいつでも指せる） */
+  const free = view?.status.kind === "playing" && !!view.status.free;
+  /** 今、自分が指せるか。順番のないゲームなら、参加者はいつでも */
+  const canMove =
+    !!view &&
+    view.status.kind === "playing" &&
+    view.you !== null &&
+    (free || view.status.turn === view.you) &&
+    !view.waitingForOpponent;
+  /** 自分の番（急かしてよい）。順番のないゲームでは急かさない */
+  const myTurn = canMove && !free;
 
   // タブのタイトルで手番を知らせる（PC で別タブを見ていても気づける）
   useEffect(() => {
@@ -99,9 +108,17 @@ export function Play({ id }: { id: string }) {
       const next = await api.move(id, token, view.version, move, lang);
       setView(next);
       setSelected(null);
-      // 手番が相手に移ったとき・終局したときだけ知らせる（同じ人が続けて指すゲームでは知らせない）
-      const handedOver = next.status.kind === "finished" || next.status.turn !== next.you;
-      if (lineSession() && handedOver) {
+      // 手番が相手に移ったとき・終局したときだけ知らせる（同じ人が続けて指すゲームでは知らせない）。
+      // 順番のないゲームは指すたびに知らせるが、同じ人が短い間に続けて指したときは毎回は知らせない
+      let notify: boolean;
+      if (next.status.kind === "finished") notify = true;
+      else if (next.status.free) {
+        const { send, saved } = freeNotice(savedNotified.get(id), next.version, Date.now());
+        // LINE の外では知らせないので、覚えておくのも LINE の中だけ
+        if (lineSession()) savedNotified.set(id, saved);
+        notify = send;
+      } else notify = next.status.turn !== next.you;
+      if (lineSession() && notify) {
         // 指したことを相手に LINE で知らせる。トークから開いていれば自動、そうでなければボタンで
         const me = next.players.find((p) => p.seat === next.you)?.name ?? "";
         const tr = recipientT(next);
@@ -206,7 +223,11 @@ export function Play({ id }: { id: string }) {
               className={[
                 "player",
                 `seat${seat}`,
-                view.status.kind === "playing" && view.status.turn === seat && !view.waitingForOpponent && "turn",
+                view.status.kind === "playing" &&
+                  !view.status.free &&
+                  view.status.turn === seat &&
+                  !view.waitingForOpponent &&
+                  "turn",
                 view.status.kind === "finished" &&
                   (view.status.winner === seat || view.status.coop === "cleared") &&
                   "winner",
@@ -268,7 +289,7 @@ export function Play({ id }: { id: string }) {
           status={view.status}
           you={view.you}
           names={names}
-          interactive={myTurn && !busy}
+          interactive={canMove && !busy}
           selected={selected}
           onSelect={(m) => setSelected(m)}
           onSubmit={(m) => submit(m)}
@@ -385,6 +406,9 @@ function StatusBanner({
     tone = (w !== null && w === view.you) || coop === "cleared" ? `done won${yours}` : "done";
   } else if (view.waitingForOpponent) {
     text = t("status.waiting");
+  } else if (view.status.free) {
+    // 順番のないゲーム：だれの番とも言わず、急かさない
+    text = freeText(t, view.gameType);
   } else if (view.you === null) {
     const turn = view.status.turn;
     text = t("status.spectating", { name: names[turn], seat: seatLabel(turn) });

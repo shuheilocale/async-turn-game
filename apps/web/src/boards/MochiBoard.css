@@ -361,7 +361,7 @@
   }
 }
 
-/* 相手の番：ゆらゆら待つ */
+/* 観戦しているとき：ゆらゆら待つ */
 .mochi-hit.waiting .mochi-bob {
   animation: mochi-sway 4.4s ease-in-out infinite;
 }
@@ -874,41 +874,6 @@
   animation: mochi-bubble 2.4s ease-in-out infinite;
 }
 
-/* 相手の番 */
-.mochi-wait {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-}
-
-.mochi-wait p:first-child {
-  font-weight: 700;
-}
-
-.mochi-wait .muted {
-  font-size: 0.85rem;
-}
-
-.mochi-wait-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  margin-top: 0.5em;
-  border-radius: 50%;
-  background: var(--seat-color);
-  animation: mochi-pulse 2s ease-in-out infinite;
-}
-
-@keyframes mochi-pulse {
-  50% {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--seat-color) 20%, transparent);
-  }
-}
-
 /* ---------- ふたりのお世話 ---------- */
 
 .mochi-two {
@@ -930,6 +895,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.mochi-two-cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
 .mochi-two-who {
@@ -958,6 +929,32 @@
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--seat-text);
+}
+
+/* それぞれがさいごにしたお世話。いちばん新しいものは、その人の色で */
+.mochi-two-last {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 16px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.mochi-two-last .mochi-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.mochi-two-last span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mochi-two-last.latest {
+  color: var(--seat-text);
+  font-weight: 700;
 }
 
 .mochi-mix {

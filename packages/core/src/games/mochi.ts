@@ -1,8 +1,9 @@
 import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Seat } from "../types.ts";
 
 /**
- * ふたりのもち（協力ゲーム）：卵からかえる小さな生きもの「もち」を、2 人で交代でお世話して育てる放置ゲーム。
- * - 自分の番にお世話を 1 つ選ぶ（ごはん・あそぶ・なでる・おしゃべり・ねかしつける・おでかけ）と、相手の番になる
+ * ふたりのもち（協力ゲーム）：卵からかえる小さな生きもの「もち」を、2 人でお世話して育てる放置ゲーム。
+ * - 順番はない。2 人ともいつでもお世話を 1 つ選べる（ごはん・あそぶ・なでる・おしゃべり・ねかしつける・おでかけ）。
+ *   同じ人が続けてもよいが、前のお世話からすぐに続けても速くは育たない（BONUS_HOURS）
  * - お世話のあいだも本物の時計で時間が進む。おなか・きげんはゆっくり減り、ねむけは増える。
  *   ねむけが 100 になると自分で眠り、眠るとねむけが減って起きる。どれだけ放っておいても死なない・弱らない
  * - 育つのは、お世話のあと GROW_HOURS 時間のあいだ。具合がよいほど速い。ほしがっているお世話をするとおまけで育つ
@@ -11,7 +12,8 @@ import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Sea
  * - 留守のあいだに小さなできごとが 1 つ起きる（拾いもの・夢・ひとこま）。拾ったものは「たからもの」になる
  *
  * applyMove は時計を読めないので、時刻はサーバが stampMove で手に書き込む。お世話のあいだの具合は
- * conditionAt で計算する（盤の表示もこれを使う）。できごとの乱数は initialState で作った種から決める
+ * conditionAt で計算する（盤の表示もこれを使う）。できごとの乱数は initialState で作った種から決める。
+ * 放っておいたときに知らせる時刻（おなかがすいた・目がさめた など）は nextAlarm で出す
  */
 
 export const HOUR = 3_600_000;
@@ -175,6 +177,12 @@ export interface LastCare {
   matched: boolean;
 }
 
+/** 席ごとの、さいごにしたお世話 */
+export interface SeatCare {
+  care: Care;
+  at: number;
+}
+
 export interface MochiState {
   /** できごとを決める種（initialState で作る） */
   seed: number;
@@ -191,8 +199,14 @@ export interface MochiState {
   cares: Record<Care, number>;
   /** 席ごとのお世話の回数 */
   bySeat: [number, number];
+  /**
+   * 順番はないので、次にお世話するとよさそうな人の目安（直前にお世話していない人）。表示にだけ使い、applyMove は見ない。
+   * 前は手番だった（そのころの対局も、そのまま続けられる）
+   */
   turn: Seat;
   last: LastCare | null;
+  /** 席ごとの、さいごにしたお世話。順番がなかったころの対局にはない（lastCareOf で読む） */
+  lastOf?: [SeatCare | null, SeatCare | null];
   /** 拾ったもの（拾った順） */
   treasures: Treasure[];
   /** 留守のあいだのできごと（古い順。DIARY_MAX まで） */
@@ -203,6 +217,12 @@ export interface MochiState {
 }
 
 const DIARY_MAX = 60;
+
+/** その席が、さいごにしたお世話。lastOf がない前からの対局では、最後のお世話だけ分かる */
+export function lastCareOf(s: MochiState, seat: Seat): SeatCare | null {
+  if (s.lastOf) return s.lastOf[seat];
+  return s.last?.seat === seat ? { care: s.last.care, at: s.last.at } : null;
+}
 
 /** ある時刻のようす。conditionAt で計算する */
 export interface Condition {
@@ -433,6 +453,76 @@ function afterCare(c: Condition, care: Care): { needs: Needs; asleep: boolean } 
   };
 }
 
+// ---------- 知らせる時刻 ----------
+
+/** だれもお世話しないまま、この時間たったら「しばらくだれも来ていない」と知らせる */
+export const LONELY_HOURS = 12;
+/** お世話のすぐあと（この時間より前）に起きることは知らせない（お世話した人が見ているし、相手にはお世話の知らせが届く） */
+export const ALARM_MIN_HOURS = 1;
+
+/**
+ * 知らせの種類。同じ時刻なら、この順で先のものにする。
+ * grown：おとなになれるくらい育った（お世話するとおとなになる）／hatched：卵がかえった／
+ * hungry：おなかがすいて、ごはんをほしがるくらいになった（眠っていたら、目がさめたとき）／
+ * wake：眠っていたのが目をさました／lonely：しばらくだれも来ていない
+ */
+export const ALARMS = ["grown", "hatched", "hungry", "wake", "lonely"] as const;
+export type AlarmKind = (typeof ALARMS)[number];
+export interface Alarm {
+  at: number;
+  kind: AlarmKind;
+}
+
+/** lo（ミリ秒）では ok でなく、hi では ok のとき、はじめて ok になる時刻（ミリ秒）。ok は lo〜hi で一度だけ変わること */
+function firstWhen(lo: number, hi: number, ok: (t: number) => boolean): number | null {
+  if (!ok(hi)) return null;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (ok(mid)) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
+/**
+ * だれもお世話しないまま時間がたったとき、次に知らせるとよい時刻と種類。はじめてのお世話の前と、おとなになったあとは null。
+ * さいごのお世話から LONELY_HOURS 時間までのあいだで、いちばん早いものを 1 つだけ返す（お世話するまで、知らせは 1 回）。
+ * どれも「変わり目」の時刻で、お世話のときにもうそうなっていたもの（おなかがすいていた など）は知らせない。
+ * 具合はおなか・育った量が時間とともに一方にしか動かないので、conditionAt を使って変わり目をはさみうちで探す（ミリ秒まで）
+ */
+export function nextAlarm(s: MochiState): Alarm | null {
+  if (s.at === null || s.form !== null) return null;
+  const start = s.at;
+  const end = start + LONELY_HOURS * HOUR;
+  const at = (t: number) => conditionAt(s, t);
+  const found: Alarm[] = [{ at: end, kind: "lonely" }];
+  const add = (kind: AlarmKind, t: number | null) => {
+    if (t !== null && t - start >= ALARM_MIN_HOURS * HOUR && t <= end) found.push({ at: t, kind });
+  };
+
+  // 育った量は減らない。卵がかえる・おとなになれるくらい育つ
+  add("hatched", s.growth < HATCH ? firstWhen(start, end, (t) => at(t).growth >= HATCH) : null);
+  add("grown", firstWhen(start, end, (t) => at(t).growth >= ADULT));
+
+  // 眠ったあとに目がさめる。LONELY_HOURS のあいだに目がさめるのは多くても 1 回なので、一度だけ変わる
+  add("wake", firstWhen(start, end, (t) => {
+    const c = at(t);
+    return c.slept && !c.asleep;
+  }));
+
+  // おなかは減るだけ。ほしがるくらいになった時刻に眠っていたら、目がさめたときにする
+  const hungry = (t: number) => at(t).needs.tummy <= 100 - WANT_AT;
+  let fed = hungry(start) ? null : firstWhen(start, end, hungry);
+  if (fed !== null && at(fed).asleep) {
+    // 眠っているのは長くても 100 / sleepyDown 時間
+    const from = fed;
+    fed = firstWhen(from, from + Math.ceil((100 / RATES.sleepyDown) * HOUR) + 1, (t) => !at(t).asleep);
+  }
+  add("hungry", fed);
+
+  return found.reduce((a, b) => (b.at < a.at || (b.at === a.at && ALARMS.indexOf(b.kind) < ALARMS.indexOf(a.kind)) ? b : a));
+}
+
 const isCare = (v: unknown): v is Care => typeof v === "string" && (CARES as readonly string[]).includes(v);
 
 export const mochi: GameDefinition<MochiState, MochiMove> = {
@@ -450,6 +540,7 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
       bySeat: [0, 0],
       turn: 0,
       last: null,
+      lastOf: [null, null],
       treasures: [],
       diary: [],
       adultAt: null,
@@ -460,12 +551,13 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
   status(state): GameStatus {
     // 協力ゲームなので勝ち負けはない。おとなになったら 2 人でクリア（失敗はない）
     if (state.form !== null) return { kind: "finished", winner: null, coop: "cleared" };
-    return { kind: "playing", turn: state.turn };
+    // 順番はない（2 人ともいつでもお世話できる）。turn は次にお世話するとよさそうな人の目安
+    return { kind: "playing", turn: state.turn, free: true };
   },
 
   applyMove(state, move, seat) {
     if (state.form !== null) throw new IllegalMoveError("game_over");
-    if (seat !== state.turn) throw new IllegalMoveError("not_your_turn");
+    // 順番はないので、手番は見ない（同じ人が続けてもよい）
     if (!isCare(move.care)) throw new IllegalMoveError("mochi_no_such_care");
 
     // 時刻は前のお世話より戻さない。時刻のない手は前のお世話と同じ時刻
@@ -482,6 +574,8 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
     const cares = { ...state.cares, [move.care]: state.cares[move.care] + 1 };
     const bySeat: [number, number] = [...state.bySeat];
     bySeat[seat]++;
+    const lastOf: [SeatCare | null, SeatCare | null] = [lastCareOf(state, 0), lastCareOf(state, 1)];
+    lastOf[seat] = { care: move.care, at: t };
     const grown = growth >= ADULT;
     return {
       ...state,
@@ -494,6 +588,7 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
       bySeat,
       turn: other(seat),
       last: { care: move.care, seat, at: t, want, matched },
+      lastOf,
       treasures: happening?.kind === "found" ? [...state.treasures, { item: happening.item, at: t }] : state.treasures,
       diary: happening ? [...state.diary, { at: t, seat, happening }].slice(-DIARY_MAX) : state.diary,
       adultAt: grown ? t : null,
@@ -510,4 +605,6 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
   stampMove(move, now) {
     return { care: move.care, at: now };
   },
+
+  nextAlarm,
 };

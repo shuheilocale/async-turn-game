@@ -27,6 +27,9 @@ const used = [
   "hap.foundWalk",
   "hap.hatched",
   "hap.grew",
+  "carePrompt",
+  "lastNone",
+  "status.free",
 ].map((k) => `game.mochi.${k}`);
 
 describe("ふたりのもちの文言", () => {

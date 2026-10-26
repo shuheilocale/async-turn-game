@@ -60,3 +60,19 @@ export const savedCategory = {
   get: () => read<string>("atg:category", "all"),
   set: (category: string) => write("atg:category", category),
 };
+
+/**
+ * 順番のないゲームで、相手に LINE で知らせた時刻（ミリ秒）と、自分がさいごに指したあとの版（対局ごと）。
+ * 同じ人が短い間に続けて指したときに、毎回は知らせないために使う（notify.ts の freeNotice）
+ */
+export const savedNotified = {
+  get: (id: string): Notified | undefined => read<Record<string, Notified>>("atg:notified", {})[id],
+  set(id: string, value: Notified) {
+    write("atg:notified", { ...read<Record<string, Notified>>("atg:notified", {}), [id]: value });
+  },
+};
+
+export interface Notified {
+  at: number;
+  version: number;
+}

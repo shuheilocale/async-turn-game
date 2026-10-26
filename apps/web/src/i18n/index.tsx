@@ -103,8 +103,21 @@ export function useI18n() {
  * 自分の言い方を持っていればそれを使う（相性を見るゲームで「失敗」と出さないため）
  */
 export function coopText(t: T, gameType: string, coop: "cleared" | "failed", place: "status" | "badge" = "status"): string {
-  const own = t(`game.${gameType}.${place}.${coop}`);
-  return own.startsWith("game.") ? t(`${place}.${coop}`) : own;
+  return ownText(t, gameType, `${place}.${coop}`);
+}
+
+/**
+ * 順番のないゲーム（GameStatus の free）の「いつでも指せる」の文言（帯の一文か、一覧のバッジ）。
+ * ゲームが game.<ID>.status.free などを持っていればそれを使う（もちなら「お世話できます」）
+ */
+export function freeText(t: T, gameType: string, place: "status" | "badge" = "status"): string {
+  return ownText(t, gameType, `${place}.free`);
+}
+
+/** game.<ID>.<key> があればそれを、なければ共通の <key> を使う */
+function ownText(t: T, gameType: string, key: `${"status" | "badge"}.${string}`): string {
+  const own = t(`game.${gameType}.${key}`);
+  return own.startsWith("game.") ? t(key as Parameters<T>[0]) : own;
 }
 
 /** API のエラーコードを今の言語の文にする */

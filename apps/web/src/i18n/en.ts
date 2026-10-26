@@ -40,6 +40,7 @@ export const en: Messages = {
   "badge.waiting": "Waiting for opponent",
   "badge.yourTurn": "Your turn",
   "badge.theirTurn": "Their turn",
+  "badge.free": "Anytime",
 
   "join.title": "You're invited to a game",
   "join.from": "{host} invited you to play {game}.",
@@ -77,6 +78,7 @@ export const en: Messages = {
   "learn.bot": "Computer",
   "learn.botThinking": "The computer is thinking",
   "learn.both": "You play both sides. It's {seat}'s turn",
+  "learn.free": "You play both sides. You're {seat} now (tap a name below to switch)",
   "learn.again": "Play again",
   "learn.create": "Start a real game",
   "learn.tour.next": "Next",
@@ -103,6 +105,7 @@ export const en: Messages = {
   "status.spectating": "{name}'s turn ({seat}) — spectating",
   "status.yourTurn": "Your turn",
   "status.theirTurn": "{name}'s turn",
+  "status.free": "Either of you can move anytime",
   "title.yourTurn": "● Your turn",
 
   "error.unknown": "Something went wrong. Please try again",

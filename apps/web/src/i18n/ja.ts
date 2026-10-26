@@ -39,6 +39,7 @@ export const ja = {
   "badge.waiting": "相手の参加待ち",
   "badge.yourTurn": "あなたの番",
   "badge.theirTurn": "相手の番",
+  "badge.free": "いつでも",
 
   "join.title": "対局に招待されています",
   "join.from": "{host}さんから「{game}」の招待です。",
@@ -76,6 +77,7 @@ export const ja = {
   "learn.bot": "コンピュータ",
   "learn.botThinking": "コンピュータが考えています",
   "learn.both": "ひとりで 2 人分を動かします。今は{seat}の番です",
+  "learn.free": "ひとりで 2 人分を動かします。今は{seat}です（下の名前を押すと入れ替わります）",
   "learn.again": "もう一度",
   "learn.create": "このゲームで対局を作る",
   "learn.tour.next": "次へ",
@@ -102,6 +104,7 @@ export const ja = {
   "status.spectating": "{name}さん（{seat}）の番です（観戦中）",
   "status.yourTurn": "あなたの番です",
   "status.theirTurn": "{name}さんの番です",
+  "status.free": "2 人ともいつでも指せます",
   "title.yourTurn": "● あなたの番",
 
   "error.unknown": "うまくいきませんでした。もう一度お試しください",

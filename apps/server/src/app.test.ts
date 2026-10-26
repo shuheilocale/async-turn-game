@@ -97,6 +97,17 @@ describe("api", () => {
     ]);
   });
 
+  it("順番のないゲーム（もち）は、どちらの席からでも、同じ人が続けても指せる（サーバは手番を見ない）", async () => {
+    const { id, black, white } = await setupGame("mochi");
+    const first = await post(`/games/${id}/moves`, { version: 0, move: { care: "feed" } }, black);
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as GameView).status).toEqual({ kind: "playing", turn: 1, free: true });
+    expect((await post(`/games/${id}/moves`, { version: 1, move: { care: "pet" } }, black)).status).toBe(200);
+    const third = await post(`/games/${id}/moves`, { version: 2, move: { care: "talk" } }, white);
+    expect(third.status).toBe(200);
+    expect(((await third.json()) as { state: { bySeat: number[] } }).state.bySeat).toEqual([2, 1]);
+  });
+
   it("時間を使わないゲームの手には時刻を書き込まない", async () => {
     const { id, black } = await setupGame();
     await post(`/games/${id}/moves`, { version: 0, move: { row: 2, col: 3, at: 5 } }, black);

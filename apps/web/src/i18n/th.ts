@@ -40,6 +40,7 @@ export const th: Messages = {
   "badge.waiting": "รออีกฝ่ายเข้าร่วม",
   "badge.yourTurn": "ตาของคุณ",
   "badge.theirTurn": "ตาของอีกฝ่าย",
+  "badge.free": "ได้ทุกเมื่อ",
 
   "join.title": "คุณได้รับคำเชิญให้เล่นเกม",
   "join.from": "{host} ชวนคุณเล่น {game}",
@@ -77,6 +78,7 @@ export const th: Messages = {
   "learn.bot": "คอมพิวเตอร์",
   "learn.botThinking": "คอมพิวเตอร์กำลังคิด",
   "learn.both": "คุณเล่นทั้งสองฝ่าย ตอนนี้เป็นตาของ{seat}",
+  "learn.free": "คุณเล่นแทนทั้งสองฝ่าย ตอนนี้เป็น{seat} (แตะชื่อด้านล่างเพื่อสลับ)",
   "learn.again": "เล่นอีกครั้ง",
   "learn.create": "เริ่มเกมจริง",
   "learn.tour.next": "ถัดไป",
@@ -103,6 +105,7 @@ export const th: Messages = {
   "status.spectating": "ตาของ {name} ({seat}) — กำลังดู",
   "status.yourTurn": "ตาของคุณ",
   "status.theirTurn": "ตาของ {name}",
+  "status.free": "ทั้งสองคนเล่นได้ทุกเมื่อ",
   "title.yourTurn": "● ตาของคุณ",
 
   "error.unknown": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",

@@ -1684,6 +1684,11 @@ button.card-face:disabled {
   color: var(--muted);
 }
 
+/* 順番のないゲームで、どちらとして指すかを選ぶ名前の札 */
+button.player {
+  text-align: start;
+}
+
 .learn-link {
   min-height: 40px;
   border: 0;

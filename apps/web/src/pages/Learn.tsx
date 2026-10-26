@@ -18,7 +18,8 @@ const LEARN_STEP_MS = 12 * 3_600_000;
 /**
  * 「ルールを学ぶ」：サーバを使わず、この端末だけで 1 局ためす画面。
  * 対戦ゲームはコンピュータ（packages/core の botMove）が相手。コンピュータがいないゲーム
- * （協力ゲームなど）は、ひとりで 2 人分を動かす。ゲームごとの案内（tours/）を上に重ねて出せる
+ * （協力ゲームなど）は、ひとりで 2 人分を動かす。順番のないゲーム（GameStatus の free）では、
+ * 名前の札を押して、どちらとして指すかを選べる（選ぶまでは目安の人）。ゲームごとの案内（tours/）を上に重ねて出せる
  */
 export function Learn({ gameType }: { gameType: string }) {
   const { t } = useI18n();
@@ -30,6 +31,8 @@ export function Learn({ gameType }: { gameType: string }) {
   const [moves, setMoves] = useState(0);
   /** この局で指した手の数（コンピュータの手も数える）。お試しの時計に使う */
   const [plies, setPlies] = useState(0);
+  /** 順番のないゲームで、どちらとして指すか（選んだら、入れ替えるまでそのまま）。null なら目安の人 */
+  const [asSeat, setAsSeat] = useState<Seat | null>(null);
   const steps = tourOf(gameType);
   const [step, setStep] = useState<number | null>(steps.length > 0 ? 0 : null);
   const root = useRef<HTMLDivElement>(null);
@@ -41,8 +44,9 @@ export function Learn({ gameType }: { gameType: string }) {
   const withBot = !!def && !ui?.coop && (!!def.botMove || !!def.legalMoves);
   const status: GameStatus | null = def && state !== undefined ? def.status(state) : null;
   const turn = status?.kind === "playing" ? status.turn : null;
-  // コンピュータが相手なら自分はいつも先手。ひとりで 2 人分なら、今の手番の人として見る
-  const you: Seat = withBot ? 0 : (turn ?? 0);
+  const free = status?.kind === "playing" && !!status.free;
+  // コンピュータが相手なら自分はいつも先手。ひとりで 2 人分なら、今の手番の人（順番がなければ選んだ人）として見る
+  const you: Seat = withBot ? 0 : free ? (asSeat ?? turn ?? 0) : (turn ?? 0);
   const botTurn = withBot && turn === 1;
 
   const apply = useCallback(
@@ -100,6 +104,7 @@ export function Learn({ gameType }: { gameType: string }) {
     setMessage(null);
     setMoves(0);
     setPlies(0);
+    setAsSeat(null);
   };
 
   return (
@@ -117,16 +122,30 @@ export function Learn({ gameType }: { gameType: string }) {
 
       <div className="play-status">
         <div className={`banner ${status.kind === "playing" && !botTurn ? `hot seat${you}` : ""}`} role="status">
-          {bannerText(t, status, names, withBot, botTurn, gameType)}
+          {free ? t("learn.free", { seat: names[you] }) : bannerText(t, status, names, withBot, botTurn, gameType)}
         </div>
         <div className="versus">
-          {([0, 1] as Seat[]).map((seat) => (
-            <div key={seat} className={`player seat${seat} ${turn === seat ? "turn" : ""}`}>
-              <SeatToken gameType={gameType} seat={seat} />
-              <span className="name">{names[seat]}</span>
-              {withBot && seat === 0 && names[0] !== t("play.you") && <span className="you">{t("play.you")}</span>}
-            </div>
-          ))}
+          {([0, 1] as Seat[]).map((seat) =>
+            free ? (
+              // 順番のないゲーム：押した人として指す
+              <button
+                key={seat}
+                type="button"
+                className={`player seat${seat} ${you === seat ? "turn" : ""}`}
+                aria-pressed={you === seat}
+                onClick={() => setAsSeat(seat)}
+              >
+                <SeatToken gameType={gameType} seat={seat} />
+                <span className="name">{names[seat]}</span>
+              </button>
+            ) : (
+              <div key={seat} className={`player seat${seat} ${turn === seat ? "turn" : ""}`}>
+                <SeatToken gameType={gameType} seat={seat} />
+                <span className="name">{names[seat]}</span>
+                {withBot && seat === 0 && names[0] !== t("play.you") && <span className="you">{t("play.you")}</span>}
+              </div>
+            ),
+          )}
         </div>
         {message && <p className="message">{message}</p>}
       </div>

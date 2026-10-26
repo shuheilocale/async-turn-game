@@ -95,9 +95,9 @@ export default {
   ja: {
     "game.mochi.name": "ふたりのもち",
     "game.mochi.desc":
-      "卵からかえる小さな生きもの「もち」を、2 人で交代でお世話して育てる協力ゲーム。お世話のあいだも本物の時計で少しずつ育ち、5〜7 日ほどでおとなになる。",
+      "卵からかえる小さな生きもの「もち」を、2 人でお世話して育てる協力ゲーム。順番はなく、いつでも、どちらでもお世話できる。お世話のあいだも本物の時計で少しずつ育ち、5〜7 日ほどでおとなになる。",
     "game.mochi.rules":
-      "卵からかえる小さな生きもの「もち」を、2 人で交代でお世話して育てます。自分の番に、ごはん・あそぶ・なでる・おしゃべり・ねかしつける・おでかけ のどれか 1 つをえらぶと、相手の番になります。お世話とお世話のあいだも、本物の時計で時間が進みます。おなかときげんはゆっくり減り、ねむけは増えます。ねむけがいっぱいになると自分で眠り、ぐっすり眠ると起きてきます。もちは、お世話のあと半日ほどのあいだ少しずつ育ち、具合がよいほど速く育ちます。もちがほしがっているお世話（しるしがつきます）をすると、よけいに育ちます。すぐに続けてお世話しても、速くは育ちません。どれだけ放っておいても、しょんぼりしたり眠ったりするだけで、弱ったりいなくなったりはしません。留守のあいだには小さなできごとが 1 つあり、拾ってきたものは「たからもの」に集まります。おでかけのあとは、かならず何かを拾ってきます。卵 → あかちゃん → こども → おとな と育ち、1 日に 2 人で何回かお世話すると、5〜7 日ほどでおとなになります。おとなの姿は、どのお世話が目立って多かったかで 7 種類に分かれます（よく食べるとまんまる、よく遊ぶと身軽、おしゃべりが多いと耳が長い など。まんべんなくならなかよしの姿）。体の色は、2 人のお世話の回数に合わせて青とオレンジが混ざります。おとなになったら 2 人でクリアです。",
+      "卵からかえる小さな生きもの「もち」を、2 人でお世話して育てます。順番はありません。いつでも、どちらでも、ごはん・あそぶ・なでる・おしゃべり・ねかしつける・おでかけ のどれか 1 つをえらんでお世話できます（同じ人が続けてもかまいません）。お世話とお世話のあいだも、本物の時計で時間が進みます。おなかときげんはゆっくり減り、ねむけは増えます。ねむけがいっぱいになると自分で眠り、ぐっすり眠ると起きてきます。もちは、お世話のあと半日ほどのあいだ少しずつ育ち、具合がよいほど速く育ちます。もちがほしがっているお世話（しるしがつきます）をすると、よけいに育ちます。前のお世話からすぐに続けても（どちらがしても）、速くは育ちません。どれだけ放っておいても、しょんぼりしたり眠ったりするだけで、弱ったりいなくなったりはしません。留守のあいだには小さなできごとが 1 つあり、拾ってきたものは「たからもの」に集まります。おでかけのあとは、かならず何かを拾ってきます。卵 → あかちゃん → こども → おとな と育ち、1 日に 2 人で何回かお世話すると、5〜7 日ほどでおとなになります。おとなの姿は、どのお世話が目立って多かったかで 7 種類に分かれます（よく食べるとまんまる、よく遊ぶと身軽、おしゃべりが多いと耳が長い など。まんべんなくならなかよしの姿）。体の色は、2 人のお世話の回数に合わせて青とオレンジが混ざります。おとなになったら 2 人でクリアです。",
     "game.mochi.seat0": "青",
     "game.mochi.seat1": "オレンジ",
     "game.mochi.creature": "もち",
@@ -105,6 +105,7 @@ export default {
     "game.mochi.who": "{name}さん",
     "game.mochi.status.cleared": "もちがおとなになりました！",
     "game.mochi.badge.cleared": "おとなになった",
+    "game.mochi.status.free": "いつでも、どちらでもお世話できます",
 
     ...group("stage", { egg: "たまご", baby: "あかちゃん", child: "こども", adult: "おとな" }),
     "game.mochi.day": "{n} 日目",
@@ -200,13 +201,12 @@ export default {
     "game.mochi.ago.hour": "{n} 時間前",
     "game.mochi.ago.day": "{n} 日前",
 
-    "game.mochi.yourTurn": "お世話を 1 つえらんでください",
-    "game.mochi.theirTurn": "{who}がお世話する番です",
-    "game.mochi.waitHint": "もちは待っています。さわると、よろこびます",
+    "game.mochi.carePrompt": "いつでもお世話できます。1 つえらんでください",
     "game.mochi.tapHint": "もちにさわれます",
 
     "game.mochi.two": "ふたりのお世話",
     "game.mochi.times": "{n} 回",
+    "game.mochi.lastNone": "まだお世話していません",
     "game.mochi.colorNote": "体の色は、2 人のお世話の回数で混ざります",
     "game.mochi.treasures": "たからもの",
     "game.mochi.treasuresEmpty": "まだありません。留守のあいだに、何か拾ってくるかも",
@@ -254,21 +254,21 @@ export default {
     "game.mochi.art": "{form}",
     "error.mochi_no_such_care": "そのお世話はできません",
 
-    "game.mochi.tour.goal": "2 人で交代でお世話して、卵から「もち」を育てる協力ゲームです。5〜7 日ほどでおとなになります。",
+    "game.mochi.tour.goal": "2 人でお世話して、卵から「もち」を育てる協力ゲームです。順番はなく、いつでも、どちらでもお世話できます。5〜7 日ほどでおとなになります。",
     "game.mochi.tour.care":
-      "自分の番に、お世話を 1 つえらびます。えらぶとすぐに相手の番です。しるしのあるお世話は、もちがほしがっているもの。お世話してみましょう。",
+      "お世話を 1 つえらびます。順番はないので、2 人ともいつでもできます。しるしのあるお世話は、もちがほしがっているもの。お世話してみましょう。",
     "game.mochi.tour.time":
       "お世話のあいだも本物の時計で少しずつ育ちます。おなか・きげんは減り、ねむけは増えますが、放っておいても弱りません。お試しでは 1 回ごとに半日すすみます。",
     "game.mochi.tour.away": "留守のあいだに、小さなできごとがあります。拾ってきたものは「たからもの」に集まります。",
-    "game.mochi.tour.form": "おとなの姿は、どのお世話が多かったかで変わります。体の色は 2 人のお世話の回数で混ざります。",
+    "game.mochi.tour.form": "おとなの姿は、どのお世話が多かったかで変わります。体の色は 2 人のお世話の回数で混ざります（お試しでは、上の名前を押すと、もう 1 人としてお世話できます）。",
   },
 
   en: {
     "game.mochi.name": "Mochi for Two",
     "game.mochi.desc":
-      "Take turns caring for a little egg-born creature called a mochi. It keeps growing on the real clock between visits and is all grown up in about 5 to 7 days.",
+      "Care for a little egg-born creature called a mochi together. There are no turns: either of you can care for it anytime. It keeps growing on the real clock between visits and is all grown up in about 5 to 7 days.",
     "game.mochi.rules":
-      "Take turns caring for a little creature called a mochi, from egg to grown-up. On your turn, pick one: Feed, Play, Pat, Chat, Tuck in, or Outing. Then it's your partner's turn. Time keeps moving on the real clock between your visits. Its tummy and mood slowly go down and it gets sleepier. When it gets too sleepy, it falls asleep on its own and wakes up refreshed. Your mochi grows little by little for about half a day after each visit, and faster when it's feeling good. Doing what it wants (marked on the buttons) helps it grow even more. Caring again right away won't make it grow faster. However long it's left alone, it only gets a bit down or falls asleep. It never gets weak and never goes away. While you're away, one small thing happens, and anything it brings back goes into your Treasures. After an outing, it always brings something back. It grows from egg to baby to kid to grown-up, and with a few visits a day between you, it's grown up in about 5 to 7 days. Its grown-up form depends on which care stood out the most (7 forms: lots of food makes it round, lots of play makes it light on its feet, lots of chats gives it long ears, and so on; an even mix gives the Together form). Its color blends blue and orange depending on how often each of you cared for it. When it's grown up, you clear the game together.",
+      "Care for a little creature called a mochi together, from egg to grown-up. There are no turns: either of you can pick one of Feed, Play, Pat, Chat, Tuck in, or Outing anytime (even several times in a row). Time keeps moving on the real clock between your visits. Its tummy and mood slowly go down and it gets sleepier. When it gets too sleepy, it falls asleep on its own and wakes up refreshed. Your mochi grows little by little for about half a day after each visit, and faster when it's feeling good. Doing what it wants (marked on the buttons) helps it grow even more. Caring again right away (whoever does it) won't make it grow faster. However long it's left alone, it only gets a bit down or falls asleep. It never gets weak and never goes away. While you're away, one small thing happens, and anything it brings back goes into your Treasures. After an outing, it always brings something back. It grows from egg to baby to kid to grown-up, and with a few visits a day between you, it's grown up in about 5 to 7 days. Its grown-up form depends on which care stood out the most (7 forms: lots of food makes it round, lots of play makes it light on its feet, lots of chats gives it long ears, and so on; an even mix gives the Together form). Its color blends blue and orange depending on how often each of you cared for it. When it's grown up, you clear the game together.",
     "game.mochi.seat0": "Blue",
     "game.mochi.seat1": "Orange",
     "game.mochi.creature": "Mochi",
@@ -276,6 +276,7 @@ export default {
     "game.mochi.who": "{name}",
     "game.mochi.status.cleared": "Your mochi is all grown up!",
     "game.mochi.badge.cleared": "Grown up",
+    "game.mochi.status.free": "Either of you can care for it anytime",
 
     ...group("stage", { egg: "Egg", baby: "Baby", child: "Kid", adult: "Grown-up" }),
     "game.mochi.day": "Day {n}",
@@ -371,13 +372,12 @@ export default {
     "game.mochi.ago.hour": "{n} h ago",
     "game.mochi.ago.day": "{n} days ago",
 
-    "game.mochi.yourTurn": "Pick one way to care for it",
-    "game.mochi.theirTurn": "It's {who}'s turn to care",
-    "game.mochi.waitHint": "Your mochi is waiting. Give it a poke — it likes that",
+    "game.mochi.carePrompt": "You can care for it anytime. Pick one",
     "game.mochi.tapHint": "You can touch your mochi",
 
     "game.mochi.two": "Care from you two",
     "game.mochi.times": "{n}×",
+    "game.mochi.lastNone": "No care yet",
     "game.mochi.colorNote": "Its color blends with how often each of you cared for it",
     "game.mochi.treasures": "Treasures",
     "game.mochi.treasuresEmpty": "Nothing yet. It might bring something back while you're away",
@@ -425,21 +425,21 @@ export default {
     "game.mochi.art": "{form}",
     "error.mochi_no_such_care": "That's not a way to care for it",
 
-    "game.mochi.tour.goal": "Take turns caring for a mochi together, from egg to grown-up. It's all grown up in about 5 to 7 days.",
+    "game.mochi.tour.goal": "Care for a mochi together, from egg to grown-up. There are no turns: either of you can care for it anytime. It's all grown up in about 5 to 7 days.",
     "game.mochi.tour.care":
-      "On your turn, pick one way to care for it. Then it's your partner's turn right away. The marked button is what your mochi wants. Give it a try.",
+      "Pick one way to care for it. There are no turns, so both of you can do it anytime. The marked button is what your mochi wants. Give it a try.",
     "game.mochi.tour.time":
       "It keeps growing on the real clock between visits. Its tummy and mood go down and it gets sleepier, but it never gets weak if left alone. In this practice game, each visit moves the clock half a day.",
     "game.mochi.tour.away": "Small things happen while you're away. Whatever it brings back goes into your Treasures.",
-    "game.mochi.tour.form": "Its grown-up form depends on which care you gave the most. Its color blends with how often each of you cared for it.",
+    "game.mochi.tour.form": "Its grown-up form depends on which care you gave the most. Its color blends with how often each of you cared for it (in practice, tap a name above to care as the other person).",
   },
 
   th: {
     "game.mochi.name": "โมจิของเรา",
     "game.mochi.desc":
-      "ผลัดกันดูแล \"โมจิ\" สิ่งมีชีวิตตัวเล็กๆ ที่ฟักออกจากไข่ ระหว่างที่ไม่ได้ดูแล โมจิก็ค่อยๆ โตตามเวลาจริง และจะโตเป็นผู้ใหญ่ในราว 5–7 วัน",
+      "ช่วยกันดูแล \"โมจิ\" สิ่งมีชีวิตตัวเล็กๆ ที่ฟักออกจากไข่ ไม่ต้องผลัดตา ใครจะดูแลเมื่อไหร่ก็ได้ ระหว่างที่ไม่ได้ดูแล โมจิก็ค่อยๆ โตตามเวลาจริง และจะโตเป็นผู้ใหญ่ในราว 5–7 วัน",
     "game.mochi.rules":
-      "ผลัดกันดูแล \"โมจิ\" สิ่งมีชีวิตตัวเล็กๆ ตั้งแต่เป็นไข่จนโตเป็นผู้ใหญ่ ในตาของตัวเอง ให้เลือกดูแล 1 อย่าง คือ ให้อาหาร เล่นด้วย ลูบหัว คุยด้วย กล่อมนอน หรือพาไปเที่ยว แล้วจะเป็นตาของอีกคน ระหว่างการดูแลแต่ละครั้ง เวลาก็เดินไปตามนาฬิกาจริง ความอิ่มและอารมณ์จะค่อยๆ ลดลง ส่วนความง่วงจะเพิ่มขึ้น ถ้าง่วงเต็มที่ โมจิจะหลับไปเอง แล้วตื่นขึ้นมาเมื่อนอนพอแล้ว หลังดูแลแต่ละครั้ง โมจิจะค่อยๆ โตไปอีกราวครึ่งวัน ยิ่งสบายดีก็ยิ่งโตเร็ว ถ้าดูแลแบบที่โมจิอยากได้ (มีเครื่องหมายที่ปุ่ม) จะโตขึ้นอีก แต่ดูแลติดๆ กันทันทีก็ไม่ได้ทำให้โตเร็วขึ้น ต่อให้ปล่อยไว้นานแค่ไหน โมจิก็แค่ซึมๆ หรือหลับไป ไม่มีวันอ่อนแอหรือหายไปไหน ระหว่างที่ไม่อยู่ จะมีเรื่องเล็กๆ เกิดขึ้น 1 เรื่อง ของที่โมจิเก็บมาได้จะสะสมไว้ใน \"สมบัติ\" และหลังพาไปเที่ยว โมจิจะเก็บอะไรกลับมาเสมอ โมจิจะโตจากไข่ เป็นวัยเบบี๋ วัยเด็ก แล้วเป็นผู้ใหญ่ ถ้าทั้งสองคนช่วยกันดูแลวันละหลายครั้ง จะโตเป็นผู้ใหญ่ในราว 5–7 วัน ร่างผู้ใหญ่มี 7 แบบ ขึ้นอยู่กับว่าดูแลแบบไหนบ่อยเป็นพิเศษ (กินเก่งจะกลมดิ๊ก เล่นเยอะจะตัวเบาคล่องแคล่ว คุยบ่อยหูจะยาว ฯลฯ ถ้าดูแลครบทุกอย่างพอๆ กันจะเป็นร่างคู่ใจ) สีตัวจะผสมระหว่างน้ำเงินกับส้มตามจำนวนครั้งที่แต่ละคนดูแล เมื่อโตเป็นผู้ใหญ่ ก็ถือว่าทั้งสองคนผ่านด่านด้วยกัน",
+      "ช่วยกันดูแล \"โมจิ\" สิ่งมีชีวิตตัวเล็กๆ ตั้งแต่เป็นไข่จนโตเป็นผู้ใหญ่ ไม่ต้องผลัดตา ทั้งสองคนเลือกดูแลได้ทุกเมื่อครั้งละ 1 อย่าง คือ ให้อาหาร เล่นด้วย ลูบหัว คุยด้วย กล่อมนอน หรือพาไปเที่ยว (คนเดียวดูแลติดๆ กันก็ได้) ระหว่างการดูแลแต่ละครั้ง เวลาก็เดินไปตามนาฬิกาจริง ความอิ่มและอารมณ์จะค่อยๆ ลดลง ส่วนความง่วงจะเพิ่มขึ้น ถ้าง่วงเต็มที่ โมจิจะหลับไปเอง แล้วตื่นขึ้นมาเมื่อนอนพอแล้ว หลังดูแลแต่ละครั้ง โมจิจะค่อยๆ โตไปอีกราวครึ่งวัน ยิ่งสบายดีก็ยิ่งโตเร็ว ถ้าดูแลแบบที่โมจิอยากได้ (มีเครื่องหมายที่ปุ่ม) จะโตขึ้นอีก แต่ดูแลติดๆ กันทันที (ไม่ว่าใครจะดูแล) ก็ไม่ได้ทำให้โตเร็วขึ้น ต่อให้ปล่อยไว้นานแค่ไหน โมจิก็แค่ซึมๆ หรือหลับไป ไม่มีวันอ่อนแอหรือหายไปไหน ระหว่างที่ไม่อยู่ จะมีเรื่องเล็กๆ เกิดขึ้น 1 เรื่อง ของที่โมจิเก็บมาได้จะสะสมไว้ใน \"สมบัติ\" และหลังพาไปเที่ยว โมจิจะเก็บอะไรกลับมาเสมอ โมจิจะโตจากไข่ เป็นวัยเบบี๋ วัยเด็ก แล้วเป็นผู้ใหญ่ ถ้าทั้งสองคนช่วยกันดูแลวันละหลายครั้ง จะโตเป็นผู้ใหญ่ในราว 5–7 วัน ร่างผู้ใหญ่มี 7 แบบ ขึ้นอยู่กับว่าดูแลแบบไหนบ่อยเป็นพิเศษ (กินเก่งจะกลมดิ๊ก เล่นเยอะจะตัวเบาคล่องแคล่ว คุยบ่อยหูจะยาว ฯลฯ ถ้าดูแลครบทุกอย่างพอๆ กันจะเป็นร่างคู่ใจ) สีตัวจะผสมระหว่างน้ำเงินกับส้มตามจำนวนครั้งที่แต่ละคนดูแล เมื่อโตเป็นผู้ใหญ่ ก็ถือว่าทั้งสองคนผ่านด่านด้วยกัน",
     "game.mochi.seat0": "น้ำเงิน",
     "game.mochi.seat1": "ส้ม",
     "game.mochi.creature": "โมจิ",
@@ -447,6 +447,7 @@ export default {
     "game.mochi.who": "{name}",
     "game.mochi.status.cleared": "โมจิโตเป็นผู้ใหญ่แล้ว!",
     "game.mochi.badge.cleared": "โตแล้ว",
+    "game.mochi.status.free": "ทั้งสองคนดูแลโมจิได้ทุกเมื่อ",
 
     ...group("stage", { egg: "ไข่", baby: "วัยเบบี๋", child: "วัยเด็ก", adult: "ผู้ใหญ่" }),
     "game.mochi.day": "วันที่ {n}",
@@ -542,13 +543,12 @@ export default {
     "game.mochi.ago.hour": "{n} ชั่วโมงที่แล้ว",
     "game.mochi.ago.day": "{n} วันที่แล้ว",
 
-    "game.mochi.yourTurn": "เลือกดูแล 1 อย่าง",
-    "game.mochi.theirTurn": "ตาของ {who} ดูแลโมจิ",
-    "game.mochi.waitHint": "โมจิกำลังรออยู่ ลองแตะดูสิ ชอบนะ",
+    "game.mochi.carePrompt": "ดูแลได้ทุกเมื่อ เลือก 1 อย่าง",
     "game.mochi.tapHint": "แตะโมจิได้นะ",
 
     "game.mochi.two": "การดูแลจากทั้งสองคน",
     "game.mochi.times": "{n} ครั้ง",
+    "game.mochi.lastNone": "ยังไม่ได้ดูแล",
     "game.mochi.colorNote": "สีตัวผสมกันตามจำนวนครั้งที่แต่ละคนดูแล",
     "game.mochi.treasures": "สมบัติ",
     "game.mochi.treasuresEmpty": "ยังไม่มี ระหว่างที่ไม่อยู่ โมจิอาจจะเก็บอะไรมาให้นะ",
@@ -596,12 +596,12 @@ export default {
     "game.mochi.art": "{form}",
     "error.mochi_no_such_care": "ดูแลแบบนั้นไม่ได้",
 
-    "game.mochi.tour.goal": "ผลัดกันดูแล \"โมจิ\" ตั้งแต่เป็นไข่ เป็นเกมร่วมมือที่โมจิจะโตเป็นผู้ใหญ่ในราว 5–7 วัน",
+    "game.mochi.tour.goal": "ช่วยกันดูแล \"โมจิ\" ตั้งแต่เป็นไข่ เป็นเกมร่วมมือที่ไม่ต้องผลัดตา ใครจะดูแลเมื่อไหร่ก็ได้ โมจิจะโตเป็นผู้ใหญ่ในราว 5–7 วัน",
     "game.mochi.tour.care":
-      "ในตาของตัวเอง ให้เลือกดูแล 1 อย่าง เลือกแล้วจะเป็นตาของอีกคนทันที ปุ่มที่มีเครื่องหมายคือสิ่งที่โมจิอยากได้ ลองดูแลดูสิ",
+      "เลือกดูแล 1 อย่าง ไม่ต้องผลัดตา ทั้งสองคนดูแลได้ทุกเมื่อ ปุ่มที่มีเครื่องหมายคือสิ่งที่โมจิอยากได้ ลองดูแลดูสิ",
     "game.mochi.tour.time":
       "ระหว่างการดูแล โมจิก็ค่อยๆ โตตามนาฬิกาจริง ความอิ่มและอารมณ์จะลดลง ความง่วงจะเพิ่มขึ้น แต่ปล่อยไว้ก็ไม่อ่อนแอ ในโหมดทดลอง ดูแลแต่ละครั้งเวลาจะเดินไปครึ่งวัน",
     "game.mochi.tour.away": "ระหว่างที่ไม่อยู่ จะมีเรื่องเล็กๆ เกิดขึ้น ของที่โมจิเก็บมาได้จะสะสมไว้ใน \"สมบัติ\"",
-    "game.mochi.tour.form": "ร่างผู้ใหญ่จะเปลี่ยนไปตามการดูแลที่ทำบ่อยที่สุด สีตัวจะผสมกันตามจำนวนครั้งที่แต่ละคนดูแล",
+    "game.mochi.tour.form": "ร่างผู้ใหญ่จะเปลี่ยนไปตามการดูแลที่ทำบ่อยที่สุด สีตัวจะผสมกันตามจำนวนครั้งที่แต่ละคนดูแล (ในโหมดทดลอง แตะชื่อด้านบนเพื่อดูแลในฐานะอีกคน)",
   },
 } satisfies GameMessages;

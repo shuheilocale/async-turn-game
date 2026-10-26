@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botName, coopText, translator } from "./index.tsx";
+import { botName, coopText, freeText, translator } from "./index.tsx";
 
 describe("文言", () => {
   it("お試しのコンピュータの名前には「さん」を付けない（人の名前には付ける）", () => {
@@ -19,5 +19,14 @@ describe("文言", () => {
     expect(coopText(t, "ishin", "failed", "badge")).toBe("相性が出た");
     expect(coopText(t, "heart", "failed")).toBe("失敗しました");
     expect(coopText(t, "heart", "cleared", "badge")).toBe("クリア");
+  });
+
+  it("順番のないゲームの「いつでも指せる」も、ゲームに言い方があればそれを使い、なければ共通の文にする", () => {
+    const t = translator("ja");
+    expect(freeText(t, "mochi")).toBe("いつでも、どちらでもお世話できます");
+    expect(freeText(t, "mochi", "badge")).toBe("いつでも");
+    expect(freeText(t, "tictactoe")).toBe("2 人ともいつでも指せます");
+    expect(freeText(translator("en"), "mochi")).toBe("Either of you can care for it anytime");
+    expect(freeText(translator("th"), "tictactoe", "badge")).toBe("ได้ทุกเมื่อ");
   });
 });

@@ -2,7 +2,19 @@
 export type Seat = 0 | 1;
 
 export type GameStatus =
-  | { kind: "playing"; turn: Seat }
+  | {
+      kind: "playing";
+      /**
+       * 次に指す人。free のゲームでは表示の目安（次に指すとよさそうな人。ふつうは直前に指していない人）で、
+       * 2 人ともいつでも指せる
+       */
+      turn: Seat;
+      /**
+       * 順番のないゲームだけ：2 人ともいつでも指せる（同じ人が続けて指してもよい）。
+       * applyMove は手番を見ない。画面は「あなたの番」と急かさず、相手が指すのを待たせない
+       */
+      free?: true;
+    }
   | {
       kind: "finished";
       winner: Seat | null;
@@ -48,6 +60,13 @@ export interface GameDefinition<S = unknown, M = unknown> {
    * 相手の秘密は見えない（のぞき見しない）。指せる手がなければ null
    */
   botMove?(view: unknown, seat: Seat, rng: Rng): M | null;
+  /**
+   * 時間で知らせたいことがあるゲームだけ実装する（もちがおなかをすかせた・目をさました など）。
+   * state のまま時間がたったときに、次に知らせるとよい時刻（at、ミリ秒）と種類（kind。知らせの文に使う）を返す。
+   * 知らせることがなければ null。同じ state なら同じ答えにする（純粋関数）。
+   * サーバが時刻になったら LINE で知らせるのに使う（手が指されて state が変われば、知らせる時刻も決め直す）
+   */
+  nextAlarm?(state: S): { at: number; kind: string } | null;
 }
 
 /** code は画面側で各言語の文に置き換える（例: "not_your_turn"） */

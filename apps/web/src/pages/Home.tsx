@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { GameStatus, GameView, Seat } from "@atg/core";
 import { api } from "../api.ts";
 import { boards, CATEGORIES, categoryOf, type Category } from "../boards/index.ts";
-import { coopText, errorText, useI18n, type T } from "../i18n/index.tsx";
+import { coopText, errorText, freeText, useI18n, type T } from "../i18n/index.tsx";
 import { GameGlyph } from "../icons.tsx";
 import { lineIdToken, lineSession } from "../line.ts";
 import { navigate } from "../router.ts";
@@ -222,7 +222,9 @@ async function loadSaved() {
   return savedGames.all();
 }
 
-const isMyTurn = (v: GameView) => v.status.kind === "playing" && v.status.turn === v.you && !v.waitingForOpponent;
+/** 自分の番で、急かしてよい対局。順番のないゲーム（いつでも指せる）は入れない */
+const isMyTurn = (v: GameView) =>
+  v.status.kind === "playing" && !v.status.free && v.status.turn === v.you && !v.waitingForOpponent;
 
 function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boolean } {
   if (status.kind === "finished") {
@@ -230,6 +232,8 @@ function badge(t: T, v: GameView, status: GameStatus): { label: string; hot: boo
     return { label, hot: false };
   }
   if (v.waitingForOpponent) return { label: t("badge.waiting"), hot: false };
+  // 順番のないゲームは急かさない（「いつでも」の落ち着いた札）
+  if (status.free) return { label: freeText(t, v.gameType, "badge"), hot: false };
   return isMyTurn(v) ? { label: t("badge.yourTurn"), hot: true } : { label: t("badge.theirTurn"), hot: false };
 }
 
@@ -254,7 +258,7 @@ function MyGames() {
 
   if (views === null || views.length === 0) return null;
 
-  // あなたの番 → 相手の番・参加待ち → 終わった対局（折りたたみ）の順に分ける
+  // あなたの番 → 相手の番・参加待ち・いつでも指せる → 終わった対局（折りたたみ）の順に分ける
   const mine = views.filter(isMyTurn);
   const waiting = views.filter((v) => !isMyTurn(v) && v.status.kind !== "finished");
   const finished = views.filter((v) => v.status.kind === "finished");

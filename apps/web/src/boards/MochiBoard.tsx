@@ -5,7 +5,7 @@ import type { BoardProps } from "./index.ts";
 import { CareIcon, CareShape, Creature, ItemSvg, ROOM, Room, shapeOf, SparkShape, sparkOf, type Spark } from "./mochi/art.tsx";
 import "./MochiBoard.css";
 
-const { CARES, ITEMS, conditionAt, wantOf, moodOf, happeningOf, bodyColor, nowOf, dayOf, stageOf, stageProgress, ADULT, HATCH } =
+const { CARES, ITEMS, conditionAt, wantOf, moodOf, happeningOf, bodyColor, nowOf, dayOf, stageOf, stageProgress, lastCareOf, ADULT, HATCH } =
   Mochi;
 type State = Mochi.MochiState;
 type Care = Mochi.Care;
@@ -72,9 +72,10 @@ interface Reaction {
 }
 
 /**
- * 上に段階と日数、まん中にもちの部屋、その下に今のようす・できごと・具合。自分の番なら 6 つのお世話のボタン
- * （押すとすぐに送る。罰はないので確かめない）。相手の番なら待っている知らせ。もちはいつでもさわれる（手にはならない）。
- * 下に、ふたりのお世話の回数と体の色、たからもの。おとなになったら姿と日数・回数・たからものを出す
+ * 上に段階と日数、まん中にもちの部屋、その下に今のようす・できごと・具合。順番はないので、参加者にはいつでも
+ * 6 つのお世話のボタン（押すとすぐに送る。罰はないので確かめない）。もちはいつでもさわれる（手にはならない）。
+ * 下に、ふたりのお世話の回数（それぞれがさいごにしたお世話も）と体の色、たからもの。
+ * おとなになったら姿と日数・回数・たからものを出す
  */
 export function MochiBoard({ state, status, you, names, interactive, onSubmit }: BoardProps) {
   const s = state as State;
@@ -90,8 +91,8 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
   const ready = !finished && c.growth >= ADULT;
   const color = bodyColor(s.bySeat);
   const moves = s.bySeat[0] + s.bySeat[1];
-  const turn = status.kind === "playing" ? status.turn : null;
-  const myTurn = turn !== null && turn === you;
+  /** 参加者なら、いつでもお世話できる（観戦者は見るだけ） */
+  const carer = !finished && you !== null;
 
   const nameOf = (seat: Seat) => names[seat] || t(`game.mochi.seat${seat}`);
   const who = (seat: Seat) => (seat === you ? t("game.mochi.you") : t("game.mochi.who", { name: nameOf(seat) }));
@@ -140,7 +141,7 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
               <g
                 className={[
                   "mochi-hit",
-                  !myTurn && !finished ? "waiting" : "",
+                  !carer && !finished ? "waiting" : "",
                   reaction ? "reacting" : "",
                   ready ? "ready" : "",
                   finished ? "cheer" : "",
@@ -190,9 +191,9 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
       ) : (
         <>
           {stage !== "egg" && <Meters t={t} needs={c.needs} asleep={c.asleep} />}
-          {myTurn ? (
+          {carer && (
             <section className="mochi-cares-box">
-              <p className="mochi-prompt">{t("game.mochi.yourTurn")}</p>
+              <p className="mochi-prompt">{t("game.mochi.carePrompt")}</p>
               <div className="mochi-cares">
                 {CARES.map((k) => (
                   <button
@@ -209,21 +210,11 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
                 ))}
               </div>
             </section>
-          ) : (
-            turn !== null && (
-              <section className={`mochi-wait seat${turn}`}>
-                <span className="mochi-wait-dot" aria-hidden />
-                <div>
-                  <p>{t("game.mochi.theirTurn", { who: who(turn) })}</p>
-                  {you !== null && <p className="muted">{t("game.mochi.waitHint")}</p>}
-                </div>
-              </section>
-            )
           )}
         </>
       )}
 
-      <Two t={t} s={s} names={names} you={you} color={color} />
+      <Two t={t} s={s} names={names} you={you} color={color} clock={clock} />
       <Treasures t={t} s={s} open={finished} />
     </div>
   );
@@ -437,8 +428,22 @@ function Meters({ t, needs, asleep }: { t: T; needs: Mochi.Needs; asleep: boolea
   );
 }
 
-/** ふたりのお世話の回数と、混ざった体の色 */
-function Two({ t, s, names, you, color }: { t: T; s: State; names: Record<Seat, string>; you: Seat | null; color: string }) {
+/** ふたりのお世話の回数と、それぞれがさいごにしたお世話、混ざった体の色 */
+function Two({
+  t,
+  s,
+  names,
+  you,
+  color,
+  clock,
+}: {
+  t: T;
+  s: State;
+  names: Record<Seat, string>;
+  you: Seat | null;
+  color: string;
+  clock: number;
+}) {
   const total = s.bySeat[0] + s.bySeat[1];
   const share = total === 0 ? 0.5 : s.bySeat[1] / total;
   const nameOf = (seat: Seat) => (seat === you ? t("game.mochi.you") : names[seat] || t(`game.mochi.seat${seat}`));
@@ -446,13 +451,31 @@ function Two({ t, s, names, you, color }: { t: T; s: State; names: Record<Seat, 
     <section className="mochi-two">
       <h3>{t("game.mochi.two")}</h3>
       <div className="mochi-two-row">
-        {([0, 1] as Seat[]).map((seat) => (
-          <span key={seat} className={`mochi-two-who seat${seat}`}>
-            <span className="token dot" aria-hidden />
-            <span className="mochi-two-name">{nameOf(seat)}</span>
-            <span className="mochi-two-count">{t("game.mochi.times", { n: s.bySeat[seat] })}</span>
-          </span>
-        ))}
+        {([0, 1] as Seat[]).map((seat) => {
+          const last = lastCareOf(s, seat);
+          return (
+            <div key={seat} className={`mochi-two-cell seat${seat}`}>
+              <span className="mochi-two-who">
+                <span className="token dot" aria-hidden />
+                <span className="mochi-two-name">{nameOf(seat)}</span>
+                <span className="mochi-two-count">{t("game.mochi.times", { n: s.bySeat[seat] })}</span>
+              </span>
+              {/* さいごにしたお世話。いちばん新しいお世話には色を付ける */}
+              <span className={`mochi-two-last ${last && s.last?.seat === seat && s.last.at === last.at ? "latest" : ""}`}>
+                {last ? (
+                  <>
+                    <CareIcon care={last.care} />
+                    <span>
+                      {t(`game.mochi.care.${last.care}`)}・{agoText(t, clock - last.at)}
+                    </span>
+                  </>
+                ) : (
+                  <span>{t("game.mochi.lastNone")}</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <div className="mochi-mix" aria-hidden>
         <span className="mochi-mix-bar" style={{ background: MIX_BAR }}>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { IllegalMoveError, type Rng, type Seat } from "../types.ts";
 import {
   ADULT,
+  ALARM_MIN_HOURS,
   bodyColor,
   CARE_BASE,
   CARE_MATCH,
@@ -26,15 +27,18 @@ import {
   HOUR,
   ITEMS,
   JOY_CARES,
+  LONELY_HOURS,
   mochi,
   MOMENTS,
   moodOf,
+  nextAlarm,
   nowOf,
   RATES,
   SOFT,
   stageOf,
   stageProgress,
   START_NEEDS,
+  WANT_AT,
   wantOf,
   type Care,
   type Condition,
@@ -73,7 +77,7 @@ const baby = (o: Partial<MochiState> = {}): MochiState => ({
 
 const withNeeds = (needs: Needs, o: Partial<MochiState> = {}) => baby({ needs, ...o });
 
-/** サーバと同じく stampMove で時刻を書き込んでから指す。席を省くと手番の人 */
+/** サーバと同じく stampMove で時刻を書き込んでから指す。席を省くと、目安の人（直前にお世話していない人） */
 function careAt(s: MochiState, care: Care, time: number, seat?: Seat): MochiState {
   const st = mochi.status(s);
   const by = seat ?? (st.kind === "playing" ? st.turn : 0);
@@ -307,16 +311,87 @@ describe("ほしいお世話（wantOf）", () => {
   });
 });
 
-describe("手番と手", () => {
-  it("先手から始まり、お世話するたびに交代する", () => {
+describe("順番なし（2 人ともいつでもお世話できる）と手", () => {
+  it("status は順番なし（free）。turn は目安で、直前にお世話していない人", () => {
     let s = fresh();
-    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 0 });
+    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 0, free: true });
     s = careAt(s, "pet", at(0), 0);
-    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 1 });
-    expect(codeOf(() => careAt(s, "pet", at(1), 0))).toBe("not_your_turn");
+    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 1, free: true });
     s = careAt(s, "talk", at(1), 1);
-    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 0 });
-    expect(s.bySeat).toEqual([1, 1]);
+    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 0, free: true });
+    s = careAt(s, "feed", at(2), 1);
+    expect(mochi.status(s)).toEqual({ kind: "playing", turn: 0, free: true });
+  });
+
+  it("同じ人が何回続けてもお世話できる。相手もいつでもお世話できる", () => {
+    let s = fresh();
+    for (let i = 0; i < 5; i++) s = careAt(s, CARES[i % CARES.length]!, at(i * 4), 0);
+    expect(s.bySeat).toEqual([5, 0]);
+    s = careAt(s, "feed", at(21), 1);
+    s = careAt(s, "pet", at(21.5), 1);
+    expect(s.bySeat).toEqual([5, 2]);
+    expect(s.last).toMatchObject({ care: "pet", seat: 1, at: at(21.5) });
+  });
+
+  it("前から遊んでいる途中の対局（手番が決まっている状態）も、どちらの席からでも続けられる", () => {
+    // 前は、お世話した人の相手が turn に入っていた
+    const old = careAt(withNeeds({ tummy: 60, joy: 60, sleepy: 20 }), "pet", at(1), 0);
+    expect(old.turn).toBe(1);
+    const saved: Partial<MochiState> = { ...old };
+    delete saved.lastOf;
+    const again = careAt(saved as MochiState, "talk", at(2), 0);
+    expect(again.bySeat).toEqual([2, 0]);
+    expect(again.lastOf).toEqual([{ care: "talk", at: at(2) }, null]);
+    expect(careAt(saved as MochiState, "feed", at(2), 1).bySeat).toEqual([1, 1]);
+  });
+
+  it("1 人で続けてお世話しても、2 人で交互にしたのと同じだけしか育たない（すぐ続けるとおまけは少ない）", () => {
+    const plan: [Care, number][] = [
+      ["feed", 0],
+      ["pet", 0.5],
+      ["talk", 1],
+      ["play", 4],
+      ["feed", 4.2],
+    ];
+    let alone = baby();
+    let both = baby();
+    plan.forEach(([care, hours], i) => {
+      alone = careAt(alone, care, at(hours), 0);
+      both = careAt(both, care, at(hours), (i % 2) as Seat);
+    });
+    expect(alone.growth).toBeCloseTo(both.growth);
+    expect(alone.needs).toEqual(both.needs);
+    // すぐに続けたお世話のおまけは少ない
+    const quick = careAt(careAt(baby(), "talk", at(3), 0), "pet", at(3), 0);
+    expect(quick.growth - conditionAt(careAt(baby(), "talk", at(3), 0), at(3)).growth).toBeCloseTo(0);
+  });
+
+  it("席ごとに、さいごにしたお世話を覚えておく（直前に相手がしたお世話と、自分がしたお世話が分かる）", () => {
+    let s = fresh();
+    expect(s.lastOf).toEqual([null, null]);
+    s = careAt(s, "feed", at(0), 0);
+    s = careAt(s, "pet", at(1), 1);
+    s = careAt(s, "talk", at(2), 1);
+    expect(s.lastOf).toEqual([
+      { care: "feed", at: at(0) },
+      { care: "talk", at: at(2) },
+    ]);
+  });
+
+  it("体の色は、2 人のお世話の回数の差で動く（1 人が多くお世話すると、その人の色に寄る）", () => {
+    let s = fresh();
+    for (let i = 0; i < 3; i++) s = careAt(s, "pet", at(i * 4), 0);
+    expect(bodyColor(s.bySeat)).toBe(SOFT[0]);
+    s = careAt(s, "talk", at(13), 1);
+    const leaning = bodyColor(s.bySeat);
+    expect(leaning).not.toBe(SOFT[0]);
+    expect(leaning).not.toBe(bodyColor([1, 1]));
+    for (let i = 0; i < 2; i++) s = careAt(s, "feed", at(17 + i * 4), 1);
+    expect(bodyColor(s.bySeat)).toBe(bodyColor([1, 1]));
+    for (let i = 0; i < 4; i++) s = careAt(s, "play", at(26 + i * 4), 1);
+    expect(s.bySeat).toEqual([3, 7]);
+    expect(bodyColor(s.bySeat)).toBe(bodyColor([3, 7]));
+    expect(bodyColor(s.bySeat)).not.toBe(bodyColor([1, 1]));
   });
 
   it("知らないお世話は受け付けない", () => {
@@ -590,6 +665,96 @@ describe("留守のあいだのできごと（happeningOf）", () => {
     // できごとがなければ日記は増えない
     const quick = careAt(next, "pet", at(5.2), 0);
     expect(quick.diary).toHaveLength(next.diary.length);
+  });
+});
+
+describe("知らせる時刻（nextAlarm）", () => {
+  /** 前と 1 秒前を比べて、ちょうどその時刻に変わったか */
+  const justAt = (s: MochiState, time: number, ok: (c: Condition) => boolean) => {
+    expect(ok(conditionAt(s, time))).toBe(true);
+    expect(ok(conditionAt(s, time - 1000))).toBe(false);
+  };
+  const hungryAt = 100 - WANT_AT;
+
+  it("はじめてのお世話の前と、おとなになったあとは知らせない", () => {
+    expect(nextAlarm(fresh())).toBeNull();
+    const { state } = playOut([8, 20]);
+    expect(nextAlarm(state)).toBeNull();
+  });
+
+  it("卵のときは、かえる時刻", () => {
+    const s = careAt(fresh(), "feed", T0);
+    const alarm = nextAlarm(s)!;
+    expect(alarm.kind).toBe("hatched");
+    expect(alarm.at).toBeCloseTo(T0 + (HATCH - CARE_BASE) * HOUR, -3);
+    justAt(s, alarm.at, (c) => c.growth >= HATCH);
+  });
+
+  it("おなかがすいて、ごはんをほしがるくらいになる時刻（起きているとき）", () => {
+    const s = withNeeds({ tummy: 80, joy: 100, sleepy: 0 });
+    const alarm = nextAlarm(s)!;
+    expect(alarm.kind).toBe("hungry");
+    expect(alarm.at).toBeCloseTo(at((80 - hungryAt) / RATES.tummy), -3);
+    justAt(s, alarm.at, (c) => c.needs.tummy <= hungryAt);
+    expect(conditionAt(s, alarm.at).asleep).toBe(false);
+  });
+
+  it("眠っているあいだにおなかがすいたら、目がさめた時刻に「おなかがすいた」", () => {
+    const s = withNeeds({ tummy: 70, joy: 100, sleepy: 100 }, { asleep: true });
+    const alarm = nextAlarm(s)!;
+    expect(alarm.kind).toBe("hungry");
+    expect(alarm.at).toBeCloseTo(at(100 / RATES.sleepyDown), -3);
+    justAt(s, alarm.at, (c) => !c.asleep);
+  });
+
+  it("眠っていたら、目がさめる時刻。起きていても、ねむくて眠ってしまうなら、そのあと目がさめる時刻", () => {
+    const s = withNeeds({ tummy: 100, joy: 100, sleepy: 50 }, { asleep: true });
+    expect(nextAlarm(s)!.kind).toBe("wake");
+    expect(nextAlarm(s)!.at).toBeCloseTo(at(50 / RATES.sleepyDown), -3);
+    justAt(s, nextAlarm(s)!.at, (c) => c.slept && !c.asleep);
+    const sleepy = withNeeds({ tummy: 100, joy: 100, sleepy: 92 });
+    expect(nextAlarm(sleepy)!.kind).toBe("wake");
+    expect(nextAlarm(sleepy)!.at).toBeCloseTo(at(8 / RATES.sleepyUp + 100 / RATES.sleepyDown), -3);
+  });
+
+  it("おとなになれるくらい育つ時刻（お世話するとおとなになる）", () => {
+    const s = baby({ growth: ADULT - 3, needs: { tummy: 100, joy: 100, sleepy: 0 } });
+    const alarm = nextAlarm(s)!;
+    expect(alarm.kind).toBe("grown");
+    justAt(s, alarm.at, (c) => c.growth >= ADULT);
+  });
+
+  it("ほかに何もなければ、さいごのお世話から LONELY_HOURS 時間たった時刻（しばらくだれも来ていない）", () => {
+    const s = withNeeds({ tummy: 100, joy: 100, sleepy: 0 });
+    expect(nextAlarm(s)).toEqual({ at: at(LONELY_HOURS), kind: "lonely" });
+    // お世話したときにもうおなかがすいていたら（お世話した人が見ている）、おなかの知らせは出さない
+    expect(nextAlarm(withNeeds({ tummy: 30, joy: 100, sleepy: 0 }))).toEqual({ at: at(LONELY_HOURS), kind: "lonely" });
+    // お世話のすぐあと（ALARM_MIN_HOURS より前）に起きることも知らせない
+    const soon = withNeeds({ tummy: hungryAt + RATES.tummy * ALARM_MIN_HOURS * 0.5, joy: 100, sleepy: 0 });
+    expect(nextAlarm(soon)).toEqual({ at: at(LONELY_HOURS), kind: "lonely" });
+  });
+
+  it("同じ状態なら同じ答え（JSON にしても同じ）。お世話のたびに、さいごのお世話より後の時刻になる", () => {
+    let s = fresh(4);
+    for (let i = 0; i < 30 && mochi.status(s).kind === "playing"; i++) {
+      const time = at(i * 5.5);
+      s = careAt(s, follow(s, conditionAt(s, time)), time, (i % 3 === 0 ? 1 : 0) as Seat);
+      const alarm = nextAlarm(s);
+      if (mochi.status(s).kind === "finished") {
+        expect(alarm).toBeNull();
+        break;
+      }
+      expect(alarm).not.toBeNull();
+      expect(alarm).toEqual(nextAlarm(JSON.parse(JSON.stringify(s))));
+      expect(alarm!.at).toBeGreaterThanOrEqual(s.at! + ALARM_MIN_HOURS * HOUR);
+      expect(alarm!.at).toBeLessThanOrEqual(s.at! + LONELY_HOURS * HOUR);
+      expect(Number.isInteger(alarm!.at)).toBe(true);
+    }
+  });
+
+  it("ゲームの定義からも呼べる（サーバが時刻になったら知らせるのに使う）", () => {
+    const s = withNeeds({ tummy: 80, joy: 100, sleepy: 0 });
+    expect(mochi.nextAlarm!(s)).toEqual(nextAlarm(s));
   });
 });
 
