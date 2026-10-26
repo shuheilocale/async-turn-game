@@ -78,13 +78,22 @@ export function openInLine(url: string) {
 }
 
 /** トークから開いた対局の次の対局へ移るときに呼ぶ。次の対局でも同じトークへ自動で知らせられる */
+/** その対局のカードを、開いていたトークへ自動で送ってよいか */
+export const canPostTo = (s: Pick<LineSession, "inChat" | "chatType" | "entryGameId">, gameId: string) =>
+  s.inChat && (s.chatType === "group" || s.chatType === "room" || s.entryGameId === gameId);
+
 export function followGame(fromId: string, toId: string) {
   if (session?.entryGameId === fromId) session.entryGameId = toId;
 }
 
-/** 開いていたトークに自動で送る。送れない状況（トーク以外から開いた・別の対局）なら false */
+/**
+ * 開いていたトークに自動で送る。送れない状況（トーク以外から開いた・別の対局）なら false。
+ * グループ（2 人と公式アカウントで遊ぶ場所）から開いたときは、トップや一覧を通って開いた対局でも送る
+ * （1 対 1 のトークは相手が対局ごとに違うことがあるので、そのカードから開いた対局だけ）
+ */
 export async function postToChat(gameId: string, card: Card): Promise<boolean> {
-  if (!session?.inChat || session.entryGameId !== gameId) return false;
+  if (!session) return false;
+  if (!canPostTo(session, gameId)) return false;
   try {
     await session.liff.sendMessages(flex(card));
     return true;
