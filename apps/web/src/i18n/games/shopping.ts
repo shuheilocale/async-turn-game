@@ -7,7 +7,6 @@ import type { GameMessages } from "../index.tsx";
  */
 export default {
   ja: {
-    "game.shopping.name": "ブランド爆買いオークション",
     "game.shopping.desc": "1000 万円を持って、バッグや指輪、タイ古式マッサージ券を競り落とす。金額はこっそり入札。同じシリーズを 2 つそろえるとボーナス。",
     "game.shopping.rules":
       "2 人とも 1000 万円を持ってお買い物をします。品物は 4 つのシリーズ（ファッション・ジュエリー・ビューティー・ごほうび）に分かれていて、各シリーズから 2 品ずつ、全部で 8 品が 1 つずつ競りにかけられます。どの 8 品が出るかは見えますが、出る順番は秘密です。品物ごとに、2 人はこっそり金額を入札します（10 万円きざみ。0 円でもよく、残りの予算まで）。先に入札した人の金額は、相手が入札するまで伏せておきます。2 人とも入札したら金額を見せ合い、高い方が自分の入札額を払って品物を手に入れます。負けた方は払いません。同じ金額なら、だれも払わず、その品物は次の品物とセットで競りにかけます（最後の品物なら売れ残り）。予算が 0 円になった人は、自動で 0 円の入札になります。先に入札する人は品物ごとに交代します（1 品目は先手）。8 品が終わったら、品物の点数の合計に、同じシリーズの 2 品をそろえたボーナス（シリーズごとに +3 点）と、残ったお金（100 万円ごとに 1 点。端数は切り捨て）を足して、多い方の勝ちです。同点なら残ったお金が多い方の勝ち、それも同じなら引き分けです。",
@@ -87,7 +86,6 @@ export default {
     "game.shopping.tour.end": "最後に「品物の点数＋ボーナス＋残ったお金（100 万円で 1 点）」が多い方の勝ち。お金は使い切るくらいがちょうどいいかも。",
   },
   en: {
-    "game.shopping.name": "Luxury Spree Auction",
     "game.shopping.desc": "Start with ¥10M and bid on bags, rings and Thai massage passes. Bids are secret. Collect two from the same series for a bonus.",
     "game.shopping.rules":
       "You both go shopping with ¥10M. The items come in 4 series (Fashion, Jewelry, Beauty and Treats), and 2 items from each series — 8 in all — are auctioned one at a time. You can see which 8 items are for sale, but the order is secret. For each item, both players secretly bid an amount (in steps of ¥100K, from ¥0 up to your remaining budget). The first bid stays hidden until the other player has bid. Then both bids are shown, and the higher bidder pays their bid and gets the item. The other player pays nothing. If the bids are equal, no one pays and the item is auctioned again together with the next one (if it was the last item, it goes unsold). A player with ¥0 left automatically bids ¥0. The player who bids first switches with every item (the 1st player bids first on item 1). After all 8 items, add up your item points, a bonus of +3 for each series where you own both items, and 1 point per ¥1M you have left (rounded down). Highest total wins. On a tie, whoever has more money left wins; if that's equal too, it's a draw.",
@@ -167,7 +165,6 @@ export default {
     "game.shopping.tour.end": "At the end, item points + bonuses + money left (1 pt per ¥1M) decide the winner. Spending almost everything is often just right.",
   },
   th: {
-    "game.shopping.name": "ประมูลช้อปกระจายแบรนด์เนม",
     "game.shopping.desc": "เริ่มด้วยเงิน 10 ล้านเยน ประมูลกระเป๋า แหวน และบัตรนวดแผนไทย เสนอราคาแบบลับ สะสมของซีรีส์เดียวกันครบ 2 ชิ้นได้โบนัส",
     "game.shopping.rules":
       "ทั้งสองคนเริ่มช้อปด้วยเงิน 10 ล้านเยน สินค้าแบ่งเป็น 4 ซีรีส์ (แฟชั่น เครื่องประดับ ความงาม และให้รางวัลตัวเอง) แต่ละซีรีส์มี 2 ชิ้น รวม 8 ชิ้น นำมาประมูลทีละชิ้น ดูได้ว่ามีสินค้าอะไรบ้าง แต่ลำดับเป็นความลับ ในแต่ละชิ้น ทั้งสองคนเสนอราคาแบบลับ (ทีละ 1 แสนเยน ตั้งแต่ 0 เยนจนถึงงบที่เหลือ) ราคาของคนที่เสนอก่อนจะถูกปิดไว้จนกว่าอีกฝ่ายจะเสนอ เมื่อเสนอครบทั้งคู่ จะเปิดราคา คนที่เสนอสูงกว่าจ่ายตามราคาที่ตัวเองเสนอแล้วได้สินค้าไป อีกฝ่ายไม่ต้องจ่าย ถ้าราคาเท่ากัน ไม่มีใครจ่าย และสินค้านั้นจะถูกประมูลใหม่พร้อมชิ้นถัดไปเป็นชุด (ถ้าเป็นชิ้นสุดท้ายจะขายไม่ออก) ใครที่งบเหลือ 0 เยน จะเสนอ 0 เยนให้อัตโนมัติ คนที่เสนอก่อนจะสลับกันทุกชิ้น (ชิ้นแรกคนเล่นก่อนเสนอก่อน) ครบ 8 ชิ้นแล้ว รวมคะแนนของสินค้า บวกโบนัสซีรีส์ละ +3 ถ้ามีครบทั้ง 2 ชิ้นของซีรีส์นั้น และเงินที่เหลือทุก 1 ล้านเยนได้ 1 คะแนน (ปัดเศษทิ้ง) ใครได้มากกว่าชนะ ถ้าคะแนนเท่ากัน คนที่เหลือเงินมากกว่าชนะ ถ้ายังเท่ากันอีกถือว่าเสมอ",

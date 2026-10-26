@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { gameNames } from "@atg/core";
 import { ja, type MessageKey, type Messages } from "./ja.ts";
 import { en } from "./en.ts";
 import { th } from "./th.ts";
@@ -20,10 +21,14 @@ const gameFiles = import.meta.glob<{ default: GameMessages }>("./games/*.ts", { 
 const gameMessages = (lang: Lang) =>
   Object.values(gameFiles).reduce<Record<string, string>>((all, file) => ({ ...all, ...file.default[lang] }), {});
 
+/** ゲームの名前（game.<ID>.name）は、サーバの LINE の知らせでも使うので @atg/core の gameNames に置いてある */
+const nameMessages = (lang: Lang) =>
+  Object.fromEntries(Object.entries(gameNames).map(([id, names]) => [`game.${id}.name`, names[lang]]));
+
 const dictionaries: Record<Lang, Messages> = {
-  ja: { ...gameMessages("ja"), ...ja },
-  en: { ...gameMessages("en"), ...en },
-  th: { ...gameMessages("th"), ...th },
+  ja: { ...nameMessages("ja"), ...gameMessages("ja"), ...ja },
+  en: { ...nameMessages("en"), ...gameMessages("en"), ...en },
+  th: { ...nameMessages("th"), ...gameMessages("th"), ...th },
 };
 const LANG_KEY = "atg:lang";
 

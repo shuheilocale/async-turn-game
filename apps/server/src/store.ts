@@ -1,4 +1,5 @@
 import type { Seat } from "@atg/core";
+import type { AlarmPlan } from "./alarms.ts";
 import { q, type Sql } from "./sql.ts";
 
 export interface PlayerRecord {
@@ -6,6 +7,32 @@ export interface PlayerRecord {
   name: string;
   /** 画面で使っている言語（ja / en / th）。分からなければ null */
   lang?: string | null;
+  /** タイムゾーン（IANA 名）。夜に LINE で知らせないために使う。分からなければ null */
+  timeZone?: string | null;
+}
+
+/** 時刻を過ぎた知らせの予定と、受け取る人 */
+export interface DueAlarm extends AlarmPlan {
+  gameId: string;
+  gameType: string;
+  /** 予定を決めたときの対局の版 */
+  version: number;
+  name: string;
+  lang: string | null;
+  timeZone: string | null;
+  /** LINE とつながっていなければ null（送れない） */
+  lineUserId: string | null;
+}
+
+/** 知らせの記録。status は sent（送れた）／failed（LINE に断られた）／limited（上限を超えたので送らなかった） */
+export interface NoticeRecord {
+  gameId: string;
+  seat: Seat;
+  lineUserId: string;
+  kind: string;
+  status: "sent" | "failed" | "limited";
+  detail: string | null;
+  sentAt: string;
 }
 
 export interface GameRecord {
@@ -64,13 +91,14 @@ export class GameStore {
         t,
       ),
       q(
-        "INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang, time_zone) VALUES (?, ?, ?, ?, ?, ?, ?)",
         id,
         creator.seat,
         creator.name,
         tokenHash,
         lineUserId,
         creator.lang ?? null,
+        creator.timeZone ?? null,
       ),
       q("INSERT INTO tokens (token_hash, game_id, seat) VALUES (?, ?, ?)", tokenHash, id, creator.seat),
     ]);
@@ -81,7 +109,7 @@ export class GameStore {
     const [row] = await this.db.all<Record<string, any>>("SELECT * FROM games WHERE id = ?", id);
     if (!row) return null;
     const players = await this.db.all<PlayerRecord>(
-      "SELECT seat, name, lang FROM players WHERE game_id = ? ORDER BY seat",
+      "SELECT seat, name, lang, time_zone AS timeZone FROM players WHERE game_id = ? ORDER BY seat",
       id,
     );
     return {
@@ -121,6 +149,11 @@ export class GameStore {
   /** プレイヤーの言語を書き換える（指すたびに、そのときの画面の言語を送ってもらう） */
   async setLang(id: string, seat: Seat, lang: string): Promise<void> {
     await this.db.batch([q("UPDATE players SET lang = ? WHERE game_id = ? AND seat = ?", lang, id, seat)]);
+  }
+
+  /** プレイヤーのタイムゾーンを書き換える（言語と同じく、指すたびに送ってもらう） */
+  async setTimeZone(id: string, seat: Seat, timeZone: string): Promise<void> {
+    await this.db.batch([q("UPDATE players SET time_zone = ? WHERE game_id = ? AND seat = ?", timeZone, id, seat)]);
   }
 
   /** LINE アカウントで本人と確かめられたら、この端末用の合言葉を新しく発行する */
@@ -165,8 +198,8 @@ export class GameStore {
         id,
       ),
       q(
-        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang)
-         SELECT ?, 1 - seat, name, token_hash, line_user_id, lang FROM players WHERE game_id = ? AND ${notYet}`,
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang, time_zone)
+         SELECT ?, 1 - seat, name, token_hash, line_user_id, lang, time_zone FROM players WHERE game_id = ? AND ${notYet}`,
         nextId,
         id,
         id,
@@ -189,6 +222,7 @@ export class GameStore {
     name: string,
     lineUserId: string | null = null,
     lang: string | null = null,
+    timeZone: string | null = null,
   ): Promise<{ token: string; seat: Seat } | null> {
     const game = await this.get(id);
     if (!game || game.inviteCode === null || game.inviteCode !== inviteCode) return null;
@@ -200,13 +234,14 @@ export class GameStore {
     // 招待コードがまだ残っているときだけ参加者を足し、同時にコードを消す
     const [inserted] = await this.db.batch([
       q(
-        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang) SELECT ?, ?, ?, ?, ?, ? ${stillOpen}`,
+        `INSERT INTO players (game_id, seat, name, token_hash, line_user_id, lang, time_zone) SELECT ?, ?, ?, ?, ?, ?, ? ${stillOpen}`,
         id,
         seat,
         name,
         tokenHash,
         lineUserId,
         lang,
+        timeZone,
         id,
         inviteCode,
       ),
@@ -251,5 +286,120 @@ export class GameStore {
       id,
     );
     return rows.map((r) => ({ seq: r.seq, seat: r.seat, move: JSON.parse(r.move_json), createdAt: r.created_at }));
+  }
+
+  // ---------- 時刻になったら LINE で知らせる（push.ts） ----------
+
+  /**
+   * 対局の知らせの予定を plans に置きかえる。version は予定を決めたときの対局の版で、
+   * 今の版と違えば（あとから別の手が指されていれば）古い予定で上書きしないよう何もしない
+   */
+  async setAlarms(id: string, version: number, plans: AlarmPlan[]): Promise<void> {
+    const current = "EXISTS (SELECT 1 FROM games WHERE id = ? AND version = ?)";
+    await this.db.batch([
+      q(`DELETE FROM alarms WHERE game_id = ? AND ${current}`, id, id, version),
+      ...plans.map((p) =>
+        q(
+          `INSERT INTO alarms (game_id, seat, at, kind, version) SELECT ?, ?, ?, ?, ? WHERE ${current}`,
+          id,
+          p.seat,
+          p.at,
+          p.kind,
+          version,
+          id,
+          version,
+        ),
+      ),
+    ]);
+  }
+
+  /** 対局の知らせの予定（席の順） */
+  async alarms(id: string): Promise<AlarmPlan[]> {
+    return this.db.all<AlarmPlan>("SELECT seat, at, kind FROM alarms WHERE game_id = ? ORDER BY seat", id);
+  }
+
+  /** 時刻（now）を過ぎた予定を、早い順に limit 件 */
+  async dueAlarms(now: number, limit: number): Promise<DueAlarm[]> {
+    return this.db.all<DueAlarm>(
+      `SELECT a.game_id AS gameId, g.game_type AS gameType, a.seat AS seat, a.at AS at, a.kind AS kind, a.version AS version,
+              p.name AS name, p.lang AS lang, p.time_zone AS timeZone, p.line_user_id AS lineUserId
+       FROM alarms a JOIN games g ON g.id = a.game_id JOIN players p ON p.game_id = a.game_id AND p.seat = a.seat
+       WHERE a.at <= ? ORDER BY a.at, a.game_id, a.seat LIMIT ?`,
+      now,
+      limit,
+    );
+  }
+
+  /** 時刻を過ぎた予定の数 */
+  async countDueAlarms(now: number): Promise<number> {
+    const [row] = await this.db.all<{ n: number }>("SELECT COUNT(*) AS n FROM alarms WHERE at <= ?", now);
+    return row?.n ?? 0;
+  }
+
+  /** 予定を at まで遅らせる。そのあいだに決め直されていたら何もしない */
+  async deferAlarm(alarm: DueAlarm, at: number): Promise<boolean> {
+    const [changed] = await this.db.batch([
+      q(
+        "UPDATE alarms SET at = ? WHERE game_id = ? AND seat = ? AND version = ? AND at = ?",
+        at,
+        alarm.gameId,
+        alarm.seat,
+        alarm.version,
+        alarm.at,
+      ),
+    ]);
+    return changed === 1;
+  }
+
+  /**
+   * 送る前に予定を取る（消す）。取れたときだけ true。同時に動いたほかの処理が先に取っていたり、
+   * あとから決め直されていたりすれば false なので、同じ予定を 2 回送らない
+   */
+  async takeAlarm(alarm: DueAlarm): Promise<boolean> {
+    const [deleted] = await this.db.batch([
+      q(
+        "DELETE FROM alarms WHERE game_id = ? AND seat = ? AND version = ? AND at = ?",
+        alarm.gameId,
+        alarm.seat,
+        alarm.version,
+        alarm.at,
+      ),
+    ]);
+    return deleted === 1;
+  }
+
+  async recordNotice(n: NoticeRecord): Promise<void> {
+    await this.db.batch([
+      q(
+        "INSERT INTO notices (game_id, seat, line_user_id, kind, status, detail, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        n.gameId,
+        n.seat,
+        n.lineUserId,
+        n.kind,
+        n.status,
+        n.detail,
+        n.sentAt,
+      ),
+    ]);
+  }
+
+  /** since（ISO の時刻）よりあとに、その LINE ユーザーへ送れた知らせの数。gameId を渡すとその対局の分だけ */
+  async countSent(lineUserId: string, since: string, gameId?: string): Promise<number> {
+    const [row] = await this.db.all<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM notices WHERE line_user_id = ? AND status = 'sent' AND sent_at > ?${gameId ? " AND game_id = ?" : ""}`,
+      lineUserId,
+      since,
+      ...(gameId ? [gameId] : []),
+    );
+    return row?.n ?? 0;
+  }
+
+  /** 対局の知らせの記録（古い順） */
+  async notices(id: string): Promise<NoticeRecord[]> {
+    return this.db.all<NoticeRecord>(
+      `SELECT game_id AS gameId, seat, line_user_id AS lineUserId, kind, status, detail, sent_at AS sentAt
+       FROM notices WHERE game_id = ? ORDER BY id`,
+      id,
+    );
   }
 }

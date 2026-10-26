@@ -67,6 +67,8 @@ export const ja = {
   "play.invite.copy": "リンクをコピー",
   "play.notify.line": "LINE で知らせる",
   "play.notified": "LINE に送りました",
+  "play.friend.lead": "知らせを受け取るには、公式アカウントを友だち追加してください",
+  "play.friend.add": "友だち追加",
   "play.lineFailed": "送り先を選ぶ画面を開けませんでした。リンクをコピーしたので、トークに貼ってください",
   "play.rematch": "もう一局",
   "play.otherGame": "ほかのゲームで遊ぶ",
@@ -129,26 +131,22 @@ export const ja = {
   "error.not_finished": "対局がまだ終わっていません",
   "error.line_auth_failed": "LINE アカウントを確認できませんでした。開き直してください",
 
-  "game.tictactoe.name": "マルバツ",
   "game.tictactoe.desc": "3×3 のマスに ○ と × を交互に置き、先に 3 つ並べた方の勝ち。",
   "game.tictactoe.rules": "交互に空いているマスに自分の印を置きます。縦・横・斜めのどれかに 3 つ並べたら勝ち。全部埋まったら引き分けです。",
   "game.tictactoe.seat0": "○",
   "game.tictactoe.seat1": "×",
 
-  "game.connect4.name": "四目並べ",
   "game.connect4.desc": "列を選んでコマを落とし、縦・横・斜めに 4 つ並べたら勝ち。",
   "game.connect4.rules": "列を選ぶと、コマはその列の一番下の空いている場所まで落ちます。縦・横・斜めのどれかに自分のコマを 4 つ並べたら勝ち。盤が埋まったら引き分けです。",
   "game.connect4.seat0": "青",
   "game.connect4.seat1": "オレンジ",
 
-  "game.othello.name": "オセロ",
   "game.othello.desc": "相手の石をはさんでひっくり返す定番ゲーム。最後に石が多い方の勝ち。",
   "game.othello.rules": "相手の石を自分の石ではさむように置くと、はさんだ石が自分の色になります。置ける場所がなければパス。両者とも置けなくなったら終わりで、石の多い方の勝ちです。",
   "game.othello.seat0": "黒",
   "game.othello.seat1": "白",
   "othello.pass": "{name}さんは置ける場所がないのでパスしました",
 
-  "game.hitblow.name": "ヒット＆ブロー",
   "game.hitblow.desc": "お互いに秘密の 3 桁の数字を決め、相手の数字を先に当てた方の勝ち。",
   "game.hitblow.rules": "はじめに、相手に当ててもらう 3 桁の数字（同じ数字は使わない）をこっそり決めます。交互に相手の数字を推理して入力すると、数字も位置も合っている数（ヒット）と、数字だけ合っている数（ブロー）が分かります。先に当てた方の勝ち。先手が当てても後手にもう 1 回だけ機会があり、後手も当てたら引き分けです。",
   "game.hitblow.seat0": "先手",
@@ -167,7 +165,6 @@ export const ja = {
   "hitblow.clear": "消す",
   "hitblow.none": "まだありません",
 
-  "game.auction.name": "数字のせり",
   "game.auction.desc": "1〜9 のカードをこっそり出し合い、大きい方が得点カードをもらう。かけひきのゲーム。",
   "game.auction.rules": "毎ラウンド得点カードが 1 枚めくられます。2 人は手札（1〜9）から 1 枚ずつこっそり出し、大きい数字を出した方が得点カードをもらいます。同じ数字なら得点カードは次のラウンドに持ち越し。出したカードは戻りません。9 ラウンド後に得点の多い方の勝ちです。",
   "game.auction.seat0": "先手",
@@ -186,7 +183,6 @@ export const ja = {
   "auction.wonBy": "{name}さんが獲得",
   "auction.score": "得点",
 
-  "game.gobble.name": "かぶせマルバツ",
   "game.gobble.desc": "大・中・小のコマで遊ぶマルバツ。小さいコマには大きいコマをかぶせられる。",
   "game.gobble.rules": "大・中・小のコマを 2 つずつ持ち、交互に置きます。空いているマスか、自分のコマより小さいコマの上に置けます（相手のコマにも自分のコマにも）。置く代わりに、盤上で一番上にある自分のコマを別のマスへ動かしてもかまいません。一番上に見えているコマが縦・横・斜めのどれかに 3 つ並んだら勝ち。コマを動かして、下に隠れていた相手の列が見えてしまったら相手の勝ちです。20 手で決着がつかなければ引き分け。",
   "game.gobble.seat0": "青",
@@ -200,7 +196,6 @@ export const ja = {
   "gobble.size1": "中",
   "gobble.size2": "大",
 
-  "game.nim.name": "ニム",
   "game.nim.desc": "1・3・5・7 本の棒を交互に取る。最後の 1 本を取った方の負け。",
   "game.nim.rules": "4 段に並んだ棒（1・3・5・7 本）を交互に取ります。1 回に取れるのは 1 つの段からだけで、本数は 1 本からその段の全部まで自由です。最後の 1 本を取った方の負け。",
   "game.nim.seat0": "先手",

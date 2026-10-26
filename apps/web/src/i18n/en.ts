@@ -68,6 +68,8 @@ export const en: Messages = {
   "play.invite.copy": "Copy link",
   "play.notify.line": "Let them know on LINE",
   "play.notified": "Sent on LINE",
+  "play.friend.lead": "To get reminders on LINE, add our official account as a friend",
+  "play.friend.add": "Add friend",
   "play.lineFailed": "Couldn't open the LINE share screen. The link was copied, so paste it into the chat",
   "play.rematch": "Rematch",
   "play.otherGame": "Play another game",
@@ -130,26 +132,22 @@ export const en: Messages = {
   "error.not_finished": "The game isn't over yet",
   "error.line_auth_failed": "Couldn't verify your LINE account. Please reopen the app.",
 
-  "game.tictactoe.name": "Tic-Tac-Toe",
   "game.tictactoe.desc": "Take turns placing ○ and × on a 3×3 grid. Three in a row wins.",
   "game.tictactoe.rules": "Take turns marking an empty square. Get three in a row — across, down, or diagonally — to win. If the board fills up, it's a draw.",
   "game.tictactoe.seat0": "○",
   "game.tictactoe.seat1": "×",
 
-  "game.connect4.name": "Connect Four",
   "game.connect4.desc": "Drop pieces into columns. Four in a row in any direction wins.",
   "game.connect4.rules": "Pick a column and your piece drops to the lowest empty spot. Line up four of your pieces across, down, or diagonally to win. If the board fills up, it's a draw.",
   "game.connect4.seat0": "Blue",
   "game.connect4.seat1": "Orange",
 
-  "game.othello.name": "Othello",
   "game.othello.desc": "The classic: trap your opponent's discs to flip them. Most discs at the end wins.",
   "game.othello.rules": "Place a disc so that it traps your opponent's discs between yours; the trapped discs flip to your color. If you can't move, you pass. When neither player can move, the one with more discs wins.",
   "game.othello.seat0": "Black",
   "game.othello.seat1": "White",
   "othello.pass": "{name} had no valid move and passed",
 
-  "game.hitblow.name": "Hit & Blow",
   "game.hitblow.desc": "Each picks a secret 3-digit number. First to guess the other's number wins.",
   "game.hitblow.rules": "First, each player secretly picks a 3-digit number with no repeated digits. Take turns guessing your opponent's number. For each guess you learn how many digits are right and in the right place (hits) and how many are right but in the wrong place (blows). First to guess correctly wins. If the first player guesses it, the second player gets one last try — if they also get it, it's a draw.",
   "game.hitblow.seat0": "1st",
@@ -168,7 +166,6 @@ export const en: Messages = {
   "hitblow.clear": "Clear",
   "hitblow.none": "None yet",
 
-  "game.auction.name": "Number Auction",
   "game.auction.desc": "Secretly bid cards 1–9; the higher bid takes the prize card. A game of bluffing.",
   "game.auction.rules": "Each round, one prize card is revealed. Both players secretly bid one card from their hand (1–9); the higher bid wins the prize. On a tie, the prize carries over to the next round. Bid cards are gone for good. After 9 rounds, the player with more points wins.",
   "game.auction.seat0": "1st",
@@ -187,7 +184,6 @@ export const en: Messages = {
   "auction.wonBy": "{name} won it",
   "auction.score": "Points",
 
-  "game.gobble.name": "Gobble Tic-Tac-Toe",
   "game.gobble.desc": "Tic-tac-toe with big, medium and small pieces. Bigger pieces can cover smaller ones.",
   "game.gobble.rules": "Each player has two big, two medium and two small pieces. Take turns placing one on an empty square or on top of any smaller piece (yours or your opponent's). Instead of placing, you may move one of your pieces that is on top to another square. Three visible pieces in a row, column or diagonal wins. If moving a piece uncovers a line for your opponent, your opponent wins. The game is a draw after 20 moves.",
   "game.gobble.seat0": "Blue",
@@ -201,7 +197,6 @@ export const en: Messages = {
   "gobble.size1": "Medium",
   "gobble.size2": "Big",
 
-  "game.nim.name": "Nim",
   "game.nim.desc": "Take turns removing sticks from rows of 1, 3, 5 and 7. Whoever takes the last stick loses.",
   "game.nim.rules": "Sticks are laid out in four rows of 1, 3, 5 and 7. On your turn, take any number of sticks (at least one) from a single row. Whoever takes the last stick loses.",
   "game.nim.seat0": "First",

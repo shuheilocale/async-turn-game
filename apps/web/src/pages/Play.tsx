@@ -5,10 +5,20 @@ import { boards } from "../boards/index.ts";
 import { asLang, coopText, errorText, freeText, translator, useI18n, type T } from "../i18n/index.tsx";
 import { navigate } from "../router.ts";
 import { GameGlyph, SeatToken } from "../icons.tsx";
-import { followGame, lineIdToken, lineSession, pickAndSend, postToChat, type Card } from "../line.ts";
+import {
+  addFriendUrl,
+  followGame,
+  isFriend,
+  lineIdToken,
+  lineSession,
+  openInLine,
+  pickAndSend,
+  postToChat,
+  type Card,
+} from "../line.ts";
 import { freeNotice, inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
-import { savedGames, savedNotified } from "../storage.ts";
+import { savedFriendHintClosed, savedGames, savedNotified } from "../storage.ts";
 
 /** 相手の手を待つ間、何ミリ秒ごとに盤面を確認するか */
 const POLL_MS = 5000;
@@ -280,6 +290,8 @@ export function Play({ id }: { id: string }) {
           </section>
         )}
 
+        {view.you !== null && <FriendHint />}
+
         {message && <p className="message">{message}</p>}
       </div>
 
@@ -344,6 +356,49 @@ export function Play({ id }: { id: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * LINE の中で開いていて、公式アカウントが設定されているときだけ出す「友だち追加すると知らせが届く」の案内。
+ * 閉じたら（この端末では）もう出さない。友だちだと分かれば出さない
+ */
+function FriendHint() {
+  const { t } = useI18n();
+  const [oaId, setOaId] = useState<string | null>(null);
+  const [closed, setClosed] = useState(savedFriendHintClosed.get);
+
+  useEffect(() => {
+    if (!lineSession() || closed) return;
+    let alive = true;
+    (async () => {
+      const { lineOaId } = await api.config();
+      if (lineOaId && (await isFriend()) !== true && alive) setOaId(lineOaId);
+    })().catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [closed]);
+
+  if (!oaId || closed) return null;
+  return (
+    <section className="panel invite friend-hint">
+      <p>{t("play.friend.lead")}</p>
+      <div className="friend-hint-actions">
+        <button className="primary" onClick={() => openInLine(addFriendUrl(oaId))}>
+          {t("play.friend.add")}
+        </button>
+        <button
+          className="ghost-button"
+          onClick={() => {
+            savedFriendHintClosed.set(true);
+            setClosed(true);
+          }}
+        >
+          {t("home.close")}
+        </button>
+      </div>
+    </section>
   );
 }
 

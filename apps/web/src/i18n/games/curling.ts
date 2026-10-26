@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** 3D カーリングの文言 */
 export default {
   ja: {
-    "game.curling.name": "3D カーリング",
     "game.curling.desc": "氷の上に石をすべらせ、的（ハウス）の中心の近くに止めた方が点を取る。2 エンドの合計で勝負。",
     "game.curling.rules":
       "2 エンドの試合です。1 エンドに 1 人 4 投ずつ、交互に石を投げます。自分の番では、画面をドラッグして向き（左右）と強さ（下へ引くほど強い）を決め、回転（左回り・右回り）を選んで「投げる」を押します。石は回転の向きへ少しずつ曲がり、ほかの石に当たるとはじきます。シートの横や奥から出た石と、手前の太い線（ホッグライン）を越えなかった石は取り除きます。8 投が終わったら、ハウス（的）の中心にいちばん近い石を持つ人が、相手のいちばん近い石より中心に近い自分の石の数だけ点を取ります。エンドの最後の 1 投（ハンマー）は、1 エンド目は後手が持ち、次のエンドからは点を取られた側が持ちます（どちらも 0 点なら変わりません）。2 エンドの合計が多い方の勝ちです。同点なら延長を 1 エンドして、それでも同点なら引き分けです。",
@@ -55,7 +54,6 @@ export default {
       "エンドごとの点はこの表に出ます。かなづちの印はハンマー（そのエンドの最後の 1 投）を持つ人、丸は残りの投数です。",
   },
   en: {
-    "game.curling.name": "3D Curling",
     "game.curling.desc": "Slide stones down the ice and stop them closest to the center of the house. Two ends; the higher total wins.",
     "game.curling.rules":
       "A match of two ends. In each end, each player throws 4 stones, taking turns. On your turn, drag on the screen to set the direction (left/right) and the strength (pull down for more), choose the spin (counterclockwise or clockwise), then press Throw. A stone curls slowly in the direction it spins and knocks other stones away when it hits them. Stones that leave the sheet at the side or back, and stones that don't fully cross the thick near line (the hog line), are removed. After 8 throws, whoever has the stone closest to the center of the house scores one point for each of their stones closer than the opponent's closest stone. The last throw of an end (the hammer) belongs to the second player in end 1; after that it goes to the player who was scored on (it stays the same if nobody scores). The higher total after two ends wins. If tied, one extra end is played; if still tied, it's a draw.",
@@ -107,7 +105,6 @@ export default {
       "Points for each end appear in this table. The hammer mark shows who has the last throw of the end; the dots are the throws left.",
   },
   th: {
-    "game.curling.name": "เคอร์ลิง 3D",
     "game.curling.desc": "ไถลหินไปบนน้ำแข็ง ใครหยุดหินได้ใกล้จุดกลางเป้า (เฮาส์) ที่สุดได้คะแนน แข่ง 2 เอนด์ รวมคะแนนมากกว่าชนะ",
     "game.curling.rules":
       "แข่ง 2 เอนด์ ในแต่ละเอนด์ผู้เล่นแต่ละคนโยนหินคนละ 4 ครั้งสลับกัน ในตาของคุณ ให้ลากบนหน้าจอเพื่อกำหนดทิศทาง (ซ้าย/ขวา) และแรง (ยิ่งดึงลงยิ่งแรง) เลือกการหมุน (ทวนเข็ม/ตามเข็มนาฬิกา) แล้วกด “โยน” หินจะค่อย ๆ เลี้ยวไปตามทิศที่หมุน และกระเด็นหินก้อนอื่นเมื่อชน หินที่ออกนอกลานด้านข้างหรือด้านหลัง และหินที่ข้ามเส้นหนาด้านหน้า (ฮอกไลน์) ไม่พ้น จะถูกนำออก เมื่อโยนครบ 8 ครั้ง คนที่มีหินใกล้จุดกลางเฮาส์ที่สุดได้คะแนนเท่ากับจำนวนหินของตัวเองที่อยู่ใกล้กว่าหินที่ใกล้ที่สุดของอีกฝ่าย การโยนครั้งสุดท้ายของเอนด์ (แฮมเมอร์) ในเอนด์แรกเป็นของผู้เล่นคนที่สอง หลังจากนั้นเป็นของฝ่ายที่เสียคะแนน (ถ้าไม่มีใครได้คะแนนจะไม่เปลี่ยน) รวม 2 เอนด์ใครได้มากกว่าชนะ ถ้าเท่ากันจะเล่นต่ออีก 1 เอนด์ ถ้ายังเท่ากันถือว่าเสมอ",

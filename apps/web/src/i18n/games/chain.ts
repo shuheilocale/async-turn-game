@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** まねっこチェーンの文言。{who} には「あなた」か「〇〇さん」が入る。{right}・{wrong} にはパッドの名前（pad0〜3）が入る */
 export default {
   ja: {
-    "game.chain.name": "まねっこチェーン",
     "game.chain.desc": "光った順にパッドを押してまねし、最後に 1 つ足す。2 人で並びを伸ばしていき、まちがえた人の負け。",
     "game.chain.rules":
       "色と形のちがう 4 つのパッドで、2 人で 1 本の並びを伸ばしていきます（先手から）。最初の人は、好きなパッドを 1 つ押します。自分の番になると、これまでの並びが 1 回だけ光って見えます。その順番どおりに最初からパッドを押してまねし、最後に好きなパッドを 1 つ足します。足したら相手の番です。まねの途中で 1 つでもまちがえたら、その時点で負けです。並びが 20 個に届いたら引き分けです。",
@@ -47,7 +46,6 @@ export default {
     "game.chain.tour.end": "並びが 20 個に届いたら引き分け。長くなるほど覚えるのが大変になります。",
   },
   en: {
-    "game.chain.name": "Copy Chain",
     "game.chain.desc": "Copy the pads in the order they light up, then add one more. Take turns growing the chain. One wrong tap and you lose.",
     "game.chain.rules":
       "There are four pads, each with its own color and shape. Two players take turns growing one shared chain (1st player first). The first player taps any pad to start it. When your turn begins, the chain so far lights up once. Tap the pads in that order from the very first one, then add any pad you like at the end. Then it's the other player's turn. A single wrong tap while copying loses on the spot. If the chain reaches 20 pads, the game is a draw.",
@@ -91,7 +89,6 @@ export default {
     "game.chain.tour.end": "If the chain reaches 20 pads, it's a draw. The longer it gets, the harder it is to remember.",
   },
   th: {
-    "game.chain.name": "จำแล้วต่อ",
     "game.chain.desc": "กดแผ่นตามลำดับที่สว่าง แล้วเพิ่มอีก 1 แผ่นท้ายสุด ผลัดกันต่อแถวให้ยาวขึ้น ใครกดผิดแพ้",
     "game.chain.rules":
       "มีแผ่นกด 4 แผ่นที่สีและรูปทรงต่างกัน ผู้เล่นสองคนผลัดกันต่อแถวเดียวกันให้ยาวขึ้น (ผู้เล่นก่อนเริ่ม) คนแรกกดแผ่นไหนก็ได้ 1 แผ่น เมื่อถึงตาคุณ แถวที่ผ่านมาจะสว่างให้ดู 1 ครั้ง ให้กดตามลำดับนั้นตั้งแต่แผ่นแรก แล้วเพิ่มแผ่นที่ชอบอีก 1 แผ่นท้ายสุด จากนั้นเป็นตาของอีกฝ่าย ถ้ากดผิดแม้แต่แผ่นเดียวระหว่างกดตาม จะแพ้ทันที ถ้าแถวยาวถึง 20 แผ่น เสมอ",

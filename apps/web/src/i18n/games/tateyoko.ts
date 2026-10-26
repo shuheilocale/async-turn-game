@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** タテヨコ置きの文言 */
 export default {
   ja: {
-    "game.tateyoko.name": "タテヨコ置き",
     "game.tateyoko.desc": "5×5 のマスに、縦と横の棒を交互に置く。置ける場所がなくなった方の負け。",
     "game.tateyoko.rules":
       "5×5 のマスに、2 マス分の棒を交互に置きます。先手（青）はいつも縦向き、後手（オレンジ）はいつも横向きです。棒は空いているマスにだけ置けて、ほかの棒とは重ねられません。自分の番に置ける場所がなくなった方の負けです。引き分けはありません。",
@@ -22,7 +21,6 @@ export default {
     "game.tateyoko.tour.end": "引き分けはありません。自分の縦の場所は残し、相手の横の場所を減らすように置きましょう。",
   },
   en: {
-    "game.tateyoko.name": "Domineering",
     "game.tateyoko.desc": "Take turns placing bars on a 5×5 grid, one player vertical and the other horizontal. Whoever can't place a bar loses.",
     "game.tateyoko.rules":
       "Take turns placing a bar that covers two squares of the 5×5 grid. The first player (blue) always places bars vertically, and the second player (orange) always places them horizontally. Bars go on empty squares only and can't overlap other bars. If it's your turn and there's nowhere left to place your bar, you lose. There are no draws.",
@@ -41,7 +39,6 @@ export default {
     "game.tateyoko.tour.end": "There are no draws. Keep room for your vertical bars, and take away room for your opponent's horizontal ones.",
   },
   th: {
-    "game.tateyoko.name": "แท่งตั้ง แท่งนอน",
     "game.tateyoko.desc": "ผลัดกันวางแท่งบนกระดาน 5×5 ฝ่ายหนึ่งวางแนวตั้ง อีกฝ่ายวางแนวนอน ใครไม่มีที่วางแพ้",
     "game.tateyoko.rules":
       "ผลัดกันวางแท่งยาว 2 ช่องบนกระดาน 5×5 ผู้ที่เล่นก่อน (สีน้ำเงิน) วางแนวตั้งเสมอ ผู้ที่เล่นทีหลัง (สีส้ม) วางแนวนอนเสมอ วางได้เฉพาะบนช่องว่าง และห้ามทับแท่งอื่น ถ้าถึงตาคุณแล้วไม่มีที่ให้วางแท่ง คุณแพ้ ไม่มีการเสมอ",

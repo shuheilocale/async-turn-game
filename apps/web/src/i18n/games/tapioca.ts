@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** しずむタピオカ・うかぶ氷の文言。青はバタフライピー（青いお茶）、オレンジはタイティーの色 */
 export default {
   ja: {
-    "game.tapioca.name": "しずむタピオカ・うかぶ氷",
     "game.tapioca.desc": "列を選んで、自分の色のタピオカか氷を入れる。タピオカは下に沈み、氷は上に浮かぶ。たて・よこ・ななめに 4 つ並んだら勝ち。",
     "game.tapioca.rules":
       "5 列 × 6 段のグラスを 2 人で使います。先手は青（バタフライピー）、後手はオレンジ（タイティー）です。自分の番では、列を 1 つ選んで、自分の色のタピオカか氷を 1 つ入れます。タピオカは沈んで、その列の一番下の空いているところに入ります。氷は浮いて、その列の一番上の空いているところに入ります。列は下と上の両方から埋まっていき、いっぱいの列には入れられません。氷は先手が 3 個、後手が 4 個までで、使い切ったらタピオカだけです。タピオカと氷はまぜて数えて、自分の色がたて・よこ・ななめのどれかに 4 つ並んだら勝ちです。グラスがいっぱいになって、どちらも並ばなければ引き分けです。",
@@ -39,7 +38,6 @@ export default {
     "game.tapioca.tour.end": "タピオカと氷はまぜて数えます。グラスがいっぱいになって、どちらも 4 つ並ばなければ引き分けです。",
   },
   en: {
-    "game.tapioca.name": "Pearls Sink, Ice Floats",
     "game.tapioca.desc": "Pick a column and add a tapioca pearl or an ice cube in your color. Pearls sink to the bottom and ice floats to the top. Four in a row in any direction wins.",
     "game.tapioca.rules":
       "Two players share a glass that is 5 columns wide and 6 rows tall. The first player is Blue (butterfly pea tea) and the second player is Orange (Thai tea). On your turn, pick a column and add one pearl or one ice cube in your color. A pearl sinks to the lowest empty spot in that column. An ice cube floats to the highest empty spot. Columns fill from both the bottom and the top, and you can't add to a full column. The first player has 3 ice cubes and the second player has 4; once they're used up, you can only add pearls. Pearls and ice count together: line up four of your color across, down, or diagonally to win. If the glass fills up and no one has four in a row, it's a draw.",
@@ -75,7 +73,6 @@ export default {
     "game.tapioca.tour.end": "Pearls and ice count together. If the glass fills up and no one has four in a row, it's a draw.",
   },
   th: {
-    "game.tapioca.name": "ไข่มุกจม น้ำแข็งลอย",
     "game.tapioca.desc": "เลือกแถวตั้ง แล้วใส่ไข่มุกหรือน้ำแข็งสีของคุณ ไข่มุกจมลงข้างล่าง น้ำแข็งลอยขึ้นข้างบน เรียงได้ 4 ชิ้นในแนวใดก็ได้ชนะ",
     "game.tapioca.rules":
       "ผู้เล่น 2 คนใช้แก้วขนาด 5 แถวตั้ง × 6 ชั้นร่วมกัน ผู้ที่เล่นก่อนเป็นสีอัญชัน (สีน้ำเงิน) ผู้ที่เล่นทีหลังเป็นสีชาไทย (สีส้ม) ในตาของคุณ ให้เลือกแถวตั้ง 1 แถว แล้วใส่ไข่มุกหรือน้ำแข็งสีของคุณ 1 ชิ้น ไข่มุกจะจมลงไปอยู่ช่องว่างที่ต่ำที่สุดของแถวนั้น น้ำแข็งจะลอยขึ้นไปอยู่ช่องว่างที่สูงที่สุด แถวจึงเต็มขึ้นจากทั้งข้างล่างและข้างบน แถวที่เต็มแล้วใส่ไม่ได้ น้ำแข็งมีผู้เล่นก่อน 3 ก้อน ผู้เล่นทีหลัง 4 ก้อน ใช้หมดแล้วใส่ได้แค่ไข่มุก ไข่มุกกับน้ำแข็งนับรวมกัน ถ้าสีของคุณเรียงกัน 4 ชิ้นในแนวนอน แนวตั้ง หรือแนวทแยง คุณชนะ ถ้าแก้วเต็มแล้วยังไม่มีใครเรียงได้ ถือว่าเสมอ",

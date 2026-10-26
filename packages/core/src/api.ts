@@ -34,6 +34,8 @@ export interface CreateGameRequest {
   name: string;
   seat: Seat | "random";
   lang?: string;
+  /** 画面のタイムゾーン（IANA 名。Asia/Tokyo など）。LINE で知らせるときに、受け取る人の夜を避けるのに使う */
+  timeZone?: string;
   /** LINE から使っているときの ID トークン。サーバが LINE アカウントを確かめて席と結びつける */
   idToken?: string;
 }
@@ -49,6 +51,7 @@ export interface JoinGameRequest {
   inviteCode: string;
   name: string;
   lang?: string;
+  timeZone?: string;
   idToken?: string;
 }
 
@@ -74,6 +77,14 @@ export interface MoveRequest {
   move: unknown;
   /** 指した人の画面の言語。変わっていればサーバが覚え直す */
   lang?: string;
+  /** 指した人の画面のタイムゾーン。変わっていればサーバが覚え直す */
+  timeZone?: string;
+}
+
+/** 画面に渡す設定（GET /api/config） */
+export interface AppConfig {
+  /** LINE の公式アカウントの ID（@xxxx）。友だち追加すると、時刻になったら知らせが届く。設定されていなければ null */
+  lineOaId: string | null;
 }
 
 export interface ApiError {

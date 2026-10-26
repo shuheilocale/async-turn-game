@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** わなの扉の文言。{who} には「あなた」か「〇〇さん」、{door} には「3 点の扉」などが入る */
 export default {
   ja: {
-    "game.doors.name": "わなの扉",
     "game.doors.desc": "仕掛ける人が 3 つの扉の 1 つにこっそりわなを仕掛け、くぐる人が扉を選ぶ。扉は 1・2・3 点で、わなの扉は 0 点。",
     "game.doors.rules":
       "扉は 3 つあり、くぐってセーフなら 1 点・2 点・3 点がもらえます。毎回戦、片方が「仕掛ける人」、もう片方が「くぐる人」です。仕掛ける人は、どれか 1 つの扉にこっそりわなを仕掛けます（相手には見えません）。くぐる人は扉を 1 つ選んでくぐります。わなの扉ならアウトで 0 点、ほかの扉ならセーフでその扉の点です。くぐったあとは、わなの扉を 2 人とも見られます。役は回戦ごとに交代し、1 回戦目は先手が仕掛けます。6 回戦（3 回ずつ仕掛け・くぐる）で、点の合計が多い方の勝ちです。同じ点なら引き分けです。高い扉ほど点は多いけれど、わなも仕掛けられやすくなります。",
@@ -47,7 +46,6 @@ export default {
     "game.doors.tour.end": "「これまでの回戦」で、相手がどの扉を選びがちかを読みましょう。役は回戦ごとに交代します。",
   },
   en: {
-    "game.doors.name": "Trap Doors",
     "game.doors.desc": "One player secretly sets a trap behind one of three doors, and the other picks a door to walk through. The doors are worth 1, 2 and 3 points; the trapped one scores 0.",
     "game.doors.rules":
       "There are three doors. Walk through one safely and you score 1, 2 or 3 points. Each round, one player is the Trapper and the other is the Walker. The Trapper secretly sets a trap behind one door (the Walker can't see it). The Walker picks a door and walks through. The trapped door means you're out and score 0; any other door is safe and scores its points. After the walk, both players see where the trap was. The roles switch every round, and the 1st player sets the first trap. After 6 rounds (3 as Trapper, 3 as Walker), whoever has more points wins. Equal points is a draw. Higher doors score more, but they're more likely to be trapped.",
@@ -91,7 +89,6 @@ export default {
     "game.doors.tour.end": "Check \"Rounds so far\" to read which doors your opponent tends to pick. The roles switch every round.",
   },
   th: {
-    "game.doors.name": "ประตูกับดัก",
     "game.doors.desc": "คนวางกับดักแอบวางกับดักไว้ที่ประตู 1 ใน 3 บาน แล้วคนเดินเลือกประตูที่จะเดินผ่าน ประตูมีค่า 1, 2 และ 3 แต้ม ประตูที่มีกับดักได้ 0 แต้ม",
     "game.doors.rules":
       "มีประตู 3 บาน ถ้าเดินผ่านได้อย่างปลอดภัยจะได้ 1, 2 หรือ 3 แต้ม แต่ละรอบ ฝ่ายหนึ่งเป็น “คนวางกับดัก” อีกฝ่ายเป็น “คนเดิน” คนวางกับดักแอบวางกับดักไว้ที่ประตู 1 บาน (อีกฝ่ายมองไม่เห็น) คนเดินเลือกประตู 1 บานแล้วเดินผ่าน ถ้าเป็นประตูที่มีกับดักจะตกรอบได้ 0 แต้ม ถ้าเป็นประตูอื่นจะปลอดภัยและได้แต้มของประตูนั้น หลังเดินผ่าน ทั้งสองคนจะเห็นว่ากับดักอยู่ที่ไหน บทบาทจะสลับกันทุกรอบ รอบแรกคนเล่นก่อนเป็นคนวางกับดัก ครบ 6 รอบ (วางกับดัก 3 ครั้ง เดิน 3 ครั้ง) ใครได้แต้มรวมมากกว่าชนะ ถ้าแต้มเท่ากันถือว่าเสมอ ประตูที่แต้มสูงได้แต้มมาก แต่ก็มักถูกวางกับดักมากกว่า",

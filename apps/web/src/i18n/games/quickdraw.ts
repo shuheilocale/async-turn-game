@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** はやうちの文言。{who} には「あなた」か「〇〇さん」、{sec} には「0.287」のような秒数が入る */
 export default {
   ja: {
-    "game.quickdraw.name": "はやうち",
     "game.quickdraw.desc": "合図が出たらすぐに画面をタップして、反応の速さをきそう。合図より前に押すとおてつき。3 回戦。",
     "game.quickdraw.rules":
       "3 回戦で、合図が出てから画面をタップするまでの速さ（反応時間）をきそいます。各回戦で 2 人が 1 回ずつ挑戦し、先に挑戦する人は回戦ごとに交代します（1 回戦目は先手）。「準備」を押すと画面が待ちの色になり、1.5〜5 秒のどこか（毎回ちがいます）で合図の「！」が出ます。合図が出たら、できるだけ早く画面をタップします。合図より前にタップすると「おてつき」で、その回戦は負けです（2 人ともおてつきなら引き分け）。準備を押したら、やり直しはできません。準備のあとに画面を開き直すと、その挑戦はおてつきになります。合図から 3 秒たつと、3.000 秒で記録されます。先に挑戦した人の記録は、相手が挑戦し終わるまで相手に伏せてあります。反応時間が短い方が、その回戦の勝ちです（同じなら引き分け）。多く勝った方の勝ちです。勝った数が同じなら、反応時間の合計が短い方の勝ち（おてつきは 3 秒として数えます）。それも同じなら引き分けです。2 回戦で 2 勝したら、3 回戦はせずに決着します。",
@@ -66,7 +65,6 @@ export default {
     "game.quickdraw.tour.go": "「準備」を押して、合図を待ちましょう。",
   },
   en: {
-    "game.quickdraw.name": "Quick Tap",
     "game.quickdraw.desc": "Tap the screen as soon as the signal appears, and compare reaction times. Tapping before the signal is a false start. 3 rounds.",
     "game.quickdraw.rules":
       "Over 3 rounds, you compete on how fast you tap the screen after the signal appears (your reaction time). In each round both players try once, and who goes first changes every round (the 1st player goes first in round 1). Press Ready and the screen changes to the waiting color; somewhere between 1.5 and 5 seconds later (different every time) the \"!\" signal appears. When it does, tap the screen as fast as you can. Tapping before the signal is a false start, and you lose that round (if both players false-start, it's a tie). Once you press Ready, you can't redo it. If you reopen the screen after pressing Ready, that try counts as a false start. If you don't tap within 3 seconds of the signal, 3.000 s is recorded. The first player's result stays hidden from the other player until they have tried too. The shorter reaction time wins the round (the same time is a tie). Whoever wins more rounds wins. If that's equal, the smaller total reaction time wins (a false start counts as 3 seconds); if that's also equal, it's a draw. If someone wins both of the first 2 rounds, the game ends there without round 3.",
@@ -129,7 +127,6 @@ export default {
     "game.quickdraw.tour.go": "Press Ready and watch for the signal.",
   },
   th: {
-    "game.quickdraw.name": "แตะไว",
     "game.quickdraw.desc": "พอสัญญาณขึ้นให้แตะหน้าจอทันที แข่งกันว่าใครไวกว่า ถ้าแตะก่อนสัญญาณถือว่าแตะก่อน เล่น 3 รอบ",
     "game.quickdraw.rules":
       "เล่น 3 รอบ แข่งกันว่าใครแตะหน้าจอได้เร็วกว่าหลังจากสัญญาณขึ้น (เวลาตอบสนอง) แต่ละรอบทั้งสองคนลองคนละครั้ง และคนที่ลองก่อนจะสลับกันทุกรอบ (รอบที่ 1 ผู้เล่นก่อนลองก่อน) เมื่อกด “พร้อม” หน้าจอจะเปลี่ยนเป็นสีรอ แล้วสัญญาณ “!” จะขึ้นในช่วง 1.5–5 วินาที (ไม่เท่ากันทุกครั้ง) พอสัญญาณขึ้นให้แตะหน้าจอให้เร็วที่สุด ถ้าแตะก่อนสัญญาณถือว่า “แตะก่อน” และแพ้รอบนั้น (ถ้าแตะก่อนทั้งคู่ถือว่าเสมอ) กดพร้อมแล้วทำใหม่ไม่ได้ ถ้าเปิดหน้าจอใหม่หลังจากกดพร้อม ครั้งนั้นจะนับว่าแตะก่อน ถ้าไม่แตะภายใน 3 วินาทีหลังสัญญาณ จะบันทึกเป็น 3.000 วินาที ผลของคนที่ลองก่อนจะถูกซ่อนไว้จนกว่าอีกฝ่ายจะลองเสร็จ ใครเวลาตอบสนองสั้นกว่าชนะรอบนั้น (เท่ากันเสมอ) ใครชนะหลายรอบกว่าชนะ ถ้าเท่ากัน ใครเวลารวมน้อยกว่าชนะ (แตะก่อนนับเป็น 3 วินาที) ถ้ายังเท่ากันถือว่าเสมอ ถ้าใครชนะ 2 รอบแรกทั้งคู่ เกมจะจบโดยไม่ต้องเล่นรอบที่ 3",

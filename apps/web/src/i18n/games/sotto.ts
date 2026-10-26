@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** そっと出しの文言。{who} {holder} には「あなた」か「〇〇さん」が入る */
 export default {
   ja: {
-    "game.sotto.name": "そっと出し",
     "game.sotto.desc": "1〜30 の札を 3 枚ずつ持ち、2 人で協力して小さい順に場に出していく。相手の札は見えず、数字も伝えない。",
     "game.sotto.rules":
       "2 人で一緒にクリアを目指すゲームです。1〜30 の札から、2 人に 3 枚ずつ配ります。自分の札だけが見え、相手の札は枚数しか分かりません。2 人の札を全部、小さい順に場に出しきればクリアです。手番では「出す」か「待つ」を選びます。「出す」と、自分の一番小さい札が場に出ます（どの札を出すかは選べません）。「待つ」と、札を出さずに相手の番になります。待てるのは 2 人合わせて 4 回までです。出した札より小さい札を相手が持っていたらミスで、ライフが 1 減り、相手のその札はすべて捨てます。ライフは 2 人で 2 つあり、なくなったら失敗です。手番は 1 手ごとに交代します。札がなくなった人の番は飛ばし、相手が続けて出します。数字は言葉で伝えないのがお約束です。",
@@ -53,7 +52,6 @@ export default {
     "game.sotto.tour.signal": "本番では数字を言葉で伝えないのがお約束。「待った」ことが合図になります。",
   },
   en: {
-    "game.sotto.name": "Quiet Order",
     "game.sotto.desc": "Each of you holds 3 cards from 1–30. Work together to play them all in rising order — without seeing each other's cards or saying any numbers.",
     "game.sotto.rules":
       "A cooperative game: you win or lose together. Each player gets 3 cards from 1–30. You can see only your own cards; for your partner's, you only know how many are left. Play all of both players' cards onto the pile from lowest to highest to win. On your turn, choose Play or Wait. Play puts your lowest card on the pile (you can't choose which card). Wait passes the turn without playing. You can wait 4 times in total, shared between you. If your partner still holds a card lower than the one you played, it's a mistake: you lose 1 life, and all those lower cards are discarded. You share 2 lives; lose both and the game is over. Turns alternate after every move. When one player runs out of cards, their turns are skipped and the other keeps playing. The one rule of manners: never tell each other your numbers.",
@@ -103,7 +101,6 @@ export default {
     "game.sotto.tour.signal": "In a real game, don't say numbers out loud. Waiting is your signal.",
   },
   th: {
-    "game.sotto.name": "วางเงียบๆ",
     "game.sotto.desc": "ถือไพ่คนละ 3 ใบจากเลข 1–30 แล้วช่วยกันวางลงกองจากน้อยไปมาก โดยมองไม่เห็นไพ่ของอีกฝ่ายและไม่บอกตัวเลขกัน",
     "game.sotto.rules":
       "เกมร่วมมือ ชนะหรือแพ้ไปด้วยกัน แจกไพ่จากเลข 1–30 ให้คนละ 3 ใบ เห็นได้เฉพาะไพ่ของตัวเอง ส่วนไพ่ของอีกฝ่ายรู้แค่จำนวน ถ้าวางไพ่ของทั้งสองคนลงกองจากน้อยไปมากได้ครบทุกใบถือว่าผ่าน ในตาของตัวเอง เลือก “วาง” หรือ “รอ” ถ้าวาง ไพ่ใบที่เล็กที่สุดของตัวเองจะถูกวางลงกอง (เลือกใบไม่ได้) ถ้ารอ จะส่งตาให้อีกฝ่ายโดยไม่วางไพ่ รอได้รวมกันทั้งสองคน 4 ครั้ง ถ้าอีกฝ่ายยังถือไพ่ที่เล็กกว่าใบที่วาง ถือว่าพลาด ชีวิตลด 1 และไพ่ใบที่เล็กกว่านั้นของอีกฝ่ายจะถูกทิ้งทั้งหมด มีชีวิตร่วมกัน 2 ดวง ถ้าหมดถือว่าล้มเหลว สลับตากันทุกครั้งที่เล่น ถ้าใครไพ่หมดแล้วจะข้ามตาคนนั้น ให้อีกฝ่ายวางต่อไป ข้อตกลงคือห้ามบอกตัวเลขกันด้วยคำพูด",

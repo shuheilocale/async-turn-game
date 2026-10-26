@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** めくりあわせ（神経衰弱）の文言。{who} には「あなた」か「〇〇さん」が入る */
 export default {
   ja: {
-    "game.memory.name": "めくりあわせ",
     "game.memory.desc": "裏向きに並んだ 12 枚の札から 2 枚ずつめくり、同じ絵がそろえばもらえる。多くもらった方の勝ち。",
     "game.memory.rules":
       "12 枚（6 組）の札が裏向きに並んでいます。どこに何の絵があるかは 2 人とも知りません。手番では札を 1 枚ずつ、2 枚めくります。1 枚目の絵を見てから 2 枚目を選べますが、めくった札は元に戻せません。2 枚が同じ絵なら、その 2 枚をもらって、続けてもう一度めくります。ちがう絵なら裏に戻して、相手の番です。全部の札がなくなったら、多くもらった方の勝ち。同じ数なら引き分けです。交互に遊ぶので、相手がめくった札は、あなたの番に開いたときに短く再生します（何度でも見直せます）。前にめくられたことのある札には、裏に小さな点が付きます。",
@@ -46,7 +45,6 @@ export default {
     "game.memory.tour.score": "もらった札はここに並びます。全部なくなったとき、多くそろえた方の勝ち。同じなら引き分けです。",
   },
   en: {
-    "game.memory.name": "Memory Match",
     "game.memory.desc": "Flip two of the 12 face-down cards at a time. If the pictures match, you keep them. Whoever keeps more pairs wins.",
     "game.memory.rules":
       "12 cards (6 pairs) lie face down. Neither of you knows where each picture is. On your turn, flip two cards, one at a time. You see the first picture before choosing the second, but you can't take back a card you've flipped. If the two pictures match, you keep both cards and flip again. If they don't, they turn back face down and it's your opponent's turn. When all the cards are gone, whoever has more pairs wins. Equal pairs is a draw. Since you take turns at different times, the cards your opponent flipped are replayed briefly when you open the game on your turn (you can watch them again any time). Cards that have been flipped before get a small dot on their back.",
@@ -89,7 +87,6 @@ export default {
     "game.memory.tour.score": "The pairs you keep line up here. When all cards are gone, whoever has more pairs wins. Equal is a draw.",
   },
   th: {
-    "game.memory.name": "เปิดไพ่จับคู่",
     "game.memory.desc": "เปิดไพ่ที่คว่ำอยู่ 12 ใบทีละ 2 ใบ ถ้าภาพตรงกันจะได้ไพ่คู่นั้นไป ใครได้คู่มากกว่าชนะ",
     "game.memory.rules":
       "มีไพ่ 12 ใบ (6 คู่) คว่ำเรียงอยู่ ไม่มีใครรู้ว่าภาพไหนอยู่ตรงไหน ในตาของตัวเอง ให้เปิดไพ่ทีละใบ รวม 2 ใบ ดูภาพใบแรกก่อนแล้วค่อยเลือกใบที่สองได้ แต่ไพ่ที่เปิดแล้วจะเปลี่ยนใจไม่ได้ ถ้าภาพทั้ง 2 ใบตรงกัน จะได้ไพ่คู่นั้นไป และเปิดต่อได้อีก ถ้าไม่ตรงกัน ไพ่จะคว่ำกลับและเปลี่ยนเป็นตาของอีกฝ่าย เมื่อไพ่หมด ใครได้คู่มากกว่าชนะ ถ้าเท่ากันถือว่าเสมอ เพราะผลัดกันเล่นคนละเวลา ไพ่ที่อีกฝ่ายเปิดจะถูกเล่นซ้ำสั้นๆ เมื่อคุณเปิดเกมในตาของคุณ (ดูซ้ำได้กี่ครั้งก็ได้) ไพ่ที่เคยถูกเปิดแล้วจะมีจุดเล็กๆ ที่ด้านหลัง",

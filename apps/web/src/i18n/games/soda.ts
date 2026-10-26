@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** ふりふりソーダの文言。{who} には「あなた」か「〇〇さん」、{n} には振った強さ（0〜100）が入る */
 export default {
   ja: {
-    "game.soda.name": "ふりふりソーダ",
     "game.soda.desc": "1 本のソーダを 2 人で交互に振る。吹き出させた人の負け。吹き出さずに終われば、たくさん振った方の勝ち。",
     "game.soda.rules":
       "1 本のソーダのボトルを、2 人で交互に振ります（先手から）。自分の番に「振る」を押すと、少しかまえてから 3 秒間、振った強さ（0〜100）をはかります。強く振るほど、ボトルの中の圧力が上がります。iPhone などでは端末のセンサーで振った強さをはかります（はじめに「センサーをオンにする」を押し、出てきた確認で「許可」を選んでください）。センサーが使えないときは、3 秒間ボトルを指でこする・連打して振ります。振りが足りない（強さ 20 未満）ときは、最低量の 20 が入ります。圧力が限界を超えるとふたが飛んで吹き出し、振った人の負けです。限界は圧力計の黄色から赤の帯のどこかで、ボトルごとにちがい、終わるまで分かりません。1 人 4 回ずつ、合わせて 8 回振っても吹き出さなければ、圧力を多く入れた方の勝ちです（同じなら引き分け）。「振る」を押したらやり直しはできません。振っている途中で画面を閉じると、いちばん強く振った（100）ことになります。",
@@ -70,7 +69,6 @@ export default {
     "game.soda.tour.go": "「振る」を押すと、少しかまえてから 3 秒間はかります。やってみましょう。",
   },
   en: {
-    "game.soda.name": "Shake Soda",
     "game.soda.desc": "Take turns shaking one bottle of soda. Whoever makes it burst loses. If it never bursts, whoever shook harder wins.",
     "game.soda.rules":
       "Two players take turns shaking one bottle of soda (1st player first). On your turn, press Shake: after a moment to get ready, your shake is measured for 3 seconds (strength 0–100). The harder you shake, the more the pressure in the bottle rises. On an iPhone or similar, the phone's motion sensor measures your shake (first press \"Turn on sensor\" and choose Allow). If the sensor can't be used, rub or tap the bottle on the screen for 3 seconds instead. If your shake is too weak (under 20), the minimum of 20 is added. If the pressure goes over the limit, the cap pops off and the soda bursts: whoever shook it loses. The limit is somewhere in the yellow-to-red band of the gauge, different for every bottle, and hidden until the game ends. If it doesn't burst after 4 shakes each (8 in total), whoever added more pressure wins (a tie is a draw). Once you press Shake, there's no redo. If you close the screen while shaking, it counts as the strongest shake (100).",
@@ -137,7 +135,6 @@ export default {
     "game.soda.tour.go": "Press Shake: after a moment to get ready, your shake is measured for 3 seconds. Give it a try.",
   },
   th: {
-    "game.soda.name": "โซดาเขย่า",
     "game.soda.desc": "ผลัดกันเขย่าโซดาขวดเดียว ใครทำให้พุ่งแพ้ ถ้าไม่พุ่งจนจบ ใครเขย่าแรงกว่าชนะ",
     "game.soda.rules":
       "ผู้เล่นสองคนผลัดกันเขย่าโซดาขวดเดียว (ผู้เล่นก่อนเริ่ม) ในตาของคุณ กด “เขย่า” แล้วเตรียมตัวสักครู่ จากนั้นจะวัดแรงเขย่า (0–100) เป็นเวลา 3 วินาที ยิ่งเขย่าแรง แรงดันในขวดยิ่งสูง ใน iPhone และเครื่องอื่น ๆ จะวัดแรงเขย่าด้วยเซนเซอร์ของเครื่อง (กด “เปิดเซนเซอร์” ก่อน แล้วเลือก “อนุญาต”) ถ้าใช้เซนเซอร์ไม่ได้ ให้ถูหรือแตะรัว ๆ ที่ขวดบนหน้าจอ 3 วินาทีแทน ถ้าเขย่าไม่พอ (แรงไม่ถึง 20) จะเพิ่มแรงดันขั้นต่ำ 20 ถ้าแรงดันเกินขีดจำกัด ฝาจะกระเด็นและโซดาจะพุ่ง คนที่เขย่าแพ้ ขีดจำกัดอยู่ที่ไหนสักแห่งในแถบสีเหลืองถึงแดงของมาตรวัด แต่ละขวดไม่เท่ากัน และจะรู้ก็ต่อเมื่อเกมจบ ถ้าเขย่าครบคนละ 4 ครั้ง (รวม 8 ครั้ง) แล้วยังไม่พุ่ง ใครเพิ่มแรงดันมากกว่าชนะ (เท่ากันเสมอ) เมื่อกด “เขย่า” แล้วจะทำใหม่ไม่ได้ ถ้าปิดหน้าจอระหว่างเขย่า จะนับเป็นการเขย่าแรงที่สุด (100)",

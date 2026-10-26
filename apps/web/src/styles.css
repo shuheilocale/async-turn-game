@@ -782,6 +782,22 @@ dialog.sheet::backdrop {
   gap: 12px;
 }
 
+/* 公式アカウントを友だち追加する案内（小さく出す） */
+.friend-hint p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.friend-hint-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.friend-hint-actions button {
+  flex: 1;
+}
+
 /* 選んだ手の確定。スマホでは画面の下に固定する */
 .confirm {
   display: none;

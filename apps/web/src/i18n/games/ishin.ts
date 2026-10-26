@@ -192,7 +192,6 @@ const th: Table = {
  */
 export default {
   ja: {
-    "game.ishin.name": "ふたりの以心伝心",
     "game.ishin.desc": "6 つの質問に、自分の答えと「相手はこう答えると思う」という予想を 2 人とも出す協力ゲーム。予想が当たるとハートが増え、最後に相性を ％ で見る。",
     "game.ishin.rules":
       "2 人で協力するゲームです。質問は全部で 6 問。毎問、2 人とも 4 つの選択肢から「自分の答え」と「相手はこれを選ぶと思う」という予想を 1 つずつ選びます。先に答える人は毎問交代します（1 問目は先手）。先に出した答えと予想は、もう 1 人が出すまで見えません。2 人とも出したら見せ合い、予想が相手の答えと同じならハートが 1 つ増えます（1 問で 2 人合わせて最大 2 つ）。「どっちが？」の質問では、「わたし」は自分、「あなた」は相手のことです。6 問でハートは最大 12 こ。ハートの数を相性の ％ にして、8 こ以上なら 2 人でクリアです。",
@@ -268,7 +267,6 @@ export default {
     ...keys(ja),
   },
   en: {
-    "game.ishin.name": "In Sync",
     "game.ishin.desc": "A cooperative game of 6 questions. You both give your own answer and a guess of your partner's answer. Every correct guess adds a heart, and at the end you see how in sync you are as a percentage.",
     "game.ishin.rules":
       "A cooperative game for two. There are 6 questions. For each one, both of you pick two things from 4 choices: your own answer, and a guess of what your partner will answer. Who answers first switches every question (the 1st player starts). The first answer and guess stay hidden until the other player has answered too. Then you both see everything, and each guess that matches your partner's answer adds a heart (up to 2 per question). In \"Who's more likely\" questions, \"Me\" means yourself and \"You\" means your partner. 6 questions give up to 12 hearts. Your hearts become your in-sync percentage, and 8 or more hearts means you clear the game together.",
@@ -344,7 +342,6 @@ export default {
     ...keys(en),
   },
   th: {
-    "game.ishin.name": "ใจตรงกัน",
     "game.ishin.desc": "เกมร่วมมือ 6 คำถาม ทั้งสองคนตอบคำตอบของตัวเองและทายคำตอบของอีกฝ่าย ทายถูกได้หัวใจ ตอนจบจะบอกว่าใจตรงกันกี่เปอร์เซ็นต์",
     "game.ishin.rules":
       "เกมร่วมมือสำหรับสองคน มีคำถามทั้งหมด 6 ข้อ แต่ละข้อ ทั้งสองคนเลือกจาก 4 ตัวเลือก 2 อย่าง คือ “คำตอบของตัวเอง” และ “ทายว่าอีกฝ่ายจะตอบข้อไหน” คนตอบก่อนจะสลับกันทุกข้อ (ข้อแรกผู้เล่นก่อนเริ่ม) คำตอบและคำทายของคนที่ตอบก่อนจะถูกซ่อนไว้จนกว่าอีกคนจะตอบ เมื่อตอบครบทั้งสองคนจะเปิดดูพร้อมกัน ถ้าทายตรงกับคำตอบของอีกฝ่ายจะได้หัวใจ 1 ดวง (ข้อละไม่เกิน 2 ดวง) ในคำถาม “ใครน่าจะ…” คำว่า “ฉัน” คือตัวเอง และ “เธอ” คืออีกฝ่าย ครบ 6 ข้อได้หัวใจสูงสุด 12 ดวง จำนวนหัวใจจะกลายเป็นเปอร์เซ็นต์ใจตรงกัน ถ้าได้ 8 ดวงขึ้นไปถือว่าผ่านด้วยกัน",

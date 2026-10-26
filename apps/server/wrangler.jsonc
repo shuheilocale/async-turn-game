@@ -11,7 +11,18 @@
   },
   "vars": {
     // LINE ミニアプリのチャネル ID（開発用・審査用・本番用）。LINE の ID トークンの発行先として受け付ける
-    "LINE_CHANNEL_IDS": "2012180394,2012180395,2012180396"
+    "LINE_CHANNEL_IDS": "2012180394,2012180395,2012180396",
+    // LINE ミニアプリの LIFF ID（本番用）。LINE で知らせるカードの「開く」ボタンに使う（画面の既定と同じ）
+    "LIFF_ID": "2012180396-nO920f3r",
+    // 公開している URL。LINE で知らせるカードのアイコン（/icons/<ゲームID>.png）に使う
+    "APP_ORIGIN": "https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev",
+    // LINE の公式アカウントの ID（@xxxx）。入れると、LINE の中の対局画面に友だち追加の案内が出る。空なら出さない
+    "LINE_OA_ID": ""
+    // Messaging API のチャネルアクセストークンは secret で入れる（npx wrangler secret put LINE_MESSAGING_TOKEN）
+  },
+  // 時刻を過ぎた知らせの予定を 15 分ごとに処理する（src/worker.ts の scheduled）
+  "triggers": {
+    "crons": ["*/15 * * * *"]
   },
   "d1_databases": [
     {

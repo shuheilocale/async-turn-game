@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** ころころの文言 */
 export default {
   ja: {
-    "game.korokoro.name": "ころころ",
     "game.korokoro.desc": "3 面が青、3 面がオレンジのキューブを転がして、止まったマスを下の面の色で塗る。たてかよこに 3 つ並んだ色の人の勝ち。",
     "game.korokoro.rules":
       "4×4 の盤と、3 面が青・3 面がオレンジのキューブを 1 つ、2 人で使います（向かい合う面はいつも別の色です）。先手が青、後手がオレンジです。自分の番では、キューブをたてかよこにまっすぐ、1 マス以上好きなだけ転がします。1 マス進むごとに 1 回転がります。塗ったマスの上も通れますが、止まれるのは空いているマスだけです。止まったマスを、そのとき下になった面の色で塗ります。青かオレンジがたてかよこに 3 つ並んだら、誰が塗ってもその色の人の勝ちです（ななめは数えません）。自分の番にどこにも止まれなければ引き分けです。",
@@ -34,7 +33,6 @@ export default {
     "game.korokoro.tour.end": "塗ったマスの上は通れますが、止まれません。自分の番にどこにも止まれなければ引き分けです。",
   },
   en: {
-    "game.korokoro.name": "Roll & Paint",
     "game.korokoro.desc": "Roll a cube with three blue faces and three orange faces, and paint the square it stops on with the color of its bottom face. Three of a color in a row wins for that color.",
     "game.korokoro.rules":
       "Two players share a 4×4 board and one cube. Three of the cube's faces are blue and three are orange, and opposite faces are always different colors. The first player is Blue and the second player is Orange. On your turn, roll the cube straight up, down, left, or right, as many squares as you like (at least one). The cube tips over once for every square it moves. It can roll over painted squares, but it can only stop on an empty one. Paint the square where it stops with the color of the face that is now on the bottom. When three blue or three orange squares line up across or down (diagonals don't count), the player of that color wins, no matter who painted it. If it's your turn and there's nowhere to stop, the game is a draw.",
@@ -65,7 +63,6 @@ export default {
     "game.korokoro.tour.end": "The cube can roll over painted squares but can't stop on them. If it's your turn and there's nowhere to stop, the game is a draw.",
   },
   th: {
-    "game.korokoro.name": "กลิ้งระบายสี",
     "game.korokoro.desc": "กลิ้งลูกบาศก์ที่มีสีน้ำเงิน 3 ด้านและสีส้ม 3 ด้าน แล้วระบายช่องที่หยุดด้วยสีของด้านล่าง สีไหนเรียงกัน 3 ช่องในแนวตั้งหรือแนวนอน ผู้เล่นสีนั้นชนะ",
     "game.korokoro.rules":
       "ผู้เล่น 2 คนใช้กระดาน 4×4 และลูกบาศก์ 1 ลูกร่วมกัน ลูกบาศก์มีสีน้ำเงิน 3 ด้านและสีส้ม 3 ด้าน ด้านที่อยู่ตรงข้ามกันเป็นคนละสีเสมอ ผู้ที่เล่นก่อนเป็นสีน้ำเงิน ผู้ที่เล่นทีหลังเป็นสีส้ม ในตาของคุณ ให้กลิ้งลูกบาศก์เป็นเส้นตรงขึ้น ลง ซ้าย หรือขวา กี่ช่องก็ได้ (อย่างน้อย 1 ช่อง) ลูกบาศก์จะพลิก 1 ครั้งทุกครั้งที่เคลื่อนไป 1 ช่อง กลิ้งผ่านช่องที่ระบายแล้วได้ แต่หยุดได้เฉพาะช่องว่าง ระบายช่องที่หยุดด้วยสีของด้านที่อยู่ล่างในตอนนั้น เมื่อสีน้ำเงินหรือสีส้มเรียงกัน 3 ช่องในแนวตั้งหรือแนวนอน (แนวทแยงไม่นับ) ผู้เล่นสีนั้นชนะ ไม่ว่าใครจะเป็นคนระบาย ถ้าถึงตาคุณแล้วไม่มีช่องให้หยุดเลย ถือว่าเสมอ",

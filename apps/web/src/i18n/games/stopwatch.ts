@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** ぴったりストップの文言。{who} には「あなた」か「〇〇さん」、{sec} には「13.7」のような秒数が入る */
 export default {
   ja: {
-    "game.stopwatch.name": "ぴったりストップ",
     "game.stopwatch.desc": "目標の秒数ぴったりにストップウォッチを止める。数字はすぐ見えなくなるので、頭の中で数える。3 回戦。",
     "game.stopwatch.rules":
       "3 回戦で、目標の秒数ぴったりにストップウォッチを止めるのをきそいます。各回戦には出題する人がいて、回戦ごとに交代します（1 回戦目は先手）。出題する人は目標の秒数（5.0〜15.0 秒、0.1 秒きざみ）を決めて、まず自分が挑戦します。「スタート」を押すと時間を測りはじめ、1.5 秒ほどで数字が見えなくなります。頭の中で数えて、目標の秒数だと思ったら「ストップ」を押します。やり直しはできません。スタートしたあとに画面を開き直すと、その挑戦は失敗（ずれ 60 秒）になります。60 秒たつと自動で止まります。出題した人の記録は相手に伏せたまま、相手が同じ秒数に挑戦します。相手が止めたら、2 人の記録を見せ合います。目標とのずれが小さい方が、その回戦の勝ちです（同じなら引き分け）。多く勝った方の勝ちです。勝った数が同じなら、3 回戦のずれの合計が小さい方の勝ち。それも同じなら引き分けです。2 回戦で 2 勝したら、3 回戦はせずにそこで決着します。",
@@ -74,7 +73,6 @@ export default {
     "game.stopwatch.tour.go": "「スタート」から 1.5 秒ほどで数字が見えなくなります。頭の中で数えて「ストップ」。やり直しはできません。秒数を決めて、スタートしてみましょう。",
   },
   en: {
-    "game.stopwatch.name": "Perfect Stop",
     "game.stopwatch.desc": "Stop the stopwatch right on the target time. The numbers soon disappear, so count in your head. 3 rounds.",
     "game.stopwatch.rules":
       "Over 3 rounds, you try to stop a stopwatch right on a target time. Each round has a setter, and the setter changes every round (the 1st player sets round 1). The setter picks a target time (5.0–15.0 seconds, in steps of 0.1) and goes first. Press Start and the stopwatch begins; after about 1.5 seconds the numbers disappear. Count in your head and press Stop when you think the target time has passed. You can't redo it. If you reopen the screen after pressing Start, that try counts as a miss (60 seconds off). The stopwatch stops by itself at 60 seconds. The setter's result stays hidden while the other player tries the same target. When they stop, both results are shown. Whoever is closer to the target wins the round (the same gap is a tie). Whoever wins more rounds wins. If that's equal, the smaller total gap over the 3 rounds wins; if that's also equal, it's a draw. If someone wins both of the first 2 rounds, the game ends there without round 3.",
@@ -145,7 +143,6 @@ export default {
     "game.stopwatch.tour.go": "About 1.5 s after Start, the numbers disappear. Count in your head and press Stop. No redo. Choose a time and press Start.",
   },
   th: {
-    "game.stopwatch.name": "หยุดให้ตรงเวลา",
     "game.stopwatch.desc": "หยุดนาฬิกาจับเวลาให้ตรงกับเวลาเป้าหมาย ตัวเลขจะหายไปเร็ว ต้องนับในใจ เล่น 3 รอบ",
     "game.stopwatch.rules":
       "เล่น 3 รอบ แข่งกันหยุดนาฬิกาจับเวลาให้ตรงกับเวลาเป้าหมาย แต่ละรอบจะมีคนตั้งโจทย์ และสลับกันทุกรอบ (รอบที่ 1 ผู้เล่นก่อนเป็นคนตั้ง) คนตั้งโจทย์เลือกเวลาเป้าหมาย (5.0–15.0 วินาที ทีละ 0.1) แล้วลองเองก่อน เมื่อกด “เริ่ม” นาฬิกาจะเริ่มจับเวลา และประมาณ 1.5 วินาทีตัวเลขจะหายไป ให้นับในใจ แล้วกด “หยุด” เมื่อคิดว่าถึงเวลาเป้าหมาย ทำใหม่ไม่ได้ ถ้าเปิดหน้าจอใหม่หลังจากกดเริ่ม ครั้งนั้นจะนับว่าพลาด (คลาด 60 วินาที) นาฬิกาจะหยุดเองที่ 60 วินาที ผลของคนตั้งโจทย์จะถูกซ่อนไว้ ขณะที่อีกฝ่ายลองเวลาเดียวกัน เมื่ออีกฝ่ายหยุดแล้ว จะเปิดผลของทั้งสองคน ใครคลาดจากเป้าหมายน้อยกว่าชนะรอบนั้น (คลาดเท่ากันเสมอ) ใครชนะหลายรอบกว่าชนะ ถ้าเท่ากัน ใครคลาดรวม 3 รอบน้อยกว่าชนะ ถ้ายังเท่ากันถือว่าเสมอ ถ้าใครชนะ 2 รอบแรกทั้งคู่ เกมจะจบโดยไม่ต้องเล่นรอบที่ 3",

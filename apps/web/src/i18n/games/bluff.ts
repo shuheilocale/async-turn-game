@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** はったり三枚の文言。{who} には「あなた」か「〇〇さん」が入る */
 export default {
   ja: {
-    "game.bluff.name": "はったり三枚",
     "game.bluff.desc": "1・2・3 のカードを 1 枚ずつ配り、チップを上乗せするかを決める。小さいカードでも、相手がおりれば勝てる。",
     "game.bluff.rules":
       "カードは 1・2・3 の 3 枚です。毎回戦、2 人に 1 枚ずつ配られ、残りの 1 枚は使いません。相手のカードは見えません。はじめに 2 人ともチップを 1 枚ずつ場に出します。先に動く人は「上乗せ」（チップを 1 枚足す）か「パス」を選びます。パスなら、後の人も「上乗せ」か「パス」を選びます。両方パスならカードを見せ合い、大きい方が相手から 1 枚もらいます。上乗せされた人は「受ける」か「おりる」を選びます。受けると 1 枚足して見せ合い、大きい方が相手から 2 枚もらいます。おりると、上乗せした人が 1 枚もらい、カードは見せません。先に動く人は回戦ごとに交代します。6 回戦でもらったチップの差し引きが多い方の勝ちです。",
@@ -45,7 +44,6 @@ export default {
     "game.bluff.tour.end": "小さいカードでも上乗せすると、相手がおりてくれることがあります。これが、はったりです。",
   },
   en: {
-    "game.bluff.name": "Three-Card Bluff",
     "game.bluff.desc": "Each player gets one of the cards 1, 2 and 3, then decides whether to raise. Even a low card can win if your opponent folds.",
     "game.bluff.rules":
       "There are three cards: 1, 2 and 3. Each round, both players get one card and the third is set aside unseen. You can't see your opponent's card. At the start of the round, both players put 1 chip in the pot. The first player chooses Raise (add 1 chip) or Pass. After a pass, the other player also chooses Raise or Pass. If both pass, the cards are shown and the higher card takes 1 chip from the opponent. A player facing a raise chooses Call or Fold. Call adds 1 chip and the cards are shown; the higher card takes 2 chips from the opponent. Fold gives the raiser 1 chip, and the cards stay hidden. The first player switches every round. After 6 rounds, whoever has gained more chips wins.",
@@ -87,7 +85,6 @@ export default {
     "game.bluff.tour.end": "Even with a low card, raising can make your opponent fold. That's a bluff.",
   },
   th: {
-    "game.bluff.name": "บลัฟไพ่สามใบ",
     "game.bluff.desc": "แจกไพ่ 1, 2, 3 ให้คนละใบ แล้วเลือกว่าจะเพิ่มชิปหรือไม่ ถึงไพ่จะเล็ก ถ้าอีกฝ่ายหมอบก็ชนะได้",
     "game.bluff.rules":
       "มีไพ่ 3 ใบ คือ 1, 2 และ 3 แต่ละรอบจะแจกให้คนละ 1 ใบ ใบที่เหลือไม่ได้ใช้ และมองไม่เห็นไพ่ของอีกฝ่าย ก่อนเริ่มรอบ ทั้งสองคนวางชิปคนละ 1 อันลงกองกลาง คนที่เริ่มก่อนเลือก “เพิ่ม” (เพิ่มชิป 1 อัน) หรือ “ผ่าน” ถ้าผ่าน อีกฝ่ายก็เลือก “เพิ่ม” หรือ “ผ่าน” ถ้าผ่านทั้งคู่ จะเปิดไพ่ คนที่ไพ่สูงกว่าได้ชิปจากอีกฝ่าย 1 อัน คนที่ถูกเพิ่มเลือก “ตาม” หรือ “หมอบ” ถ้าตาม จะเพิ่มชิป 1 อันแล้วเปิดไพ่ คนที่ไพ่สูงกว่าได้ชิปจากอีกฝ่าย 2 อัน ถ้าหมอบ คนที่เพิ่มได้ชิป 1 อันโดยไม่ต้องเปิดไพ่ คนเริ่มก่อนจะสลับกันทุกรอบ ครบ 6 รอบ ใครได้ชิปสุทธิมากกว่าชนะ",

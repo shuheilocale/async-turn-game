@@ -61,6 +61,12 @@ export const savedCategory = {
   set: (category: string) => write("atg:category", category),
 };
 
+/** 対局画面の「公式アカウントを友だち追加すると知らせが届く」の案内を閉じたか */
+export const savedFriendHintClosed = {
+  get: () => read<boolean>("atg:friendHintClosed", false),
+  set: (closed: boolean) => write("atg:friendHintClosed", closed),
+};
+
 /**
  * 順番のないゲームで、相手に LINE で知らせた時刻（ミリ秒）と、自分がさいごに指したあとの版（対局ごと）。
  * 同じ人が短い間に続けて指したときに、毎回は知らせないために使う（notify.ts の freeNotice）

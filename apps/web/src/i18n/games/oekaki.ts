@@ -7,7 +7,6 @@ import type { GameMessages } from "../index.tsx";
  */
 export default {
   ja: {
-    "game.oekaki.name": "おえかきクイズ",
     "game.oekaki.desc": "描く人の絵を見て、当てる人がお題を 4 つから当てる協力クイズ。お題は映画・R&B・タイ・タピオカなど。6 問で 4 問当てればクリア。",
     "game.oekaki.rules":
       "2 人で協力するお絵かきクイズです。全部で 6 問。問題ごとに「描く人」と「当てる人」が交代します（1 問目は先手が描きます）。描く人には、ジャンルのちがうお題の候補が 3 つ出ます。1 つ選ぶと 40 秒のタイマーが始まるので、指で絵を描いてください。何筆でもかまいません。色は 4 色、太さは 2 つから選べて、「1 つ戻す」で最後の 1 筆を消せます。「描けた」を押すか、時間になったら絵を送ります。文字や数字を書くのはなしです。お題と候補は、当てる人が答えるまで描く人にしか見えません。当てる人は、描かれた順に再生される絵を見て、4 つの選択肢（正解と、同じジャンルのほかのお題 3 つ）から 1 つ選びます。当たれば 1 点（★ 1 つ）。6 問で 4 点以上なら 2 人でクリア、3 点以下なら失敗です。お題のジャンルは、映画・Netflix のドラマ・R&B・ハイブランドのもの・タイ・タピオカ・お金・美容・日本です。",
@@ -206,7 +205,6 @@ export default {
     "game.oekaki.tour.stars": "当たると★が 1 つ。6 問で★が 4 つ以上ならクリアです！",
   },
   en: {
-    "game.oekaki.name": "Doodle Quiz",
     "game.oekaki.desc":
       "One of you draws, the other guesses the topic from 4 choices. Topics include movies, R&B, Thailand, boba and more. Get 4 of 6 right to clear.",
     "game.oekaki.rules":
@@ -406,7 +404,6 @@ export default {
     "game.oekaki.tour.stars": "Each right answer earns a ★. Get 4 or more ★ in 6 questions to clear!",
   },
   th: {
-    "game.oekaki.name": "วาดให้ทาย",
     "game.oekaki.desc":
       "คนหนึ่งวาด อีกคนดูภาพแล้วทายหัวข้อจาก 4 ตัวเลือก หัวข้อมีทั้งหนัง เพลง R&B ของไทย ชานมไข่มุก และอื่น ๆ ทายถูก 4 จาก 6 ข้อถือว่าผ่าน",
     "game.oekaki.rules":

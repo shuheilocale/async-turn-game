@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** みずそそぎの文言。{who} には「あなた」か「〇〇さん」が入る */
 export default {
   ja: {
-    "game.pour.name": "みずそそぎ",
     "game.pour.desc": "1 つのコップに、2 人で交互に水を注ぐ。ボタンを押している間だけ水が出る。あふれさせた人の負け。",
     "game.pour.rules":
       "1 つのコップに、2 人で交互に水を注ぎます（先手から）。自分の番では「そそぐ」ボタンを 1 回だけ長押しします。押している間だけ水が出て、離すと止まります。やり直しはできません。1 回に注ぐ量は 20〜45 ml です。短く押しても 20 ml は出て、長く押しても 45 ml で止まります。コップのふちは 200 ml で、ふちまではあふれません。ふちを越えても、表面張力でもつことがあります。どこまでもつか（200〜230 ml）はコップごとにちがい、終わるまで分かりません。注いだ水であふれさせた人の負けです。",
@@ -43,7 +42,6 @@ export default {
     "game.pour.tour.trap": "短く押しても 20 ml は出ます。ふちのすぐ下で相手に渡せば、相手はふちを越えて注ぐしかありません。",
   },
   en: {
-    "game.pour.name": "Don't Spill",
     "game.pour.desc": "Take turns pouring water into one cup. Water flows only while you hold the button. Whoever makes it overflow loses.",
     "game.pour.rules":
       "Two players take turns pouring water into one cup (1st player first). On your turn, press and hold the Pour button once. Water flows only while you hold it and stops when you let go. You can't redo it. Each pour is 20–45 ml: even a short press pours 20 ml, and a long press stops at 45 ml. The rim of the cup is at 200 ml, and the cup never overflows below the rim. Above the rim, surface tension may hold the water for a while. How much the cup holds (200–230 ml) is different for every cup and stays hidden until the game ends. Whoever makes the cup overflow loses.",
@@ -83,7 +81,6 @@ export default {
     "game.pour.tour.trap": "Even a short press pours 20 ml. Stop just below the rim, and your opponent has no choice but to pour over it.",
   },
   th: {
-    "game.pour.name": "รินน้ำ",
     "game.pour.desc": "ผลัดกันรินน้ำลงแก้วใบเดียว น้ำจะไหลเฉพาะตอนกดปุ่มค้างไว้ ใครทำน้ำล้นแพ้",
     "game.pour.rules":
       "ผู้เล่นสองคนผลัดกันรินน้ำลงแก้วใบเดียว (ผู้เล่นก่อนเริ่ม) ในตาของคุณ ให้กดปุ่ม “ริน” ค้างไว้หนึ่งครั้ง น้ำจะไหลเฉพาะตอนกดค้าง และหยุดเมื่อปล่อยนิ้ว ทำใหม่ไม่ได้ รินได้ครั้งละ 20–45 มล. ถึงกดสั้นๆ ก็ไหล 20 มล. และกดนานแค่ไหนก็หยุดที่ 45 มล. ขอบแก้วอยู่ที่ 200 มล. ถ้ายังไม่ถึงขอบน้ำจะไม่ล้น เมื่อเกินขอบ แรงตึงผิวอาจช่วยให้น้ำยังไม่ล้นได้อีกนิด แก้วแต่ละใบรับได้ไม่เท่ากัน (200–230 มล.) และจะรู้ก็ต่อเมื่อเกมจบ ใครรินจนน้ำล้นแพ้",

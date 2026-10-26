@@ -93,6 +93,8 @@ npm run deploy       # 画面をビルドして Workers に公開する
 | --- | --- | --- |
 | `PORT` | `8787` | サーバのポート |
 | `DB_PATH` | `data/games.db` | 対局データを保存する SQLite ファイル |
+| `ALARM_INTERVAL_MS` | 開発 `60000`・本番 `900000` | 知らせの予定を処理する間隔（`0` で止める）。Workers の Cron Trigger の代わり |
+| `LINE_MESSAGING_TOKEN` / `LINE_OA_ID` / `LIFF_ID` / `APP_ORIGIN` | なし | 「LINE で時刻になったら知らせる」を参照（Workers では `wrangler.jsonc` の vars と secret） |
 
 これらは Node.js で動かすときだけ使う。Workers では D1 を `wrangler.jsonc` の `DB` という名前でつなぐ。
 
@@ -105,6 +107,8 @@ apps/server/        API サーバ（Hono。本番は Cloudflare Workers + D1、�
   migrations/       テーブルを作る・変える SQL（D1 と手元の SQLite で共通）
   src/app.ts        API の定義
   src/store.ts      保存処理。SQL の実行口（sql.ts）だけを差し替えて使う
+  src/alarms.ts     知らせの予定の決め方・夜の判定
+  src/push.ts       時刻になったら LINE の公式アカウントで知らせる（文言の表もここ）
   src/sqlite.ts     実行口：Node.js 組み込みの SQLite（開発・テスト用）
   src/d1.ts         実行口：Cloudflare D1（本番）
   src/index.ts      Node.js 用の入口
@@ -134,6 +138,7 @@ docs/企画書.md
 | POST | `/api/games/:id/join` | 招待コードで参加 `{ inviteCode, name }` |
 | POST | `/api/games/:id/moves` | 手を指す `{ version, move }` |
 | GET | `/api/games/:id/moves` | 手の記録 |
+| GET | `/api/config` | 画面に渡す設定 `{ lineOaId }`（LINE の公式アカウントの ID。なければ null） |
 
 ## LINE ミニアプリとして使う
 
@@ -151,16 +156,53 @@ LINE Developers に「LINE ミニアプリ」のチャネルを作ってある�
 - トークに送るカードの URL は `https://miniapp.line.me/<LIFF ID>/g/<対局ID>` の形
 - プライバシーポリシーは `/privacy`（チャネルの設定に載せる）
 
+## LINE で時刻になったら知らせる
+
+トークの流れに埋もれても気づけるよう、時間がたったらサーバから LINE の公式アカウントで本人に知らせる（Messaging API の push）。
+
+| いつ | だれに | 例 |
+| --- | --- | --- |
+| ゲームが `nextAlarm(state)` を持っていれば、その時刻 | 2 人とも | もちがおなかをすかせた・目をさました・卵がかえった・おとなになれそう・さみしそう |
+| 持っていない、順番のあるゲームで、手番の人が 24 時間指していない | 手番の人に 1 回だけ | 「あきさん、『オセロ』であなたの番です」 |
+
+- 予定は D1 の `alarms`（対局・席ごとに次の 1 つ）。手を受け取ったとき・参加したとき・次の対局を作ったときに決め直し、終局したら消す（[apps/server/src/alarms.ts](apps/server/src/alarms.ts)）
+- Cron Trigger（`wrangler.jsonc` の `triggers.crons`。15 分ごと）で時刻を過ぎた予定を集めて送り、送ったら消す（[apps/server/src/push.ts](apps/server/src/push.ts)）。送った記録は `notices`
+- 文面は受け取る人の言語（ja・en・th）。文言の表は `push.ts`、ゲーム名は画面と共通の `packages/core/src/names.ts`。カードの見た目は画面から送るものと同じ（`packages/core/src/card.ts`）で、「開く」はミニアプリのその対局を開く
+- タイムゾーンは画面が作成・参加・指すときに送る（`Intl.DateTimeFormat().resolvedOptions().timeZone`）。分からなければ言語から推す（ja→日本、th→タイ、en→UTC）
+
+送る量の決まり
+
+- **夜は送らない**：受け取る人のタイムゾーンで 22 時〜8 時なら、その人の 8 時まで遅らせる（2 人で時刻が違えば人ごと）
+- **送りすぎない**：同じ対局で 1 人に 1 日（24 時間）3 通、全部の対局で 1 人 1 日 6 通まで。超える分は送らずに捨てる（無料枠は月 200 通）。1 日以上遅れた予定も送らずに捨てる
+- LINE とつながっていない人（LINE の外から参加した人）には送らない。友だちでない・失敗したときも、ほかの送信は続ける。同じ予定は条件つきで消して取ってから送るので、2 回は送らない
+- `LINE_MESSAGING_TOKEN` がなければ何もしない（時刻を過ぎた予定があればログに 1 行）
+
+設定のしかた
+
+1. [LINE Developers](https://developers.line.biz/console/) で、LINE ミニアプリと**同じプロバイダー**に Messaging API のチャネル（公式アカウント）を作る。プロバイダーが違うと LINE のユーザー ID が変わり、届かない
+2. チャネルの「Messaging API 設定」で長期のチャネルアクセストークンを発行し、Workers の secret に入れる
+
+   ```bash
+   cd apps/server && npx wrangler secret put LINE_MESSAGING_TOKEN
+   ```
+
+3. 公式アカウントの ID（`@xxxx`）を [wrangler.jsonc](apps/server/wrangler.jsonc) の vars の `LINE_OA_ID` に入れて公開する。LINE の中の対局画面に「知らせを受け取るには、公式アカウントを友だち追加してください」の案内とボタンが出る（閉じたらその端末では出さない。`liff.getFriendship()` で友だちと分かれば出さない。分かるのは LINE ミニアプリのチャネルに公式アカウントをつないだときだけ）
+4. 先に `npm run db:migrate`（`0005_alarms.sql`）を流してから `npm run deploy` する
+- 公式アカウントは友だち追加されないと送れない。応答メッセージ・あいさつメッセージは LINE Official Account Manager で好みに
+- 手元の確かめ方：`npm run dev` のサーバは 1 分ごとに予定を処理する。開発のときだけ `POST /api/dev/alarms`（本文 `{ "now": ミリ秒, "fake": true }`）で今すぐ処理できる。`now` を先にするとその時刻として、`fake` なら LINE に送らずに送るはずだった中身を返す（本番の Node.js と Workers にはこの口はない）
+
 ## ゲームを追加するには
 
-新しく作るファイルはゲームごとに分かれていて、共有ファイルへの追記は登録の 2 行だけ。
+新しく作るファイルはゲームごとに分かれていて、共有ファイルへの追記は登録の 2 行とゲーム名の 1 行だけ。
 
 1. `packages/core/src/games/<ID>.ts` に `GameDefinition` を実装し、`<ID>.test.ts` にルールのテストを書く。`packages/core/src/index.ts` の `games` に登録する
    - 相手に隠す情報があるなら `viewState` と `viewMove` も実装する（`hitblow.ts` / `auction.ts` が例）
    - 同じ人が続けて指す（手番が移らない）手は LINE で知らせない
+   - ゲーム名（ja・en・th）は `packages/core/src/names.ts` の `gameNames` に足す（画面とサーバの LINE の知らせで共通）
+   - 時間がたったら知らせたいことがあるゲームは `nextAlarm(state)` を実装し、その `kind` の文を `apps/server/src/push.ts` の表に「<ID>.<kind>」で足す。持たない順番のあるゲームは、手番の人が 24 時間指していなければ知らせる
    - 時間を使うゲーム（お世話のあいだも時計で育つ など）は `stampMove(move, now)` も実装する。applyMove は時計を読めないので、サーバが手を受け取った時刻（`Date.now()`）を `stampMove` で手に書き込んでから applyMove に渡し、その手を記録する（画面から送られてきた時刻は使わない）。お試しでは 1 手ごとに時計を半日進めて書き込む（`mochi.ts` が例）
 2. `apps/web/src/boards/<名前>Board.tsx` に盤の見た目を作り、`apps/web/src/boards/index.ts` の `boards` に登録する（長さの目安もここ）。盤だけで使う CSS は同じフォルダの `<名前>Board.css` に書いて、盤から読み込む
-3. 文言は `apps/web/src/i18n/games/<ID>.ts` に日本語・英語・タイ語をまとめて書く（`game.<ID>.name / desc / rules / seat0 / seat1` など。エラーなら `error.<コード>`）。置くだけで読み込まれる
+3. 文言は `apps/web/src/i18n/games/<ID>.ts` に日本語・英語・タイ語をまとめて書く（`game.<ID>.desc / rules / seat0 / seat1` など。名前だけは 1. の `gameNames`。エラーなら `error.<コード>`）。置くだけで読み込まれる
 4. アイコンは `apps/web/src/glyphs/<ID>.tsx` に SVG で描く（viewBox は 0 0 64 64。色は `icons.tsx` の `g-*` クラス）。置くだけで読み込まれる
 
-サーバ側の変更は不要。
+サーバ側の変更は不要（`nextAlarm` の知らせの文を足すときだけ `push.ts`）。

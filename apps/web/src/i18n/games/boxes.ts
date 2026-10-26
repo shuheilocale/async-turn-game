@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** 線とり陣取り（Dots and Boxes）の文言 */
 export default {
   ja: {
-    "game.boxes.name": "線とり陣取り",
     "game.boxes.desc": "点と点のあいだに交互に線を引き、四角を閉じたらその箱は自分のもの。箱を多く取った方の勝ち。",
     "game.boxes.rules":
       "4×4 の点が並んでいます。交互に、となり合う 2 つの点のあいだに線を 1 本引きます。線を引いて四角（箱）の 4 辺目を閉じたら、その箱は自分のものになり、もう 1 本続けて引きます（2 つ同時に閉じても、続けて引けるのは 1 本です）。24 本すべて引いたら終わりで、箱を多く取った方の勝ち。箱は 9 個なので引き分けはありません。",
@@ -28,7 +27,6 @@ export default {
     "game.boxes.tour.end": "箱の 3 本目の線を引くと、相手に閉じられやすくなります。できるだけ避けましょう。",
   },
   en: {
-    "game.boxes.name": "Dots and Boxes",
     "game.boxes.desc": "Take turns drawing lines between dots. Close a box to make it yours. Whoever gets more boxes wins.",
     "game.boxes.rules":
       "The board is a 4×4 grid of dots. On your turn, draw one line between two neighboring dots. If your line closes the fourth side of a box, that box is yours and you draw one more line (even if you close two boxes at once, you get only one more line). When all 24 lines are drawn, the player with more boxes wins. There are 9 boxes, so there are no draws.",
@@ -53,7 +51,6 @@ export default {
     "game.boxes.tour.end": "Drawing the third side of a box makes it easy for your opponent to close it, so try to avoid that.",
   },
   th: {
-    "game.boxes.name": "ลากเส้นยึดกล่อง",
     "game.boxes.desc": "ผลัดกันลากเส้นระหว่างจุด ปิดกล่องได้เมื่อไรกล่องนั้นเป็นของคุณ ใครได้กล่องมากกว่าชนะ",
     "game.boxes.rules":
       "กระดานมีจุดเรียงกัน 4×4 ผลัดกันลากเส้น 1 เส้นระหว่างจุด 2 จุดที่อยู่ติดกัน ถ้าเส้นที่ลากปิดด้านที่ 4 ของกล่อง กล่องนั้นจะเป็นของคุณ และได้ลากต่ออีก 1 เส้น (ถึงจะปิดได้ 2 กล่องพร้อมกัน ก็ลากต่อได้แค่ 1 เส้น) ลากครบทั้ง 24 เส้นแล้วจบเกม ใครได้กล่องมากกว่าชนะ มีกล่องทั้งหมด 9 กล่อง จึงไม่มีเสมอ",

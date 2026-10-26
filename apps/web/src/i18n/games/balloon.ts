@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** ふうせんの文言。{who} には「あなた」か「〇〇さん」が入る */
 export default {
   ja: {
-    "game.balloon.name": "ふうせん",
     "game.balloon.desc": "1 つの風船を、2 人で交互にふくらませる。割った人の負け。割れずに終われば、空気を多く入れた方の勝ち。",
     "game.balloon.rules":
       "1 つの風船を、2 人で交互にふくらませます（先手から）。自分の番では、風船をタップした回数だけ空気が入ります。1 回の番に入れるのは 1〜5 回で、「これで決定」を押すまでは取り消せます。風船は、2 人合わせて 12〜32 回目のどこかで割れます。何回目で割れるかは風船ごとにちがい、終わるまで分かりません。決定した空気で風船が割れたら、割った人の負けです。1 人 5 回ずつ、合わせて 10 回ふくらませても割れなければ、空気を多く入れた方の勝ちです（同じなら引き分け）。",
@@ -40,7 +39,6 @@ export default {
     "game.balloon.tour.score": "1 人 5 回ずつふくらませて割れなければ、空気を多く入れた方の勝ち。少しずつだけでは勝てません。",
   },
   en: {
-    "game.balloon.name": "Balloon",
     "game.balloon.desc": "Take turns blowing up one balloon. Whoever pops it loses. If it never pops, whoever put in more air wins.",
     "game.balloon.rules":
       "Two players take turns blowing up one balloon (1st player first). On your turn, each tap on the balloon adds one puff of air. You add 1–5 puffs per turn, and you can take them back until you press Confirm. The balloon pops somewhere between the 12th and 32nd puff in total. The exact number is different for every balloon and stays hidden until the game ends. If the balloon pops from the puffs you confirmed, you lose. If it doesn't pop after 5 turns each (10 in total), whoever put in more air wins (a tie is a draw).",
@@ -77,7 +75,6 @@ export default {
     "game.balloon.tour.score": "If it doesn't pop after 5 turns each, whoever put in more air wins. Playing it safe every time won't win.",
   },
   th: {
-    "game.balloon.name": "ลูกโป่ง",
     "game.balloon.desc": "ผลัดกันเป่าลูกโป่งใบเดียว ใครทำแตกแพ้ ถ้าไม่แตกจนจบ ใครเป่าลมเข้าไปมากกว่าชนะ",
     "game.balloon.rules":
       "ผู้เล่นสองคนผลัดกันเป่าลูกโป่งใบเดียว (ผู้เล่นก่อนเริ่ม) ในตาของคุณ แตะลูกโป่งกี่ครั้งก็เป่าลมเข้าไปเท่านั้น ตาหนึ่งเป่าได้ 1–5 ครั้ง และยกเลิกได้จนกว่าจะกด “ยืนยัน” ลูกโป่งจะแตกตอนลมครั้งที่ 12–32 (นับรวมสองคน) ลูกโป่งแต่ละใบแตกไม่เท่ากัน และจะรู้ก็ต่อเมื่อเกมจบ ถ้าลูกโป่งแตกจากลมที่คุณยืนยัน คุณแพ้ ถ้าเป่าครบคนละ 5 ตา (รวม 10 ตา) แล้วยังไม่แตก ใครเป่าลมเข้าไปมากกว่าชนะ (เท่ากันเสมอ)",

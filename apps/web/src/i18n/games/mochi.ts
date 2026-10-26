@@ -93,7 +93,6 @@ const thList = {
 
 export default {
   ja: {
-    "game.mochi.name": "ふたりのもち",
     "game.mochi.desc":
       "卵からかえる小さな生きもの「もち」を、2 人でお世話して育てる協力ゲーム。順番はなく、いつでも、どちらでもお世話できる。お世話のあいだも本物の時計で少しずつ育ち、5〜7 日ほどでおとなになる。",
     "game.mochi.rules":
@@ -264,7 +263,6 @@ export default {
   },
 
   en: {
-    "game.mochi.name": "Mochi for Two",
     "game.mochi.desc":
       "Care for a little egg-born creature called a mochi together. There are no turns: either of you can care for it anytime. It keeps growing on the real clock between visits and is all grown up in about 5 to 7 days.",
     "game.mochi.rules":
@@ -435,7 +433,6 @@ export default {
   },
 
   th: {
-    "game.mochi.name": "โมจิของเรา",
     "game.mochi.desc":
       "ช่วยกันดูแล \"โมจิ\" สิ่งมีชีวิตตัวเล็กๆ ที่ฟักออกจากไข่ ไม่ต้องผลัดตา ใครจะดูแลเมื่อไหร่ก็ได้ ระหว่างที่ไม่ได้ดูแล โมจิก็ค่อยๆ โตตามเวลาจริง และจะโตเป็นผู้ใหญ่ในราว 5–7 วัน",
     "game.mochi.rules":

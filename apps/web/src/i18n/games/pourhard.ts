@@ -6,7 +6,6 @@ import type { GameMessages } from "../index.tsx";
  */
 export default {
   ja: {
-    "game.pourhard.name": "みずそそぎ・ハード",
     "game.pourhard.desc":
       "みずそそぎの上級版。150 ml に届いたら目隠しになり、水の量も注いだ量も見えなくなる。最低量は小さくなるが、1 回ごとに増えていく。",
     "game.pourhard.rules":
@@ -38,7 +37,6 @@ export default {
       "ふち（200 ml）まではあふれません。ふちのすぐ下で渡せば、増えていく最低量で相手があふれるかもしれません。",
   },
   en: {
-    "game.pourhard.name": "Don't Spill: Hard",
     "game.pourhard.desc":
       "The hard version of Don't Spill. At 150 ml you're blindfolded: no one can see the water level or how much is poured. The minimum pour drops, then grows every turn.",
     "game.pourhard.rules":
@@ -70,7 +68,6 @@ export default {
       "The cup never overflows below the rim (200 ml). Hand it over just below the rim, and the growing minimum may make your opponent spill.",
   },
   th: {
-    "game.pourhard.name": "รินน้ำ: โหมดยาก",
     "game.pourhard.desc":
       "รินน้ำฉบับยาก เมื่อน้ำถึง 150 มล. จะถูกปิดตา ทั้งสองคนมองไม่เห็นระดับน้ำและปริมาณที่ริน ปริมาณขั้นต่ำจะลดลง แล้วค่อยๆ เพิ่มขึ้นทุกครั้ง",
     "game.pourhard.rules":

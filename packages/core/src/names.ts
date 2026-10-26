@@ -1,0 +1,45 @@
+/**
+ * ゲームの名前（画面の言語ごと）。画面の文言（apps/web の i18n の game.<ID>.name）と、
+ * サーバが LINE で知らせる文の両方で使うので、ここに 1 つだけ置く。ゲームを足したらここにも足す
+ */
+export type NameLang = "ja" | "en" | "th";
+
+export const gameNames: Record<string, Record<NameLang, string>> = {
+  tictactoe: { ja: "マルバツ", en: "Tic-Tac-Toe", th: "โอเอ็กซ์" },
+  fading: { ja: "きえるマルバツ", en: "Fading Tic-Tac-Toe", th: "โอเอ็กซ์จางหาย" },
+  gobble: { ja: "かぶせマルバツ", en: "Gobble Tic-Tac-Toe", th: "โอเอ็กซ์ครอบ" },
+  nim: { ja: "ニム", en: "Nim", th: "นิม" },
+  chain: { ja: "まねっこチェーン", en: "Copy Chain", th: "จำแล้วต่อ" },
+  tateyoko: { ja: "タテヨコ置き", en: "Domineering", th: "แท่งตั้ง แท่งนอน" },
+  bridge: { ja: "つなぎ橋", en: "Hex Bridge", th: "สะพานเชื่อม" },
+  korokoro: { ja: "ころころ", en: "Roll & Paint", th: "กลิ้งระบายสี" },
+  stack: { ja: "いしつみ", en: "Stone Stack", th: "ซ้อนหิน" },
+  curling: { ja: "3D カーリング", en: "3D Curling", th: "เคอร์ลิง 3D" },
+  artillery: { ja: "たまうちバトル", en: "Cannon Duel", th: "ดวลปืนใหญ่" },
+  pour: { ja: "みずそそぎ", en: "Don't Spill", th: "รินน้ำ" },
+  pourhard: { ja: "みずそそぎ・ハード", en: "Don't Spill: Hard", th: "รินน้ำ: โหมดยาก" },
+  balloon: { ja: "ふうせん", en: "Balloon", th: "ลูกโป่ง" },
+  stopwatch: { ja: "ぴったりストップ", en: "Perfect Stop", th: "หยุดให้ตรงเวลา" },
+  quickdraw: { ja: "はやうち", en: "Quick Tap", th: "แตะไว" },
+  soda: { ja: "ふりふりソーダ", en: "Shake Soda", th: "โซดาเขย่า" },
+  tilt: { ja: "かたむけコロコロ", en: "Tilt Maze", th: "เขาวงกตเอียง" },
+  freehand: { ja: "ひとふでチャレンジ", en: "One-Stroke Challenge", th: "วาดรวดเดียว" },
+  connect4: { ja: "四目並べ", en: "Connect Four", th: "เรียงสี่" },
+  tapioca: { ja: "しずむタピオカ・うかぶ氷", en: "Pearls Sink, Ice Floats", th: "ไข่มุกจม น้ำแข็งลอย" },
+  boxes: { ja: "線とり陣取り", en: "Dots and Boxes", th: "ลากเส้นยึดกล่อง" },
+  othello: { ja: "オセロ", en: "Othello", th: "โอเทลโล" },
+  hitblow: { ja: "ヒット＆ブロー", en: "Hit & Blow", th: "ฮิตแอนด์โบลว์" },
+  auction: { ja: "数字のせり", en: "Number Auction", th: "ประมูลตัวเลข" },
+  bluff: { ja: "はったり三枚", en: "Three-Card Bluff", th: "บลัฟไพ่สามใบ" },
+  fight: { ja: "バックボーン・ファイト", en: "Backbone Fight", th: "แบ็กโบนไฟต์" },
+  doors: { ja: "わなの扉", en: "Trap Doors", th: "ประตูกับดัก" },
+  memory: { ja: "めくりあわせ", en: "Memory Match", th: "เปิดไพ่จับคู่" },
+  tsubo: { ja: "ツボさがし", en: "Knot Hunt", th: "ตามหาจุดตึง" },
+  shopping: { ja: "ブランド爆買いオークション", en: "Luxury Spree Auction", th: "ประมูลช้อปกระจายแบรนด์เนม" },
+  sotto: { ja: "そっと出し", en: "Quiet Order", th: "วางเงียบๆ" },
+  treasure: { ja: "宝と岩", en: "Treasure & Rocks", th: "สมบัติกับก้อนหิน" },
+  oekaki: { ja: "おえかきクイズ", en: "Doodle Quiz", th: "วาดให้ทาย" },
+  heart: { ja: "はんぶんこハート", en: "Half & Half Heart", th: "หัวใจคนละครึ่ง" },
+  ishin: { ja: "ふたりの以心伝心", en: "In Sync", th: "ใจตรงกัน" },
+  mochi: { ja: "ふたりのもち", en: "Mochi for Two", th: "โมจิของเรา" },
+};

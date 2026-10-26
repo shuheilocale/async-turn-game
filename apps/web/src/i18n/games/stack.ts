@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** いしつみの文言 */
 export default {
   ja: {
-    "game.stack.name": "いしつみ",
     "game.stack.desc": "まん中の岩に、平たい石を交互に 1 つずつ落として積む。石を落としてしまった方の負け。",
     "game.stack.rules":
       "まん中の平らな岩の上に、形も大きさもばらばらな平たい石を、交互に 1 つずつ落として積みます。自分の番では、石を左右に動かし（ドラッグするか、落としたい場所をタップ）、回転ボタンで傾きを決めてから「落とす」を押します。落としたあと、どれか 1 つでも石が岩の上から落ちたら、落とした人の負けです。前に積んだ石が崩れて落ちても同じです。40 個積んで崩れなければ引き分けです。次に落とす石の形も見えています。",
@@ -33,7 +32,6 @@ export default {
     "game.stack.tour.tip": "真ん中に重さを集めると安定します。高さと残りの石の数はここに出ます。",
   },
   en: {
-    "game.stack.name": "Stone Stack",
     "game.stack.desc": "Take turns dropping flat stones onto a rock. Whoever makes a stone fall off loses.",
     "game.stack.rules":
       "Take turns dropping flat stones of different shapes and sizes onto the flat rock in the middle. On your turn, move the stone left or right (drag it, or tap where you want it), set its tilt with the rotate buttons, then press Drop. If any stone falls off the rock after your drop, you lose — even if it is a stone that was already in the stack. If all 40 stones are stacked without a fall, the game is a draw. You can also see the shape of the next stone.",
@@ -63,7 +61,6 @@ export default {
     "game.stack.tour.tip": "Keeping weight in the middle makes the tower steadier. Height and stones left are shown here.",
   },
   th: {
-    "game.stack.name": "ซ้อนหิน",
     "game.stack.desc": "ผลัดกันปล่อยหินแบนลงบนก้อนหินใหญ่ทีละก้อน ใครทำให้หินตกลงมาแพ้",
     "game.stack.rules":
       "ผลัดกันปล่อยหินแบนที่มีรูปร่างและขนาดต่างกันลงบนก้อนหินแบนตรงกลางทีละก้อน ในตาของคุณ ให้เลื่อนหินไปทางซ้ายหรือขวา (ลาก หรือแตะตรงที่อยากปล่อย) ตั้งความเอียงด้วยปุ่มหมุน แล้วกด “ปล่อย” ถ้าหลังจากปล่อยแล้วมีหินก้อนใดก้อนหนึ่งตกจากก้อนหินใหญ่ คนที่ปล่อยแพ้ แม้จะเป็นหินที่ซ้อนไว้ก่อนแล้วก็ตาม ถ้าซ้อนครบ 40 ก้อนโดยไม่มีหินตกถือว่าเสมอ คุณจะเห็นรูปร่างของหินก้อนถัดไปด้วย",

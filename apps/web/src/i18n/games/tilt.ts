@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** かたむけコロコロの文言。{who} には「あなた」か「〇〇さん」、{sec} には「13.52」のような秒数が入る */
 export default {
   ja: {
-    "game.tilt.name": "かたむけコロコロ",
     "game.tilt.desc": "迷路の板を傾けて、穴をよけながら玉をゴールまで転がす。速くゴールした方の勝ち。3 回戦。",
     "game.tilt.rules":
       "穴のあいた小さな迷路の板を傾けて、玉をスタートからゴールまで転がします。かかった時間が短い方がその回戦の勝ちで、3 回戦です。迷路は回戦ごとに変わり、2 人とも同じ迷路に挑戦します。先に挑戦する人は回戦ごとに交代します（1 回戦目は先手）。「スタート」を押すと 3・2・1 のあとに始まり、そのときの持ち方を水平とみなします。玉が穴に落ちるとスタートに戻り、時計は止まりません。60 秒でゴールできなければ時間切れ（60 秒）です。iPhone などでは端末の傾きのセンサーで遊びます（はじめに「センサーをオンにする」を押し、出てきた確認で「許可」を選んでください）。センサーが使えないときは、画面のスティックで傾けます。先に挑戦した人のタイムは、相手が挑戦し終わるまで相手に伏せてあります。スタートしたあとに画面を閉じると、その挑戦は失敗（60 秒）になります。多く勝った方の勝ちです。勝った数が同じなら、3 回戦のタイムの合計が短い方の勝ち。それも同じなら引き分けです。2 回戦で 2 勝したら、3 回戦はせずにそこで決着します。",
@@ -76,7 +75,6 @@ export default {
     "game.tilt.tour.go": "「スタート」を押すと、3・2・1 のあとに始まります。そのときの持ち方が水平です。やってみましょう。",
   },
   en: {
-    "game.tilt.name": "Tilt Maze",
     "game.tilt.desc": "Tilt a little maze board and roll the ball to the goal without dropping it in a hole. The faster run wins. 3 rounds.",
     "game.tilt.rules":
       "Tilt a little maze board with holes in it to roll the ball from the start to the goal. Whoever takes less time wins the round, over 3 rounds. The maze changes every round, and both players play the same maze. The player who goes first changes every round (the 1st player goes first in round 1). Press Start and the run begins after 3-2-1; the way you're holding the phone at that moment counts as level. If the ball falls into a hole, it goes back to the start and the clock keeps running. If you can't reach the goal in 60 seconds, it's a time-out (60 s). On an iPhone or similar, you play with the phone's tilt sensor (first press \"Turn on sensor\" and choose Allow). If the sensor can't be used, tilt with the stick on the screen instead. The first player's time stays hidden from the other player until they've played. If you close the screen after pressing Start, that run counts as a miss (60 s). Whoever wins more rounds wins. If that's equal, the smaller total time over the 3 rounds wins; if that's also equal, it's a draw. If someone wins both of the first 2 rounds, the game ends there without round 3.",
@@ -149,7 +147,6 @@ export default {
     "game.tilt.tour.go": "Press Start and the run begins after 3-2-1. The way you hold your phone then counts as level. Give it a try.",
   },
   th: {
-    "game.tilt.name": "เขาวงกตเอียง",
     "game.tilt.desc": "เอียงกระดานเขาวงกต กลิ้งลูกบอลไปเส้นชัยโดยหลบหลุม ใครถึงเร็วกว่าชนะ เล่น 3 รอบ",
     "game.tilt.rules":
       "เอียงกระดานเขาวงกตเล็ก ๆ ที่มีหลุม เพื่อกลิ้งลูกบอลจากจุดเริ่มไปยังเส้นชัย ใครใช้เวลาน้อยกว่าชนะรอบนั้น เล่น 3 รอบ เขาวงกตเปลี่ยนทุกรอบ และทั้งสองคนเล่นเขาวงกตเดียวกัน คนที่เล่นก่อนสลับกันทุกรอบ (รอบแรกผู้เล่นก่อนเริ่ม) กด “เริ่ม” แล้วจะเริ่มหลังนับ 3-2-1 ท่าถือเครื่องตอนนั้นจะนับเป็นแนวราบ ถ้าลูกบอลตกหลุม จะกลับไปที่จุดเริ่มและนาฬิกาไม่หยุด ถ้าไปไม่ถึงเส้นชัยใน 60 วินาที ถือว่าหมดเวลา (60 วินาที) ใน iPhone และเครื่องอื่น ๆ จะเล่นด้วยเซนเซอร์วัดการเอียงของเครื่อง (กด “เปิดเซนเซอร์” ก่อน แล้วเลือก “อนุญาต”) ถ้าใช้เซนเซอร์ไม่ได้ ให้เอียงด้วยจอยบนหน้าจอแทน เวลาของคนที่เล่นก่อนจะถูกซ่อนจากอีกฝ่ายจนกว่าอีกฝ่ายจะเล่นเสร็จ ถ้าปิดหน้าจอหลังกด “เริ่ม” รอบนั้นจะนับว่าพลาด (60 วินาที) ใครชนะหลายรอบกว่าชนะ ถ้าเท่ากัน ใครใช้เวลารวม 3 รอบน้อยกว่าชนะ ถ้ายังเท่ากันถือว่าเสมอ ถ้ามีคนชนะ 2 รอบแรกทั้งคู่ เกมจะจบโดยไม่ต้องเล่นรอบที่ 3",

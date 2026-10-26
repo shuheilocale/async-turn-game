@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** ひとふでチャレンジの文言。{who} には「あなた」か「〇〇さん」が、{shape} にはお題の名前が入る */
 export default {
   ja: {
-    "game.freehand.name": "ひとふでチャレンジ",
     "game.freehand.desc": "お題の形を指で一筆で描き、形のきれいさを点数で比べる。3 回戦で多く勝った方の勝ち。",
     "game.freehand.rules":
       "お題の形を指で一筆で描き、形のきれいさを点数（0〜100 点）で比べます。全部で 3 回戦です。回戦ごとに「出題する人」が交代します（1 回戦目は先手）。出題する人は、お題（円・まっすぐな線・正三角形・正方形・星）を選びます。同じお題は 1 局に 1 回だけです。「目隠し」をつけると、描いている間は線が見えません。出題したら、そのまま自分が描きます。指を置いてから離すまでが一筆で、離すとすぐに採点されます。やり直しはできません。出題した人の絵と点数は、相手が描き終えるまで相手には見えません。相手も同じお題・同じ目隠しで描きます。相手が描き終えたら、2 人の絵と点数を並べて見せます。点数の高い方がその回戦の勝ちです（同じ点なら引き分け）。3 回戦で多く勝った方の勝ちです。勝ち数が同じなら点数の合計で決め、それも同じなら引き分けです。点数は、描いた大きさ・位置・向きには関係なく、形のきれいさだけで決まります。小さすぎる絵や短すぎる線は、点が下がります。",
@@ -69,7 +68,6 @@ export default {
     "game.freehand.tour.score": "点数は、大きさや向きに関係なく、形のきれいさで決まります。うすい点線が理想の形、赤い所がずれた所です。",
   },
   en: {
-    "game.freehand.name": "One-Stroke Challenge",
     "game.freehand.desc": "Draw the given shape in one stroke with your finger and compare how neat it is. Win more of the 3 rounds to win.",
     "game.freehand.rules":
       "Draw the given shape in one stroke with your finger, and compare how neat it is with a score from 0 to 100. There are 3 rounds. The player who sets the shape changes every round (the 1st player sets the 1st round). The setter picks a shape: circle, straight line, equilateral triangle, square, or star. Each shape can be used only once per game. With Blind on, you can't see your line while you draw. After picking, the setter draws right away. One stroke lasts from when you touch the screen until you lift your finger, and it is scored as soon as you lift it. You can't redo it. The setter's drawing and score stay hidden from the other player until they finish drawing. The other player draws the same shape with the same Blind setting. Then both drawings and scores are shown side by side. The higher score wins the round (the same score is a tie). Whoever wins more rounds wins. If you won the same number of rounds, the higher total score wins; if that is also the same, the game is a draw. The score depends only on the shape, not on its size, position, or angle. Very small drawings and very short lines score lower.",
@@ -135,7 +133,6 @@ export default {
     "game.freehand.tour.score": "The score depends on the shape only, not on size or angle. The faint dotted line is the ideal shape, and red marks show where yours is off.",
   },
   th: {
-    "game.freehand.name": "วาดรวดเดียว",
     "game.freehand.desc": "ใช้นิ้ววาดรูปตามโจทย์ในครั้งเดียว แล้วเทียบคะแนนความสวยของรูป ใครชนะมากกว่าใน 3 รอบชนะ",
     "game.freehand.rules":
       "ใช้นิ้ววาดรูปตามโจทย์ในครั้งเดียว แล้วเทียบความสวยของรูปเป็นคะแนน (0–100) มีทั้งหมด 3 รอบ คนตั้งโจทย์จะสลับกันทุกรอบ (รอบแรกผู้เล่นก่อนตั้ง) คนตั้งโจทย์เลือกรูป: วงกลม เส้นตรง สามเหลี่ยมด้านเท่า สี่เหลี่ยมจัตุรัส หรือดาว รูปเดียวกันใช้ได้ครั้งเดียวต่อเกม ถ้าเปิด “ปิดตา” จะมองไม่เห็นเส้นระหว่างวาด ตั้งโจทย์แล้วคนตั้งวาดต่อได้เลย หนึ่งเส้นคือตั้งแต่แตะนิ้วจนยกนิ้วขึ้น พอยกนิ้วก็ให้คะแนนทันที วาดใหม่ไม่ได้ รูปและคะแนนของคนตั้งโจทย์จะซ่อนไว้จนกว่าอีกฝ่ายจะวาดเสร็จ อีกฝ่ายวาดรูปเดียวกันด้วยการตั้งค่าปิดตาแบบเดียวกัน วาดเสร็จแล้วจะแสดงรูปและคะแนนของทั้งสองคนคู่กัน คะแนนสูงกว่าชนะรอบนั้น (คะแนนเท่ากันเสมอ) ใครชนะมากรอบกว่าชนะ ถ้าชนะเท่ากันดูคะแนนรวม ถ้ายังเท่ากันก็เสมอ คะแนนดูแค่ความสวยของรูป ไม่เกี่ยวกับขนาด ตำแหน่ง หรือทิศทาง รูปที่เล็กเกินไปหรือเส้นที่สั้นเกินไปจะได้คะแนนน้อยลง",

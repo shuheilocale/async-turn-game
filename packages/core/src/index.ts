@@ -38,6 +38,8 @@ import { mochi } from "./games/mochi.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
+export * from "./names.ts";
+export * from "./card.ts";
 export { botMove } from "./bot.ts";
 export * as Othello from "./games/othello.ts";
 export * as TicTacToe from "./games/tictactoe.ts";

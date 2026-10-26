@@ -6,8 +6,10 @@ import {
   type GameView,
   type JoinGameResponse,
   type NextGameResponse,
+  type AppConfig,
   type Seat,
 } from "@atg/core";
+import { cleanTimeZone, planAlarms } from "./alarms.ts";
 import type { VerifyLine } from "./line.ts";
 import type { GameRecord, GameStore } from "./store.ts";
 
@@ -57,10 +59,26 @@ function toView(game: GameRecord, you: Seat | null): GameView {
 export interface AppOptions {
   /** LINE の ID トークンを確かめる関数。なければ LINE での本人確認は使わない（手元の開発用） */
   verifyLine?: VerifyLine;
+  /** LINE の公式アカウントの ID（@xxxx）。画面で「友だち追加すると知らせが届く」の案内を出すのに使う。なければ出さない */
+  lineOaId?: string;
 }
 
-export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
+export function createApp(store: GameStore, { verifyLine, lineOaId }: AppOptions = {}) {
   const app = new Hono().basePath("/api");
+  const oaId = lineOaId?.trim() ? (lineOaId.trim().startsWith("@") ? lineOaId.trim() : `@${lineOaId.trim()}`) : null;
+
+  /**
+   * 2 人そろった対局の、次の知らせの予定を決め直す（手を受け取ったとき・参加したとき・次の対局を作ったとき）。
+   * 予定が入れられなくても対局は止めない
+   */
+  async function replan(game: GameRecord | null) {
+    if (!game || game.players.length < 2) return;
+    try {
+      await store.setAlarms(game.id, game.version, planAlarms(getGame(game.gameType)!, game.state, Date.now()));
+    } catch (e) {
+      console.error("知らせの予定を入れられませんでした", e);
+    }
+  }
 
   /**
    * 本文に idToken があれば LINE のユーザー ID にする。なければ null（LINE の外から使っている）。
@@ -73,6 +91,9 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
 
   app.get("/health", (c) => c.json({ ok: true }));
 
+  // 画面に渡す設定
+  app.get("/config", (c) => c.json<AppConfig>({ lineOaId: oaId }));
+
   app.post("/games", async (c) => {
     const body = await jsonBody(c);
     const def = getGame(String(body.gameType ?? ""));
@@ -84,7 +105,7 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const { id, token, inviteCode } = await store.create(
       def.id,
       def.initialState(Math.random),
-      { seat, name: cleanName(body.name), lang: cleanLang(body.lang) },
+      { seat, name: cleanName(body.name), lang: cleanLang(body.lang), timeZone: cleanTimeZone(body.timeZone) },
       lineUser,
     );
     return c.json<CreateGameResponse>({ id, token, seat, inviteCode }, 201);
@@ -103,8 +124,16 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     const lineUser = await lineUserOf(body);
     if (lineUser === "invalid") return c.json({ error: "line_auth_failed" }, 401);
     if (lineUser && (await store.seatOfLineUser(id, lineUser)) !== null) return c.json({ error: "own_game" }, 409);
-    const joined = await store.join(id, String(body.inviteCode ?? ""), cleanName(body.name), lineUser, cleanLang(body.lang));
+    const joined = await store.join(
+      id,
+      String(body.inviteCode ?? ""),
+      cleanName(body.name),
+      lineUser,
+      cleanLang(body.lang),
+      cleanTimeZone(body.timeZone),
+    );
     if (!joined) return c.json({ error: "invite_invalid" }, 409);
+    await replan(await store.get(id));
     return c.json<JoinGameResponse>(joined, 201);
   });
 
@@ -121,6 +150,7 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     if (!def) return c.json({ error: "unknown_game" }, 400);
     const nextId = await store.startNext(id, def.id, def.initialState(Math.random));
     if (!nextId) return c.json({ error: "not_found" }, 404);
+    await replan(await store.get(nextId));
     return c.json<NextGameResponse>({ id: nextId, seat: seat === 0 ? 1 : 0 }, 201);
   });
 
@@ -165,8 +195,13 @@ export function createApp(store: GameStore, { verifyLine }: AppOptions = {}) {
     }
     if (!(await store.recordMove(id, game.version, seat, move, next))) return c.json({ error: "version_conflict" }, 409);
     const lang = cleanLang(body.lang);
-    if (lang && game.players.find((p) => p.seat === seat)?.lang !== lang) await store.setLang(id, seat, lang);
-    return c.json(toView((await store.get(id))!, seat));
+    const me = game.players.find((p) => p.seat === seat);
+    if (lang && me?.lang !== lang) await store.setLang(id, seat, lang);
+    const timeZone = cleanTimeZone(body.timeZone);
+    if (timeZone && me?.timeZone !== timeZone) await store.setTimeZone(id, seat, timeZone);
+    const updated = (await store.get(id))!;
+    await replan(updated);
+    return c.json(toView(updated, seat));
   });
 
   app.get("/games/:id/moves", async (c) => {

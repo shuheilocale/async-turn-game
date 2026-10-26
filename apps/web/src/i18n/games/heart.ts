@@ -3,7 +3,6 @@ import type { GameMessages } from "../index.tsx";
 /** はんぶんこハートの文言。{who} には「あなた」か「〇〇さん」が、{side} には「左」か「右」が入る */
 export default {
   ja: {
-    "game.heart.name": "はんぶんこハート",
     "game.heart.desc": "2 人で半分ずつ描いて、1 つのハートにする協力ゲーム。相手の半分は見ずに描く。3 回戦の平均 60 点以上でクリア。",
     "game.heart.rules":
       "2 人で 1 つのハートを、半分ずつ描きます。全部で 3 回戦です。毎回戦、1 人が左半分、もう 1 人が右半分を描き、回戦ごとに左右を交代します（1 回戦目は先手が左）。左半分の人が先に描きます。右半分の人は、相手の左半分を見ずに描きます。キャンバスの真ん中の点線が目安です。上のくぼみから描き始めて、外へふくらませ、下のとがりまで一筆で描きましょう。「描けた」を押すまでは何度でも描き直せます。2 人とも描いたら、2 つの半分を合わせたハートを見せて、0〜100 点で採点します。点数は、左右のそろい（右半分を鏡に映して左半分と比べる）、つなぎ目（上のくぼみと下のとがりが合っているか）、ハートらしさで決まります。ハート全体の大きさや位置は関係なく、2 人のちょっとしたずれにはやさしめです。お題は、1 回戦目が「目安あり」（くぼみととがりの位置に点がある）、2 回戦目が「目安なし」、3 回戦目が「目隠し」（描いている線も見えない）です。3 回戦の平均が 60 点以上なら 2 人でクリアです。",
@@ -70,7 +69,6 @@ export default {
     "game.heart.tour.score": "2 人とも描くと、合わせたハートを採点します。左右のそろい・つなぎ目・ハートらしさで 0〜100 点です。",
   },
   en: {
-    "game.heart.name": "Half & Half Heart",
     "game.heart.desc": "Draw one heart together, half each, without seeing your partner's half. Clear it with an average of 60 or more over 3 rounds.",
     "game.heart.rules":
       "Draw one heart together, half each. There are 3 rounds. In each round, one of you draws the left half and the other draws the right half, and you swap sides every round (the 1st player draws the left half in round 1). The left half is drawn first. Whoever draws the right half can't see the left half while drawing. The dotted line down the middle of the canvas is your guide: start at the dip at the top, curve outward, and finish at the point at the bottom, all in one stroke. You can redraw as many times as you like until you tap Done. When both halves are drawn, the joined heart is shown and scored from 0 to 100. The score is based on how well the two halves mirror each other (the right half is flipped and compared with the left), whether the joins (the dip at the top and the point at the bottom) meet, and how heart-like the whole shape is. The size and position of the whole heart don't matter, and small differences between the two of you are treated gently. Round 1 has guide dots where the dip and the point go, round 2 has no guide dots, and round 3 is blind (you can't even see your own line). If your average over the 3 rounds is 60 or more, you clear it together.",
@@ -137,7 +135,6 @@ export default {
     "game.heart.tour.score": "When both halves are drawn, the joined heart is scored from 0 to 100 for mirror match, joins and heart shape.",
   },
   th: {
-    "game.heart.name": "หัวใจคนละครึ่ง",
     "game.heart.desc": "ช่วยกันวาดหัวใจดวงเดียวคนละครึ่ง โดยไม่เห็นครึ่งของอีกฝ่าย ถ้าเฉลี่ย 3 รอบได้ 60 คะแนนขึ้นไปถือว่าผ่าน",
     "game.heart.rules":
       "ช่วยกันวาดหัวใจดวงเดียวคนละครึ่ง มีทั้งหมด 3 รอบ ในแต่ละรอบ คนหนึ่งวาดครึ่งซ้าย อีกคนวาดครึ่งขวา และสลับข้างกันทุกรอบ (รอบแรกผู้เล่นก่อนวาดครึ่งซ้าย) คนวาดครึ่งซ้ายวาดก่อน ส่วนคนวาดครึ่งขวาจะมองไม่เห็นครึ่งซ้ายของอีกฝ่ายระหว่างวาด เส้นประตรงกลางคือเส้นนำ ให้เริ่มจากรอยเว้าด้านบน วาดโค้งออกด้านนอก แล้วไปจบที่ปลายแหลมด้านล่างในเส้นเดียว วาดใหม่ได้กี่ครั้งก็ได้จนกว่าจะกด “วาดเสร็จ” เมื่อวาดครบทั้งสองครึ่ง จะแสดงหัวใจที่ต่อกันแล้วและให้คะแนน 0–100 คะแนนดูจากความสมมาตรของสองครึ่ง (กลับด้านครึ่งขวาแล้วเทียบกับครึ่งซ้าย) รอยต่อ (รอยเว้าด้านบนและปลายแหลมด้านล่างมาบรรจบกันไหม) และความเป็นรูปหัวใจ ขนาดและตำแหน่งของหัวใจทั้งดวงไม่มีผล และถ้าสองคนวาดคลาดกันนิดหน่อยก็ไม่ถูกหักมาก รอบที่ 1 มีจุดนำบอกตำแหน่งรอยเว้าและปลายแหลม รอบที่ 2 ไม่มีจุดนำ รอบที่ 3 ปิดตา (มองไม่เห็นแม้แต่เส้นของตัวเอง) ถ้าคะแนนเฉลี่ย 3 รอบได้ 60 ขึ้นไป ถือว่าผ่านด่านด้วยกัน",
