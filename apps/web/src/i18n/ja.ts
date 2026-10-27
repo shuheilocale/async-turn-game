@@ -65,6 +65,8 @@ export const ja = {
   "play.ownLinkText": "自分用の対局リンク",
   "play.invite.line": "LINE で招待を送る",
   "play.invite.here": "このグループに招待を送る",
+  "play.invite.sending": "送っています…",
+  "play.invite.sent": "このグループに送りました",
   "play.invite.copy": "リンクをコピー",
   "play.notify.line": "LINE で知らせる",
   "play.notified": "LINE に送りました",

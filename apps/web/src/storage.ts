@@ -82,3 +82,12 @@ export interface Notified {
   at: number;
   version: number;
 }
+
+/** グループに招待を送った対局。グループへはボタン 1 つで送れるので、開き直しても二重に送らないよう覚えておく */
+export const savedInvited = {
+  has: (id: string) => read<string[]>("atg:invited", []).includes(id),
+  add(id: string) {
+    const all = read<string[]>("atg:invited", []);
+    if (!all.includes(id)) write("atg:invited", [...all.slice(-49), id]);
+  },
+};

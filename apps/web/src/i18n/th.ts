@@ -66,6 +66,8 @@ export const th: Messages = {
   "play.ownLinkText": "ลิงก์เกมส่วนตัวของฉัน",
   "play.invite.line": "ส่งคำเชิญทาง LINE",
   "play.invite.here": "ส่งคำเชิญไปที่กลุ่มนี้",
+  "play.invite.sending": "กำลังส่ง…",
+  "play.invite.sent": "ส่งไปที่กลุ่มนี้แล้ว",
   "play.invite.copy": "คัดลอกลิงก์",
   "play.notify.line": "แจ้งทาง LINE",
   "play.notified": "ส่งทาง LINE แล้ว",

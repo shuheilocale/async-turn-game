@@ -66,6 +66,8 @@ export const en: Messages = {
   "play.ownLinkText": "My personal game link",
   "play.invite.line": "Send invite on LINE",
   "play.invite.here": "Send invite to this group",
+  "play.invite.sending": "Sending…",
+  "play.invite.sent": "Sent to this group",
   "play.invite.copy": "Copy link",
   "play.notify.line": "Let them know on LINE",
   "play.notified": "Sent on LINE",

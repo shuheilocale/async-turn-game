@@ -19,7 +19,7 @@ import {
 } from "../line.ts";
 import { freeNotice, inviteCard, progressCard } from "../notify.ts";
 import { shareLink } from "../share.ts";
-import { savedGames, savedNoticeHintClosed, savedNotified } from "../storage.ts";
+import { savedGames, savedInvited, savedNoticeHintClosed, savedNotified } from "../storage.ts";
 
 /** 相手の手を待つ間、何ミリ秒ごとに盤面を確認するか */
 const POLL_MS = 5000;
@@ -34,6 +34,11 @@ export function Play({ id }: { id: string }) {
   const [picking, setPicking] = useState(false);
   /** トークに自動で送れなかったときに、送り先を選んで送るためのカード */
   const [notice, setNotice] = useState<Card | null>(null);
+  /** LINE で送っている途中か（送り終わるまでボタンを押せないようにして、同じカードを何通も送らない） */
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  /** この対局の招待をグループに送ったか */
+  const [invited, setInvited] = useState(() => savedInvited.has(id));
 
   // 「自分用リンク」(?t=...) で開かれたら、この端末に合言葉を保存して URL から消す
   useEffect(() => {
@@ -162,6 +167,20 @@ export function Play({ id }: { id: string }) {
     return false;
   }
 
+  /** LINE に送る操作を 1 つずつ行う（送り終わる前にもう一度押されても送らない） */
+  async function sendOnce(send: () => Promise<unknown>) {
+    // 画面が書き換わる前の素早い 2 度押しも止めるため、state だけでなく ref でも見る
+    if (sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
+    try {
+      await send();
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  }
+
   /** LINE のカードは受け取る人（相手）の言語で作る。相手の言語が分からなければ自分の言語 */
   function recipientT(v: GameView): T {
     const opp = v.you === 0 ? 1 : 0;
@@ -259,14 +278,28 @@ export function Play({ id }: { id: string }) {
             {lineSession() && view.you !== null && (
               <button
                 className="primary"
-                onClick={async () => {
-                  const card = inviteCard(t, view.gameType, id, view.inviteCode!, names[view.you!]);
-                  // グループから開いていれば、送り先を選ばずにこのグループへ送る（2 人のトークを選び間違えないように）
-                  if (inGroupChat() && (await postToGroup(card))) setMessage(t("play.notified"));
-                  else await sendByPicker(card, true);
-                }}
+                disabled={sending || (inGroupChat() && invited)}
+                onClick={() =>
+                  sendOnce(async () => {
+                    const card = inviteCard(t, view.gameType, id, view.inviteCode!, names[view.you!]);
+                    // グループから開いていれば、送り先を選ばずにこのグループへ送る（2 人のトークを選び間違えないように）
+                    if (inGroupChat() && (await postToGroup(card))) {
+                      savedInvited.add(id);
+                      setInvited(true);
+                      setMessage(t("play.notified"));
+                    } else await sendByPicker(card, true);
+                  })
+                }
               >
-                {t(inGroupChat() ? "play.invite.here" : "play.invite.line")}
+                {t(
+                  sending
+                    ? "play.invite.sending"
+                    : !inGroupChat()
+                      ? "play.invite.line"
+                      : invited
+                        ? "play.invite.sent"
+                        : "play.invite.here",
+                )}
               </button>
             )}
             <button
@@ -284,9 +317,12 @@ export function Play({ id }: { id: string }) {
           <section className="panel invite">
             <button
               className="primary"
-              onClick={async () => {
-                if (await sendByPicker(notice, false)) setNotice(null);
-              }}
+              disabled={sending}
+              onClick={() =>
+                sendOnce(async () => {
+                  if (await sendByPicker(notice, false)) setNotice(null);
+                })
+              }
             >
               {t("play.notify.line")}
             </button>
