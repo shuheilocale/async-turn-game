@@ -225,7 +225,7 @@ export const onEight = (s: Pick<BilliardsState, "solids" | "balls">, seat: Seat)
   s.solids !== null && targetsOf(s, seat).length === 0;
 
 /** その人が最初に当ててよい球 */
-function legalFirst(s: BilliardsState, seat: Seat): Set<number> {
+export function legalFirst(s: Pick<BilliardsState, "solids" | "balls">, seat: Seat): Set<number> {
   const targets = targetsOf(s, seat);
   // オープンで 8 以外が 1 つも残っていない（まずないが）なら 8
   return new Set(targets.length > 0 ? targets : [EIGHT]);

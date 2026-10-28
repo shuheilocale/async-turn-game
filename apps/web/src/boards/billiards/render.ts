@@ -62,8 +62,10 @@ export const screenAngle = (l: Layout, a: number) => (l.vertical ? -a - Math.PI 
 
 export interface Scene {
   balls: Shown[];
-  /** ねらいのガイド（打てるときだけ） */
-  guide?: { cue: { x: number; y: number }; angle: number; power: number; guide: Guide } | null;
+  /** ねらいのガイド（打てるときだけ）。bad なら、最初に当たるのが当ててはいけない球（線を赤く） */
+  guide?: { cue: { x: number; y: number }; angle: number; power: number; guide: Guide; bad?: boolean } | null;
+  /** 光らせる球（ねらってよい球）。pulse は光り方の強さ（0〜1） */
+  targets?: { ids: ReadonlySet<number>; pulse: number } | null;
   /** 手球を置ける（フリーボール・ブレイク）。dragging なら動かしている途中 */
   placing?: { dragging: boolean } | null;
 }
@@ -288,6 +290,20 @@ export class TableRenderer {
     const guide = scene.guide;
     if (guide) this.drawGuide(guide);
 
+    // ねらってよい球の下に、ぼんやりした光
+    const lit = scene.targets ? scene.balls.filter((b) => scene.targets!.ids.has(b.id)) : [];
+    const pulse = scene.targets?.pulse ?? 0;
+    for (const b of lit) {
+      const [sx, sy] = toScreen(l, b.x, b.y);
+      const g = ctx.createRadialGradient(sx * d, sy * d, r * 0.9, sx * d, sy * d, r * 2.3);
+      g.addColorStop(0, `rgba(255,224,110,${0.5 + 0.3 * pulse})`);
+      g.addColorStop(1, "rgba(255,224,110,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(sx * d, sy * d, r * 2.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // 影（光は画面の左上から）
     const sh = this.shadowSprite();
     for (const b of scene.balls) {
@@ -307,6 +323,20 @@ export class TableRenderer {
     }
     ctx.globalAlpha = 1;
 
+    // ねらってよい球のまわりの輪（ゆっくり明るくなったり暗くなったり）
+    if (lit.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,232,140,${0.55 + 0.4 * pulse})`;
+      ctx.lineWidth = Math.max(1.5 * d, r * 0.22);
+      for (const b of lit) {
+        const [sx, sy] = toScreen(l, b.x, b.y);
+        ctx.beginPath();
+        ctx.arc(sx * d, sy * d, r * (1.32 + 0.1 * pulse), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // 手球を置けるときは、手球のまわりに点線の輪
     const cue = scene.balls.find((b) => b.id === CUE);
     if (scene.placing && cue) {
@@ -320,6 +350,24 @@ export class TableRenderer {
       ctx.stroke();
       ctx.restore();
     }
+  }
+
+  /**
+   * 虫めがね：台の (x, y) のまわりを zoom 倍にして、out（正方形の canvas）に写す。いま描いた台の画をそのまま使う
+   */
+  drawLoupe(out: HTMLCanvasElement, x: number, y: number, zoom: number) {
+    const l = this.layout;
+    if (!l) return;
+    const d = this.dpr;
+    const size = out.clientWidth;
+    if (out.width !== Math.round(size * d)) out.width = out.height = Math.round(size * d);
+    const ctx = out.getContext("2d")!;
+    const [sx, sy] = toScreen(l, x, y);
+    const src = (size / zoom) * d;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#1f644c";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(this.canvas, sx * d - src / 2, sy * d - src / 2, src, src, 0, 0, out.width, out.height);
   }
 
   private drawGuide(g: NonNullable<Scene["guide"]>) {
@@ -367,8 +415,9 @@ export class TableRenderer {
     ctx.lineTo(bx - ux * len, by - uy * len);
     ctx.stroke();
 
-    // 手球から当たる所までの線
-    ctx.strokeStyle = "rgba(255,255,255,0.82)";
+    // 手球から当たる所までの線。当ててはいけない球に当たるなら赤く
+    const line = g.bad ? "rgba(255,92,80,0.95)" : "rgba(255,255,255,0.82)";
+    ctx.strokeStyle = line;
     ctx.lineWidth = 1.4 * d;
     ctx.beginPath();
     ctx.moveTo(cx + ux * r, cy + uy * r);
@@ -376,9 +425,9 @@ export class TableRenderer {
     ctx.stroke();
 
     // ゴーストの球
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 1.3 * d;
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = g.bad ? "rgba(255,92,80,1)" : "rgba(255,255,255,0.9)";
+    ctx.lineWidth = (g.bad ? 1.8 : 1.3) * d;
+    ctx.fillStyle = g.bad ? "rgba(255,92,80,0.22)" : "rgba(255,255,255,0.12)";
     ctx.beginPath();
     ctx.arc(ex, ey, r, 0, Math.PI * 2);
     ctx.fill();

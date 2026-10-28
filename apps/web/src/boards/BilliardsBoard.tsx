@@ -6,7 +6,7 @@ import type * as Physics from "./billiards/physics.ts";
 import { BREAK_POWER, DEFAULT_POWER, speedOf, STEP, wrapAngle } from "./billiards/table.ts";
 import { aimGuide, placeNear } from "./billiards/aim.ts";
 import { ballsAt, durationOf, lastFrame, restingBalls, restingQuat, withSim, type Clip } from "./billiards/playback.ts";
-import { layoutFor, TableRenderer, toTable, upOf, type Layout } from "./billiards/render.ts";
+import { layoutFor, TableRenderer, toScreen, toTable, upOf, type Layout } from "./billiards/render.ts";
 import { ballHex } from "./billiards/colors.ts";
 import { shotText } from "./billiards/text.ts";
 import "./BilliardsBoard.css";
@@ -29,6 +29,12 @@ const AFTER_MS = 1100;
 const NUDGE = (0.2 * Math.PI) / 180;
 /** この幅より広ければ台を横に置く */
 const WIDE = 520;
+/** 光らせる球が 1 回明るくなって戻るまで（ミリ秒） */
+const PULSE_MS = 1400;
+/** 虫めがねの倍率 */
+const ZOOM = 2.6;
+/** 縦に置いた台の右に並べる、回転と強さの列の幅（あいだを含む） */
+const SIDE = 70;
 
 const round4 = (v: number) => Math.round(v * 1e4) / 1e4 || 0;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -96,8 +102,12 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
   /** いま再生している打の結果の見出し（止まってから出す） */
   const [caption, setCaption] = useState<number | null>(null);
 
+  const root = useRef<HTMLDivElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+  const controls = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const loupe = useRef<HTMLCanvasElement>(null);
   const renderer = useRef<TableRenderer | null>(null);
   /** 表示を済ませた打の数 */
   const shown = useRef(seq);
@@ -120,6 +130,16 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
     const spot = placeNear(HEAD_SPOT[0], HEAD_SPOT[1], s.balls, s.breaking);
     return spot ? { x: spot[0], y: spot[1] } : null;
   }, [placed, cueOnTable, canPlace, s.balls, s.breaking]);
+  /** 最初に当ててよい球（ブレイクでは光らせない） */
+  const legal = useMemo(() => (canAim && !s.breaking && turn !== null ? Billiards.legalFirst(s, turn) : null), [canAim, s, turn]);
+  /** 打つ前の球（手球は置いた所に） */
+  const aimBalls = useMemo(() => {
+    const others = s.balls.filter((b) => b.id !== CUE);
+    return cue ? [{ id: CUE, x: cue.x, y: cue.y }, ...others] : others;
+  }, [s.balls, cue]);
+  const guide = useMemo(() => (canAim && cue ? aimGuide(aimBalls, cue, angle) : null), [canAim, cue, aimBalls, angle]);
+  /** このまま打つと、最初に当ててはいけない球に当たる */
+  const badHit = guide && legal && guide.target !== null && !legal.has(guide.target) ? guide.target : null;
 
   // 手番が来たら（打の数が変わったら）、置いた手球・ねらい・強さを決め直す
   const aimKey = `${seq}:${turn}:${canAim}`;
@@ -156,36 +176,55 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
     setPlay({ clips: fresh.map((r) => clipOf(r, now)), idx: 0 });
   }, [seq]);
 
-  // 台の大きさ：幅いっぱい。スマホの縦の画面では台を縦に置き、高さは画面に収める
+  // 台の大きさ：幅いっぱい。スマホの縦の画面では台を縦に置き、回転と強さは台の右に縦に並べる。
+  // 上の組・案内と下の「打つ」まで 1 画面に収まる高さにする（台の上をドラッグするとねらいが動くので、スクロールしなくても打てるように）
+  const hasControls = you !== null && !finished;
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
     const measure = () => {
       const width = el.clientWidth;
       const vertical = width < WIDE;
-      const vh = window.innerHeight;
-      const maxH = vertical ? Math.max(380, vh - 150) : Math.max(260, vh - 200);
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      const gap = 10;
+      const chrome = (head.current?.offsetHeight ?? 0) + (controls.current?.offsetHeight ?? 0) + gap * 2 + 12;
+      const maxH = Math.max(vertical ? 320 : 240, vh - chrome);
       setLayout((cur) => {
-        const next = layoutFor(width, maxH, vertical);
+        const next = layoutFor(vertical && hasControls ? width - SIDE : width, maxH, vertical);
         return cur && cur.width === next.width && cur.height === next.height && cur.vertical === next.vertical ? cur : next;
       });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (head.current) ro.observe(head.current);
+    if (controls.current) ro.observe(controls.current);
     window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [hasControls]);
+
+  // 自分の番が来たら、台と「打つ」が両方見える所までスクロールする（もう見えていれば動かさない）
+  const scrolled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!canAim || !layout || scrolled.current === aimKey) return;
+    scrolled.current = aimKey;
+    const el = root.current;
+    const bottom = controls.current?.getBoundingClientRect().bottom ?? 0;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    if (!el || (el.getBoundingClientRect().top >= 0 && bottom <= vh)) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  }, [aimKey, layout !== null]);
 
   // ---------- 描く ----------
 
   const q0 = useMemo(() => restingQuat(upOf(layout ?? { vertical: true })), [layout?.vertical]);
   /** 描くのに使う最新の値（requestAnimationFrame の中から読む） */
-  const view = useRef({ play, s, cue, angle, power, canAim, canPlace, dragging, q0 });
-  view.current = { play, s, cue, angle, power, canAim, canPlace, dragging, q0 };
+  const view = useRef({ play, aimBalls, cue, angle, power, guide, badHit, legal, canPlace, dragging, q0 });
+  view.current = { play, aimBalls, cue, angle, power, guide, badHit, legal, canPlace, dragging, q0 };
 
   const draw = (now = performance.now()) => {
     const r = renderer.current;
@@ -198,13 +237,19 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
       r.draw({ balls: ballsAt(clip, i, v.q0) });
       return;
     }
-    let balls = v.s.balls.filter((b) => b.id !== CUE);
-    if (v.cue) balls = [{ id: CUE, x: v.cue.x, y: v.cue.y }, ...balls];
     const guide =
-      v.canAim && v.cue && v.dragging !== "place"
-        ? { cue: v.cue, angle: v.angle, power: v.power, guide: aimGuide(balls, v.cue, v.angle) }
+      v.guide && v.cue && v.dragging !== "place"
+        ? { cue: v.cue, angle: v.angle, power: v.power, guide: v.guide, bad: v.badHit !== null }
         : null;
-    r.draw({ balls: restingBalls(balls, v.q0), guide, placing: v.canPlace ? { dragging: v.dragging === "place" } : null });
+    const pulse = 0.5 + 0.5 * Math.sin((now / PULSE_MS) * 2 * Math.PI);
+    r.draw({
+      balls: restingBalls(v.aimBalls, v.q0),
+      guide,
+      targets: v.legal ? { ids: v.legal, pulse } : null,
+      placing: v.canPlace ? { dragging: v.dragging === "place" } : null,
+    });
+    // ドラッグでねらっている間は、当たる所を大きくして見せる
+    if (guide && v.dragging === "aim" && loupe.current) r.drawLoupe(loupe.current, guide.guide.end[0], guide.guide.end[1], ZOOM);
   };
 
   useLayoutEffect(() => {
@@ -218,6 +263,19 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
   useEffect(() => {
     if (!play) draw();
   });
+
+  // ねらってよい球を光らせている間は、毎コマ描く（光がゆっくり強くなったり弱くなったりする）
+  const pulsing = !play && legal !== null;
+  useEffect(() => {
+    if (!pulsing || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const tick = (now: number) => {
+      draw(now);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [pulsing]);
 
   // 再生：1 コマずつ描く。止まったら少し見せてから、次の打へ（最後なら、ふだんの表示へ）
   const clip = play ? play.clips[play.idx]! : null;
@@ -423,14 +481,28 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
       if (s.breaking) note = t("game.billiards.aimBreak");
       else if (s.inHand) note = t("game.billiards.aimInHand");
       else if (Billiards.onEight(s, turn!)) note = t("game.billiards.aimEight");
+      else if (s.solids === null) note = t("game.billiards.aimOpen");
       else note = t("game.billiards.aim");
     } else if (turn !== null && turn !== you && names[turn]) note = t("game.billiards.turnOf", { name: names[turn] });
     if (lastShot) result = shotText(t, lastShot, nameOf);
   }
 
+  const warn = badHit !== null && !play ? t(badHit === EIGHT ? "game.billiards.warnEight" : "game.billiards.warnWrong") : null;
+  // 虫めがねは、当たる所と反対の側の上の角に出す（指と重ならないように）
+  const loupeLeft = guide && layout ? toScreen(layout, guide.end[0], guide.end[1])[0] > layout.width / 2 : false;
+  /** 回転と強さを台の右に出す（縦に置いた台） */
+  const side = !!layout?.vertical;
+
   return (
-    <div className="billiards-board stack-sm">
-      <Players s={shownState} names={names} you={you} turn={finished || play ? null : turn} />
+    <div ref={root} className="billiards-board stack-sm">
+      <div ref={head} className="billiards-head">
+        <Players s={shownState} names={names} you={you} turn={finished || play ? null : turn} />
+        {(warn || note) && (
+          <p className={`billiards-hint ${warn ? "warn" : ""} ${canAim ? "mine" : ""}`} role="status">
+            {warn ?? note}
+          </p>
+        )}
+      </div>
 
       <div ref={wrap} className={`billiards-wrap ${layout?.vertical ? "is-vertical" : "is-wide"}`}>
         <div className="billiards-table" style={layout ? { width: layout.width, height: layout.height } : undefined}>
@@ -446,7 +518,10 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
             onPointerCancel={onPointerUp}
             onKeyDown={onKeyDown}
           />
-          {play ? (
+          {dragging === "aim" && guide && (
+            <canvas ref={loupe} className={`billiards-loupe ${loupeLeft ? "left" : "right"} ${badHit !== null ? "bad" : ""}`} aria-hidden />
+          )}
+          {dragging ? null : play ? (
             <button type="button" className="billiards-pill billiards-replay" onClick={skip}>
               {t("game.billiards.skip")}
             </button>
@@ -464,12 +539,22 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
             </p>
           )}
         </div>
+        {hasControls && side && (
+          <div className={`billiards-side ${canAim ? "" : "off"}`} style={{ height: layout!.height }}>
+            <SpinPad value={spin} onChange={setSpin} disabled={!canAim} />
+            <div className="billiards-power vertical">
+              <span className="billiards-power-label">{t("game.billiards.power")}</span>
+              <b>{Math.round(power * 100)}</b>
+              <PowerBar value={power} onChange={setPower} disabled={!canAim} />
+            </div>
+          </div>
+        )}
       </div>
 
-      {you !== null && !finished && (
-        <div className={`billiards-controls ${canAim ? "" : "off"}`}>
-          <SpinPad value={spin} onChange={setSpin} disabled={!canAim} />
-          <div className="billiards-power">
+      {hasControls && (
+        <div ref={controls} className={`billiards-controls ${canAim ? "" : "off"} ${side ? "slim" : ""}`}>
+          {!side && <SpinPad value={spin} onChange={setSpin} disabled={!canAim} />}
+          {!side && <div className="billiards-power">
             <label htmlFor="billiards-power">
               <span>{t("game.billiards.power")}</span>
               <b>{Math.round(power * 100)}</b>
@@ -485,7 +570,7 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
               onChange={(e) => setPower(Number(e.currentTarget.value))}
               style={{ "--p": `${power * 100}%` } as CSSProperties}
             />
-          </div>
+          </div>}
           <div className="billiards-shootrow">
             <NudgeButton dir={1} label={t("game.billiards.left1")} disabled={!canAim} onNudge={() => setAngle((a) => a + NUDGE)} />
             <button type="button" className="primary billiards-shoot" onClick={shoot} disabled={!canAim || !cue}>
@@ -496,10 +581,11 @@ export function BilliardsBoard({ state, status, you, names, interactive, onSubmi
         </div>
       )}
 
-      <p className="board-note">
-        {note && <span>{note}</span>}
-        {result && !play && <span className="muted">{result}</span>}
-      </p>
+      {result && !play && (
+        <p className="board-note">
+          <span className="muted">{result}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -618,6 +704,49 @@ function SpinPad({ value, onChange, disabled }: { value: number; onChange(v: num
         </svg>
       </div>
       <span className="billiards-spin-label">{label}</span>
+    </div>
+  );
+}
+
+/** 縦の強さのつまみ（縦に置いた台の右）。上ほど強い。押した所か、ドラッグした所の強さになる */
+function PowerBar({ value, onChange, disabled }: { value: number; onChange(v: number): void; disabled: boolean }) {
+  const { t } = useI18n();
+  const active = useRef<number | null>(null);
+  const set = (el: HTMLElement, clientY: number) => {
+    const rect = el.getBoundingClientRect();
+    onChange(Math.round(clamp(1 - (clientY - rect.top) / rect.height, 0, 1) * 100) / 100);
+  };
+  return (
+    <div
+      className={`billiards-powerbar ${disabled ? "off" : ""}`}
+      role="slider"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={t("game.billiards.power")}
+      aria-orientation="vertical"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value * 100)}
+      aria-disabled={disabled}
+      style={{ "--v": value } as CSSProperties}
+      onPointerDown={(e) => {
+        if (disabled || !e.isPrimary) return;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        active.current = e.pointerId;
+        set(e.currentTarget, e.clientY);
+      }}
+      onPointerMove={(e) => active.current === e.pointerId && set(e.currentTarget, e.clientY)}
+      onPointerUp={() => (active.current = null)}
+      onPointerCancel={() => (active.current = null)}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === "ArrowUp" || e.key === "ArrowRight") onChange(clamp(Math.round(value * 100 + 2) / 100, 0, 1));
+        else if (e.key === "ArrowDown" || e.key === "ArrowLeft") onChange(clamp(Math.round(value * 100 - 2) / 100, 0, 1));
+        else return;
+        e.preventDefault();
+      }}
+    >
+      <span className="billiards-powerbar-fill" />
+      <span className="billiards-powerbar-thumb" />
     </div>
   );
 }

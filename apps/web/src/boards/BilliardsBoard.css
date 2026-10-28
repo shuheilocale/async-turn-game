@@ -7,6 +7,36 @@
   max-width: 760px;
   align-items: stretch;
   container-type: inline-size;
+  scroll-margin-top: 8px;
+}
+
+/* 組と案内。台と打ち方と合わせて 1 画面に収めるので、詰めて置く */
+.billiards-head {
+  display: grid;
+  gap: 8px;
+}
+
+/* 台のすぐ上の案内。自分の番は少し目立たせ、ファウルになるねらいのときは赤く */
+.billiards-hint {
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.billiards-hint.mine {
+  color: var(--ink);
+  font-weight: 700;
+  background: color-mix(in srgb, #f2c53d 22%, var(--surface));
+}
+
+.billiards-hint.warn {
+  color: #fff;
+  background: #c8392f;
 }
 
 /* ---------- 2 人の組と残りの球 ---------- */
@@ -19,9 +49,9 @@
 
 .billiards-player {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -141,6 +171,7 @@
 .billiards-wrap {
   display: flex;
   justify-content: center;
+  gap: 8px;
   width: 100%;
 }
 
@@ -246,7 +277,123 @@
   }
 }
 
+/* 虫めがね：ねらっている間、当たる所を大きくして台の上の角に出す */
+.billiards-loupe {
+  position: absolute;
+  top: 10px;
+  width: min(118px, 36%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid rgb(255 255 255 / 0.9);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  pointer-events: none;
+}
+
+.billiards-loupe.left {
+  left: 10px;
+}
+
+.billiards-loupe.right {
+  right: 10px;
+}
+
+.billiards-loupe.bad {
+  border-color: #ff5c50;
+}
+
 /* ---------- 打ち方 ---------- */
+
+/* 縦に置いた台の右の列：上に回転、その下に縦長の強さ */
+.billiards-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 62px;
+}
+
+.billiards-side.off {
+  opacity: 0.6;
+}
+
+.billiards-power.vertical {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 0;
+  width: 100%;
+}
+
+.billiards-power-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.billiards-power.vertical b {
+  font-family: var(--font-num);
+  font-size: 0.8rem;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+/* 縦の強さのつまみ。下から色が満ちる */
+.billiards-powerbar {
+  --v: 0.5;
+  position: relative;
+  flex: 1;
+  width: 44px;
+  min-height: 120px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  border: 1px solid var(--line);
+  touch-action: none;
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.billiards-powerbar.off {
+  cursor: default;
+}
+
+.billiards-powerbar:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+}
+
+/* 色は台の高さいっぱいに付けておき、今の強さより上を切り取る */
+.billiards-powerbar-fill {
+  position: absolute;
+  inset: 4px;
+  border-radius: 10px;
+  background: linear-gradient(0deg, #6fb59a, #e6b34a 60%, #d9573c);
+  clip-path: inset(calc((1 - var(--v)) * 100%) 0 0 0 round 10px);
+}
+
+.billiards-powerbar-thumb {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  bottom: calc(4px + (100% - 8px) * var(--v));
+  height: 12px;
+  transform: translateY(50%);
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 0.14);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+/* 回転と強さを台の右に出したときは、「打つ」の列だけ */
+.billiards-controls.slim {
+  grid-template-columns: 1fr;
+  grid-template-areas: "shoot";
+  padding: 0;
+  border: 0;
+  background: none;
+}
 
 .billiards-controls {
   display: grid;
@@ -255,8 +402,8 @@
     "spin power"
     "spin shoot";
   align-items: center;
-  gap: 8px 14px;
-  padding: 10px 12px;
+  gap: 6px 12px;
+  padding: 8px 10px;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -281,8 +428,8 @@
 }
 
 .billiards-spinpad {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: radial-gradient(circle at 36% 30%, #ffffff, #e9e5da 60%, #c9c3b5);
   box-shadow:
