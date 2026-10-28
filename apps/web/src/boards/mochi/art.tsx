@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import type { Mochi } from "@atg/core";
+import { Mochi } from "@atg/core";
 
 /**
  * ふたりのもちの絵（SVG）。もち・部屋・お世話のしるし・たからもの。
@@ -12,6 +12,8 @@ type Form = Mochi.Form;
 type Mood = Mochi.Mood;
 type Care = Mochi.Care;
 type Item = Mochi.Item;
+type Act = Mochi.Act;
+type Accessory = Mochi.Accessory;
 
 // ---------- 色 ----------
 
@@ -76,6 +78,8 @@ export interface CreatureProps {
   eggProgress?: number;
   /** お世話に喜んだ直後（目を細めて大きく笑う） */
   delighted?: boolean;
+  /** おとなが身に着けている小物 */
+  accessory?: Accessory | null;
 }
 
 /** もち。stage が egg なら卵を描く */
@@ -84,7 +88,7 @@ export function Creature(props: CreatureProps) {
   return <Body {...props} />;
 }
 
-function Body({ stage, form, color, mood, delighted = false }: CreatureProps) {
+function Body({ stage, form, color, mood, delighted = false, accessory = null }: CreatureProps) {
   const id = useSvgId();
   const shape = shapeOf(stage, form);
   const { w, h } = shape;
@@ -130,6 +134,7 @@ function Body({ stage, form, color, mood, delighted = false }: CreatureProps) {
           {adult && form === "harmony" && <Crown w={w} h={h} />}
           {adult && form === "hop" && <Curl h={h} line={line} />}
           {adult && form === "fluffy" && <Tufts h={h} color={color} line={line} />}
+          {adult && accessory && <AccessoryArt kind={accessory} w={w} h={h} />}
         </g>
       </g>
     </g>
@@ -347,6 +352,102 @@ function Crown({ w, h }: { w: number; h: number }) {
       ))}
     </g>
   );
+}
+
+/** おとなの小物。体の大きさ（w・h）に合わせて置く。頭の上のものは、姿のしるしとぶつからないよう少し横に寄せる */
+function AccessoryArt({ kind, w, h }: { kind: Accessory; w: number; h: number }) {
+  const ink = { stroke: "#5b4a3a", strokeWidth: 1.2, strokeLinejoin: "round" as const };
+  switch (kind) {
+    case "strawHat": {
+      const x = -w * 0.2;
+      const y = -h * 0.93;
+      return (
+        <g transform={`rotate(-14 ${x} ${y})`}>
+          <ellipse cx={x} cy={y} rx={w * 0.3} ry={h * 0.07} fill="#ecc66e" {...ink} />
+          <path d={`M ${x - w * 0.16} ${y} C ${x - w * 0.16} ${y - h * 0.2} ${x + w * 0.16} ${y - h * 0.2} ${x + w * 0.16} ${y} Z`} fill="#f3d385" {...ink} />
+          <path d={`M ${x - w * 0.155} ${y - h * 0.035} Q ${x} ${y - h * 0.01} ${x + w * 0.155} ${y - h * 0.035}`} fill="none" stroke="#d9534f" strokeWidth="3" />
+        </g>
+      );
+    }
+    case "nightcap": {
+      const y = -h * 0.9;
+      return (
+        <g>
+          <path d={`M ${-w * 0.34} ${y + 4} C ${-w * 0.2} ${y - h * 0.3} ${w * 0.2} ${y - h * 0.34} ${w * 0.46} ${y - h * 0.06} L ${w * 0.1} ${y - h * 0.02} Z`} fill="#8fa0dc" {...ink} />
+          <path d={`M ${-w * 0.36} ${y + 5} Q ${-w * 0.1} ${y - 6} ${w * 0.14} ${y - 2}`} fill="none" stroke="#f6f1e6" strokeWidth="5" strokeLinecap="round" />
+          <circle cx={w * 0.47} cy={y - h * 0.04} r="5" fill="#f6f1e6" {...ink} />
+        </g>
+      );
+    }
+    case "towel": {
+      const y = -h * 0.98;
+      return (
+        <g transform={`rotate(-8 ${-w * 0.05} ${y})`}>
+          <rect x={-w * 0.3} y={y - 9} width={w * 0.44} height="12" rx="4" fill="#fbf7ef" {...ink} />
+          <path d={`M ${-w * 0.3 + 4} ${y - 5} h ${w * 0.44 - 8} M ${-w * 0.3 + 4} ${y - 1} h ${w * 0.44 - 8}`} stroke="#f2a7b6" strokeWidth="1.6" />
+        </g>
+      );
+    }
+    case "leafPin":
+      return (
+        <g transform={`translate(${-w * 0.36} ${-h * 0.88}) rotate(-20) scale(0.85) translate(-12 -12)`}>
+          {itemShapes.momiji}
+        </g>
+      );
+    case "ribbon": {
+      const x = w * 0.3;
+      const y = -h * 0.86;
+      return (
+        <g fill="#e86a7a" {...ink}>
+          <path d={`M ${x} ${y} l -11 -7 v 14 z`} />
+          <path d={`M ${x} ${y} l 11 -7 v 14 z`} />
+          <circle cx={x} cy={y} r="3.4" fill="#f08a9c" />
+        </g>
+      );
+    }
+    case "garland": {
+      const y = -h * 0.2;
+      const n = 9;
+      return (
+        <g>
+          {Array.from({ length: n }, (_, i) => {
+            const u = i / (n - 1) - 0.5;
+            return <circle key={i} cx={u * w * 0.78} cy={y + 5 - Math.cos(u * Math.PI) * 6} r="3.6" fill={i === (n - 1) / 2 ? "#f3a03c" : "#fffaf0"} stroke="#c9b48a" strokeWidth="0.9" />;
+          })}
+        </g>
+      );
+    }
+    case "uchiwa": {
+      const x = w * 0.5;
+      const y = -h * 0.52;
+      return (
+        <g>
+          <path d={`M ${x - 2} ${y + 12} L ${w * 0.44} ${-h * 0.25}`} stroke="#b88a55" strokeWidth="2.4" strokeLinecap="round" />
+          <circle cx={x} cy={y} r={Math.max(11, w * 0.12)} fill="#eaf4fb" {...ink} />
+          <circle cx={x + 2} cy={y + 2} r={Math.max(5, w * 0.055)} fill="#e86a5a" />
+        </g>
+      );
+    }
+    case "paint":
+      return (
+        <g opacity="0.9">
+          <path d={`M ${-w * 0.36} ${-h * 0.36} q 5 -4 9 0 q 3 4 -2 6 q -6 2 -7 -6 z`} fill="#6fa8dc" />
+          <circle cx={-w * 0.25} cy={-h * 0.27} r="2.2" fill="#f6a868" />
+        </g>
+      );
+    case "glasses": {
+      const ex = w * 0.17;
+      const ey = -h * 0.44;
+      const r = Math.min(7.5, Math.max(5, w * 0.065));
+      return (
+        <g fill="rgba(255,255,255,0.18)" stroke="#5b4a3a" strokeWidth="1.5">
+          <circle cx={-ex} cy={ey} r={r} />
+          <circle cx={ex} cy={ey} r={r} />
+          <path d={`M ${-ex + r} ${ey} Q 0 ${ey - 3} ${ex - r} ${ey}`} fill="none" />
+        </g>
+      );
+    }
+  }
 }
 
 /** 卵。育つほどひびが入る */
@@ -571,6 +672,58 @@ const careShapes: Record<Care, ReactNode> = {
     </>
   ),
 };
+
+// ---------- やることのしるし ----------
+
+/** おでかけの行き先の絵 */
+const placeShapes: Record<Mochi.Place, ReactNode> = {
+  park: (
+    <>
+      <path d="M12 21v-6" stroke="#8a5a3a" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="10" r="6.4" fill="#8fcb8b" stroke="#5f9a63" strokeWidth="1" />
+      <circle cx="9.6" cy="8.4" r="1.6" fill="#b5dfae" />
+      <path d="M3.5 21h17" stroke="#5f9a63" strokeWidth="1.4" strokeLinecap="round" />
+    </>
+  ),
+  market: (
+    <>
+      <path d="M4 9.5h16v10H4z" fill="#fbf3e2" stroke="#b07a4a" strokeWidth="1" />
+      <path d="M3 9.5l2-5h14l2 5c0 1.4-1.3 2-2.3 2s-2.2-.6-2.2-2c0 1.4-1.3 2-2.3 2S12 10.9 12 9.5c0 1.4-1.2 2-2.2 2s-2.3-.6-2.3-2c0 1.4-1.2 2-2.2 2S3 10.9 3 9.5z" fill="#ef8f6a" stroke="#b9573c" strokeWidth="0.9" strokeLinejoin="round" />
+      <circle cx="9" cy="16.5" r="1.8" fill="#f7bf45" />
+      <circle cx="13.4" cy="16.5" r="1.8" fill="#8fcb8b" />
+    </>
+  ),
+  sea: (
+    <>
+      <circle cx="16.5" cy="7.5" r="3.4" fill="#f7cf63" />
+      <path d="M2.5 14.5c2.4-2 4.6-2 7 0s4.6 2 7 0 4-1.6 5 0V21h-19z" fill="#7cc1e8" stroke="#4a92bf" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M5 18.2c1.6-1 3-1 4.6 0" stroke="#d8eefa" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  festival: (
+    <>
+      <path d="M12 2.5v2.4" stroke="#7a5236" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="8.6" y="4.4" width="6.8" height="2" rx="0.8" fill="#4b3a33" />
+      <ellipse cx="12" cy="12.4" rx="6.6" ry="6.4" fill="#ef6a55" stroke="#b9473a" strokeWidth="1" />
+      <path d="M6 10.4h12M5.6 13.4h12.8M6.4 16.2h11.2" stroke="#f6b4a6" strokeWidth="0.9" />
+      <rect x="8.6" y="18.4" width="6.8" height="2" rx="0.8" fill="#4b3a33" />
+    </>
+  ),
+};
+
+/** やることのしるし。行き先と、たからものを使うやることだけ（ほかは null） */
+export function ActIcon({ act }: { act: Act }) {
+  const def = Mochi.ACT_DEFS[act] as Mochi.ActDef;
+  if (def.place) {
+    return (
+      <svg viewBox="0 0 24 24" className="mochi-icon" aria-hidden>
+        {placeShapes[def.place]}
+      </svg>
+    );
+  }
+  if (typeof def.unlock === "object" && "item" in def.unlock) return <ItemSvg item={def.unlock.item} className="mochi-icon" />;
+  return null;
+}
 
 // ---------- たからもの ----------
 

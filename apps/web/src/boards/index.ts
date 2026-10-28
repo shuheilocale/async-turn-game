@@ -146,7 +146,10 @@ export const boards: Record<string, BoardUI> = {
     Board: MochiBoard,
     length: "long",
     coop: true,
-    movedText: (t, move, name) => t(`game.mochi.did.${(move as { care: string }).care}`, { who: t("game.mochi.who", { name }) }),
+    movedText: (t, move, name) => {
+      const m = move as { care: string; act?: string };
+      return t(m.act ? `game.mochi.actDid.${m.act}` : `game.mochi.did.${m.care}`, { who: t("game.mochi.who", { name }) });
+    },
   },
   photo: { Board: PhotoBoard, length: "long", hidden: true, coop: true, movedText: photoMovedText },
   raid: { Board: RaidBoard, length: "long", hidden: true, coop: true, movedText: raidMovedText },

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { IllegalMoveError, type Rng, type Seat } from "../types.ts";
 import {
+  ACCESSORY_MIN,
+  ACCESSORY_OF,
+  accessoryOf,
+  ACT_DEFS,
+  ACTS,
+  actsAt,
   ADULT,
   ALARM_MIN_HOURS,
   bodyColor,
@@ -10,6 +16,14 @@ import {
   CARES,
   CHILD,
   conditionAt,
+  DEFAULT_ACT,
+  feelingOf,
+  FOLLOW_HOURS,
+  isFollowUp,
+  LIKE_JOY,
+  likesOf,
+  PLACE_ITEMS,
+  PLACES,
   DAY,
   dayOf,
   DREAMS,
@@ -40,8 +54,10 @@ import {
   START_NEEDS,
   WANT_AT,
   wantOf,
+  type Act,
   type Care,
   type Condition,
+  type Item,
   type MochiState,
   type Needs,
 } from "./mochi.ts";
@@ -341,7 +357,8 @@ describe("順番なし（2 人ともいつでもお世話できる）と手", ()
     delete saved.lastOf;
     const again = careAt(saved as MochiState, "talk", at(2), 0);
     expect(again.bySeat).toEqual([2, 0]);
-    expect(again.lastOf).toEqual([{ care: "talk", at: at(2) }, null]);
+    // やることを選ばない手は、お世話ごとの最初のやること
+    expect(again.lastOf).toEqual([{ care: "talk", act: "today", at: at(2) }, null]);
     expect(careAt(saved as MochiState, "feed", at(2), 1).bySeat).toEqual([1, 1]);
   });
 
@@ -648,7 +665,8 @@ describe("留守のあいだのできごと（happeningOf）", () => {
     const treasures = ITEMS.filter((i) => i !== missing).map((item) => ({ item, at: T0 }));
     for (let seed = 1; seed <= 10; seed++) {
       const s = careAt(baby({ seed, treasures }), "walk", at(0));
-      expect(happeningOf(s, at(3))).toEqual({ kind: "found", item: missing, walk: true });
+      // 行き先（こうえん）で見つかるものは全部持っているので、ほかのまだ持っていないものから
+      expect(happeningOf(s, at(3))).toEqual({ kind: "found", item: missing, walk: true, place: "park" });
     }
     // 全部そろったら、どれでも
     const all = careAt(baby({ treasures: ITEMS.map((item) => ({ item, at: T0 })) }), "walk", at(1));
@@ -791,5 +809,200 @@ describe("終わり", () => {
   it("状態は JSON にしても同じ（サーバに保存できる）", () => {
     const { state } = playOut([8, 20]);
     expect(JSON.parse(JSON.stringify(state))).toEqual(state);
+  });
+});
+
+describe("やること（お世話の中の選択肢）", () => {
+  /** やることを選んで指す */
+  const doAt = (s: MochiState, care: Care, act: Act | undefined, time: number, seat: Seat = 0) =>
+    mochi.applyMove(s, mochi.stampMove!(act ? { care, act } : { care }, time), seat);
+  const child = (o: Partial<MochiState> = {}) => baby({ growth: CHILD, ...o });
+  /** 好みのない種（好き・苦手を気にせず効き方を比べる） */
+  const plainSeed = (acts: Act[]) => {
+    for (let seed = 1; seed < 1000; seed++) if (acts.every((a) => feelingOf(seed, a) === null)) return seed;
+    throw new Error("見つからない");
+  };
+
+  it("どのやることも、どれか 1 つのお世話に入っていて、お世話ごとに最初のやること（DEFAULT_ACT）がある", () => {
+    for (const care of CARES) {
+      const mine = ACTS.filter((a) => ACT_DEFS[a].care === care);
+      expect(mine.length).toBeGreaterThanOrEqual(4);
+      expect(mine).toContain(DEFAULT_ACT[care]);
+      expect(ACT_DEFS[DEFAULT_ACT[care]].unlock).toBe("base");
+    }
+  });
+
+  it("あかちゃんは、はじめからのやることだけ。こどもになると増える。卵のあいだと、おとなのあとは選ばない", () => {
+    const b = baby();
+    const babyActs = actsAt(b, conditionAt(b, at(0)));
+    expect(babyActs.every((a) => ACT_DEFS[a].unlock === "base")).toBe(true);
+    const c = child();
+    const childActs = actsAt(c, conditionAt(c, at(0)));
+    expect(childActs).toEqual(expect.arrayContaining(["draw", "dance", "book", "riddle", "sea", "festival", "tickle"]));
+    expect(childActs.length).toBeGreaterThan(babyActs.length);
+    const egg = baby({ growth: 1 });
+    expect(actsAt(egg, conditionAt(egg, at(0)))).toEqual([]);
+  });
+
+  it("こどもになる前のやることを選ぶと受け付けない。知らないやること・ほかのお世話のやることも受け付けない", () => {
+    expect(codeOf(() => doAt(baby(), "walk", "sea", at(1)))).toBe("mochi_act_locked");
+    expect(codeOf(() => doAt(baby(), "feed", "ball", at(1)))).toBe("mochi_no_such_act");
+    expect(codeOf(() => mochi.applyMove(baby(), { care: "feed", act: "cake" as Act, at: at(1) }, 0))).toBe("mochi_no_such_act");
+    expect(doAt(child(), "walk", "sea", at(1)).last?.act).toBe("sea");
+  });
+
+  it("卵のあいだは、やることを送られても使わない（お世話ごとの卵への反応だけ）", () => {
+    const s = doAt(baby({ growth: 1 }), "walk", "sea", at(1));
+    expect(s.last?.act).toBeUndefined();
+    expect(s.acts).toBeUndefined();
+  });
+
+  it("たからものを持っていると、それを使うやることが増える（マンゴーを食べる・ビー玉であそぶ など）", () => {
+    const b = baby();
+    expect(actsAt(b, conditionAt(b, at(0)), "feed")).not.toContain("mango");
+    const rich = baby({ treasures: [{ item: "mango", at: T0 }, { item: "marble", at: T0 }, { item: "furin", at: T0 }] });
+    const c = conditionAt(rich, at(0));
+    expect(actsAt(rich, c, "feed")).toContain("mango");
+    expect(actsAt(rich, c, "play")).toContain("marble");
+    expect(actsAt(rich, c, "sleep")).toContain("furin");
+    expect(doAt(rich, "feed", "mango", at(1)).last?.act).toBe("mango");
+    expect(codeOf(() => doAt(b, "feed", "mango", at(1)))).toBe("mochi_act_locked");
+  });
+
+  it("つづき：おでかけのあとは足をふく・おみやげ話、ごはんのあとははみがき。FOLLOW_HOURS 時間たつか、ほかのお世話をすると消える", () => {
+    const out = doAt(baby(), "walk", "park", at(1), 0);
+    const soon = actsAt(out, conditionAt(out, at(2)));
+    expect(soon).toEqual(expect.arrayContaining(["wipe", "souvenir", "bath"]));
+    expect(soon).not.toContain("brush");
+    // 相手がつづきをしてもよい
+    expect(doAt(out, "pet", "wipe", at(2), 1).last).toMatchObject({ act: "wipe", seat: 1 });
+    expect(actsAt(out, conditionAt(out, at(1 + FOLLOW_HOURS + 0.1)))).not.toContain("wipe");
+    expect(codeOf(() => doAt(out, "pet", "wipe", at(1 + FOLLOW_HOURS + 0.1)))).toBe("mochi_act_locked");
+    const fed = doAt(out, "feed", "onigiri", at(2));
+    const after = actsAt(fed, conditionAt(fed, at(3)));
+    expect(after).toContain("brush");
+    expect(after).not.toContain("wipe");
+    for (const a of ["wipe", "souvenir", "brush", "bath", "dreamtalk"] as Act[]) expect(isFollowUp(a)).toBe(true);
+    expect(isFollowUp("ball")).toBe(false);
+  });
+
+  it("つづき：前のお世話のあと眠って起きたら、夢の話をきける（眠っているあいだは選べない）", () => {
+    const tucked = doAt(baby({ needs: { tummy: 90, joy: 90, sleepy: 50 } }), "sleep", "lullaby", at(0));
+    const asleep = conditionAt(tucked, at(1));
+    expect(asleep.asleep).toBe(true);
+    expect(actsAt(tucked, asleep)).not.toContain("dreamtalk");
+    const woke = conditionAt(tucked, at(6));
+    expect(woke.asleep).toBe(false);
+    expect(actsAt(tucked, woke)).toContain("dreamtalk");
+  });
+
+  it("やることごとに効き方がちがう（スープはねむくなる、ダンスはおなかがすく、くすぐると起きる など）", () => {
+    const seed = plainSeed(["onigiri", "soup", "ball", "dance", "head", "tickle"]);
+    const base = child({ seed, needs: { tummy: 40, joy: 40, sleepy: 40 } });
+    const soup = doAt(base, "feed", "soup", at(0)).needs;
+    const onigiri = doAt(base, "feed", "onigiri", at(0)).needs;
+    expect(soup.sleepy).toBeGreaterThan(onigiri.sleepy);
+    expect(onigiri.tummy).toBeGreaterThan(soup.tummy);
+    expect(doAt(base, "play", "dance", at(0)).needs.tummy).toBeLessThan(doAt(base, "play", "ball", at(0)).needs.tummy);
+    const sleeping = doAt(base, "sleep", undefined, at(0));
+    expect(doAt(sleeping, "pet", "head", at(0.5)).asleep).toBe(true);
+    expect(doAt(sleeping, "pet", "tickle", at(0.5)).asleep).toBe(false);
+  });
+
+  it("やることごとの回数を数える。やることのない手は、お世話ごとの最初のやること", () => {
+    let s = doAt(child(), "walk", "sea", at(1));
+    s = doAt(s, "walk", undefined, at(5));
+    expect(s.acts).toEqual({ sea: 1, park: 1 });
+    expect(s.last?.act).toBe("park");
+  });
+
+  it("おでかけの行き先で、見つけてくるものが変わる（まだ持っていないものから）", () => {
+    for (const place of PLACES) {
+      for (let seed = 1; seed <= 6; seed++) {
+        const s = doAt(child({ seed }), "walk", place, at(0));
+        const h = happeningOf(s, at(2));
+        expect(h).toMatchObject({ kind: "found", walk: true, place });
+        expect(PLACE_ITEMS[place]).toContain((h as { item: Item }).item);
+      }
+    }
+    // 16 のたからものは、4 つの行き先のどこかで見つかる
+    expect(new Set(PLACES.flatMap((p) => PLACE_ITEMS[p]))).toEqual(new Set(ITEMS));
+  });
+
+  it("好み：好きなやることが 3 つ（ちがうお世話から）、苦手なやることが 1 つ。種で決まり、はじめから・こどもからのやることから選ぶ", () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const { likes, dislike } = likesOf(seed);
+      expect(likes).toHaveLength(3);
+      expect(new Set(likes.map((a) => ACT_DEFS[a].care)).size).toBe(3);
+      expect(likes.map((a) => ACT_DEFS[a].care)).not.toContain(ACT_DEFS[dislike].care);
+      for (const a of [...likes, dislike]) expect(["base", "child"]).toContain(ACT_DEFS[a].unlock);
+      expect(likesOf(seed)).toEqual({ likes, dislike });
+    }
+  });
+
+  it("好きなやることはきげんがよけいによくなり、苦手なやることは半分。したら好みが分かる（known）", () => {
+    const seed = 3;
+    const { likes, dislike } = likesOf(seed);
+    const like = likes[0]!;
+    const plain = ACTS.find((a) => ACT_DEFS[a].care === ACT_DEFS[like].care && a !== like && ["base", "child"].includes(ACT_DEFS[a].unlock as string) && feelingOf(seed, a) === null)!;
+    const base = child({ seed, needs: { tummy: 50, joy: 20, sleepy: 30 } });
+    const liked = doAt(base, ACT_DEFS[like].care, like, at(0));
+    expect(liked.needs.joy).toBe(20 + (ACT_DEFS[like].effect as { joy?: number }).joy! + LIKE_JOY);
+    expect(liked.known).toEqual([like]);
+    expect(doAt(base, ACT_DEFS[plain].care, plain, at(0)).known).toBeUndefined();
+    const disliked = doAt(liked, ACT_DEFS[dislike].care, dislike, at(1));
+    expect(disliked.known).toEqual([like, dislike]);
+    // 2 回目からは増えない
+    expect(doAt(disliked, ACT_DEFS[like].care, like, at(2)).known).toEqual([like, dislike]);
+  });
+
+  it("おとなの小物：いちばん多くしたやること（小物のあるもの）で決まる。ACCESSORY_MIN 回に届かなければなし", () => {
+    expect(accessoryOf({})).toBeNull();
+    expect(accessoryOf({ sea: ACCESSORY_MIN - 1 })).toBeNull();
+    expect(accessoryOf({ sea: ACCESSORY_MIN, ball: 20 })).toBe("strawHat");
+    expect(accessoryOf({ sea: 3, book: 5 })).toBe("glasses");
+    for (const a of Object.values(ACCESSORY_OF)) expect(typeof a).toBe("string");
+  });
+
+  it("おとなになったとき、小物を身に着ける", () => {
+    let s = child({ growth: ADULT - 0.1, acts: { festival: 4 } });
+    s = doAt(s, "walk", "festival", at(5));
+    expect(mochi.status(s).kind).toBe("finished");
+    expect(s.accessory).toBe("uchiwa");
+  });
+
+  it("parseMove：やることはそのお世話のものだけ読む。stampMove はやることを残す", () => {
+    expect(mochi.parseMove({ care: "walk", act: "sea" })).toEqual({ care: "walk", act: "sea" });
+    expect(mochi.parseMove({ care: "feed", act: "sea" })).toBeNull();
+    expect(mochi.parseMove({ care: "feed", act: "toString" })).toBeNull();
+    expect(mochi.stampMove!({ care: "walk", act: "sea" }, 5)).toEqual({ care: "walk", act: "sea", at: 5 });
+  });
+
+  it("前からの対局（やることのない状態）も、そのまま続けられる", () => {
+    const old = JSON.parse(JSON.stringify(baby())) as MochiState;
+    delete old.acts;
+    delete old.known;
+    const s = doAt(old, "play", "hide", at(1));
+    expect(s.acts).toEqual({ hide: 1 });
+  });
+
+  it("やることを選んで遊んでも、おとなまでの日数はふだんと同じくらい（1 日 3 回なら 5〜7 日）", () => {
+    // ほしいお世話の中で、いちばん効くやることを選ぶ遊び方
+    const greedy = (s: MochiState, c: Condition): Care => wantOf(s, c) ?? CARES[(s.bySeat[0] + s.bySeat[1]) % CARES.length]!;
+    let s = fresh(5);
+    for (let day = 0; day < 30 && mochi.status(s).kind !== "finished"; day++) {
+      for (const hr of [8, 14, 21]) {
+        if (mochi.status(s).kind === "finished") break;
+        const time = T0 + day * DAY + hr * HOUR;
+        const c = conditionAt(s, time);
+        const care = greedy(s, c);
+        const options = actsAt(s, c, care);
+        const act = options.find((a) => feelingOf(s.seed, a) === "like") ?? options.at(-1);
+        s = doAt(s, care, act, time, ((s.bySeat[0] + s.bySeat[1]) % 2) as Seat);
+      }
+    }
+    const days = (s.adultAt! - s.bornAt!) / DAY;
+    expect(days).toBeGreaterThan(4.5);
+    expect(days).toBeLessThan(7.5);
   });
 });

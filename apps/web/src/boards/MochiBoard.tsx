@@ -2,13 +2,34 @@ import { useEffect, useRef, useState } from "react";
 import { Mochi, type Seat } from "@atg/core";
 import { useI18n, type T } from "../i18n/index.tsx";
 import type { BoardProps } from "./index.ts";
-import { CareIcon, CareShape, Creature, ItemSvg, ROOM, Room, shapeOf, SparkShape, sparkOf, type Spark } from "./mochi/art.tsx";
+import { ActIcon, CareIcon, CareShape, Creature, ItemSvg, ROOM, Room, shapeOf, SparkShape, sparkOf, type Spark } from "./mochi/art.tsx";
 import "./MochiBoard.css";
 
-const { CARES, ITEMS, conditionAt, wantOf, moodOf, happeningOf, bodyColor, nowOf, dayOf, stageOf, stageProgress, lastCareOf, ADULT, HATCH } =
-  Mochi;
+const {
+  CARES,
+  ITEMS,
+  ACTS,
+  ACT_DEFS,
+  conditionAt,
+  wantOf,
+  moodOf,
+  happeningOf,
+  bodyColor,
+  nowOf,
+  dayOf,
+  stageOf,
+  stageProgress,
+  lastCareOf,
+  actsAt,
+  isFollowUp,
+  feelingOf,
+  likesOf,
+  ADULT,
+  HATCH,
+} = Mochi;
 type State = Mochi.MochiState;
 type Care = Mochi.Care;
+type Act = Mochi.Act;
 type Happening = Mochi.Happening;
 
 /** 体の色の混ざり方（青 → ラベンダー → さくら色 → オレンジ）を見せる帯 */
@@ -39,6 +60,7 @@ function useClock(): number {
 export function happeningText(t: T, h: Happening): string {
   switch (h.kind) {
     case "found":
+      if (h.place) return t("game.mochi.hap.foundAt", { item: t(`game.mochi.itemIn.${h.item}`), place: t(`game.mochi.place.${h.place}`) });
       return t(h.walk ? "game.mochi.hap.foundWalk" : "game.mochi.hap.found", { item: t(`game.mochi.itemIn.${h.item}`) });
     case "hatched":
       return t("game.mochi.hap.hatched");
@@ -66,10 +88,19 @@ function agoText(t: T, ms: number): string {
 interface Reaction {
   key: number;
   care: Care;
+  act?: Act;
   matched: boolean;
   /** 卵のときのお世話 */
   egg: boolean;
+  /** 好き・苦手なやることだったか（New ははじめて分かった） */
+  feel?: "likeNew" | "like" | "dislikeNew" | "dislike";
 }
+
+/** やることの名前（やることのない前からの手は、お世話の名前） */
+const actName = (t: T, care: Care, act?: Act) => (act ? t(`game.mochi.act.${act}`) : t(`game.mochi.care.${care}`));
+/** だれが何をしたか */
+export const didText = (t: T, care: Care, act: Act | undefined, who: string) =>
+  act ? t(`game.mochi.actDid.${act}`, { who }) : t(`game.mochi.did.${care}`, { who });
 
 /**
  * 上に段階と日数、まん中にもちの部屋、その下に今のようす・できごと・具合。順番はないので、参加者にはいつでも
@@ -100,12 +131,21 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
   // お世話が増えたら（自分でも相手でも）、喜ぶ動きをしばらく出す
   const [reaction, setReaction] = useState<Reaction | null>(null);
   const seen = useRef(moves);
+  const knownSeen = useRef(s.known?.length ?? 0);
   useEffect(() => {
     // お世話のあとも卵のままなら、卵へのお世話
     const egg = stageOf(s.growth) === "egg";
-    if (moves > seen.current && s.last) setReaction({ key: moves, care: s.last.care, matched: s.last.matched, egg });
+    const known = s.known?.length ?? 0;
+    if (moves > seen.current && s.last) {
+      const act = s.last.act;
+      const feeling = act ? feelingOf(s.seed, act) : null;
+      const fresh = known > knownSeen.current;
+      const feel = feeling === "like" ? (fresh ? "likeNew" : "like") : feeling === "dislike" ? (fresh ? "dislikeNew" : "dislike") : undefined;
+      setReaction({ key: moves, care: s.last.care, act, matched: s.last.matched, egg, feel });
+    }
     if (moves < seen.current) setReaction(null);
     seen.current = moves;
+    knownSeen.current = known;
   }, [moves]);
   useEffect(() => {
     if (!reaction) return;
@@ -116,8 +156,19 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
   // さわったときの、ぷにっ（手にはならない）
   const [taps, setTaps] = useState(0);
 
-  const care = (which: Care) => {
-    if (interactive) void onSubmit({ care: which });
+  /** やることを選んでいるお世話（選ぶ画面を開いている） */
+  const [open, setOpen] = useState<Care | null>(null);
+  const care = (which: Care, act?: Act) => {
+    if (!interactive) return;
+    setOpen(null);
+    void onSubmit(act ? { care: which, act } : { care: which });
+  };
+  /** 今選べるやること。卵のあいだは空（お世話を押すとすぐに送る） */
+  const options = carer ? actsAt(s, c) : [];
+  const follows = options.filter(isFollowUp);
+  const pickCare = (which: Care) => {
+    if (stage === "egg" || options.length === 0) care(which);
+    else setOpen((cur) => (cur === which ? null : which));
   };
 
   /** このお世話のときに日記に残ったできごと（お世話した人には「さっきの留守のあいだ」になる） */
@@ -155,7 +206,8 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
                     color={color}
                     mood={mood}
                     eggProgress={stage === "egg" ? Math.min(1, c.growth / HATCH) : 0}
-                    delighted={!!reaction?.matched || finished}
+                    delighted={!!reaction?.matched || reaction?.feel === "like" || reaction?.feel === "likeNew" || finished}
+                    accessory={s.accessory}
                   />
                 </g>
               </g>
@@ -183,7 +235,7 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
         committed={committed?.happening ?? null}
         reaction={reaction}
         newTreasure={!!newTreasure && reaction !== null}
-        lastText={s.last ? `${t(`game.mochi.did.${s.last.care}`, { who: who(s.last.seat) })}・${agoText(t, clock - s.last.at)}` : null}
+        lastText={s.last ? `${didText(t, s.last.care, s.last.act, who(s.last.seat))}・${agoText(t, clock - s.last.at)}` : null}
       />
 
       {finished ? (
@@ -194,14 +246,29 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
           {carer && (
             <section className="mochi-cares-box">
               <p className="mochi-prompt">{t("game.mochi.carePrompt")}</p>
+              {follows.length > 0 && (
+                <div className="mochi-follow">
+                  <span className="mochi-follow-title">{t("game.mochi.follow")}</span>
+                  <div className="mochi-follow-row">
+                    {follows.map((a) => (
+                      <button key={a} type="button" className="mochi-act follow" disabled={!interactive} onClick={() => care(ACT_DEFS[a].care, a)}>
+                        <CareIcon care={ACT_DEFS[a].care} />
+                        <span className="mochi-act-name">{t(`game.mochi.act.${a}`)}</span>
+                        {want === ACT_DEFS[a].care && <span className="mochi-care-mark">{t("game.mochi.want.mark")}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="mochi-cares">
                 {CARES.map((k) => (
                   <button
                     key={k}
                     type="button"
-                    className={`mochi-care care-${k} ${want === k ? "wanted" : ""}`}
+                    className={`mochi-care care-${k} ${want === k ? "wanted" : ""} ${open === k ? "open" : ""}`}
                     disabled={!interactive}
-                    onClick={() => care(k)}
+                    aria-expanded={stage === "egg" ? undefined : open === k}
+                    onClick={() => pickCare(k)}
                   >
                     <CareIcon care={k} />
                     <span className="mochi-care-name">{t(`game.mochi.care.${k}`)}</span>
@@ -209,14 +276,183 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
                   </button>
                 ))}
               </div>
+              {open && (
+                <ActSheet
+                  t={t}
+                  s={s}
+                  c={c}
+                  care={open}
+                  options={options}
+                  disabled={!interactive}
+                  onPick={(a) => care(open, a)}
+                  onClose={() => setOpen(null)}
+                />
+              )}
             </section>
           )}
         </>
       )}
 
+      {stage !== "egg" && <Likes t={t} s={s} />}
+
       <Two t={t} s={s} names={names} you={you} color={color} clock={clock} />
       <Treasures t={t} s={s} open={finished} />
     </div>
+  );
+}
+
+/** 具合への効き方を、↑↓ の小さな札で */
+function Effects({ t, act }: { t: T; act: Act }) {
+  const e = ACT_DEFS[act].effect as Partial<Mochi.Needs>;
+  const chips = (["tummy", "joy", "sleepy"] as const)
+    .map((k) => ({ k, v: e[k] ?? 0 }))
+    .filter((x) => Math.abs(x.v) >= 3);
+  return (
+    <span className="mochi-effects">
+      {chips.map(({ k, v }) => (
+        <span key={k} className={`mochi-effect e-${k} ${v > 0 ? "up" : "down"}`}>
+          {t(`game.mochi.need.${k}`)}
+          <b aria-hidden>{(v > 0 ? "↑" : "↓").repeat(Math.abs(v) >= 30 ? 2 : 1)}</b>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * お世話を押したあとの、やることを選ぶ画面。今選べるものと、こどもになったら選べるもの（押せない）。
+ * たからもので増えるものがまだあれば、そのことを一言。好き・苦手が分かったものには印
+ */
+function ActSheet({
+  t,
+  s,
+  c,
+  care,
+  options,
+  disabled,
+  onPick,
+  onClose,
+}: {
+  t: T;
+  s: State;
+  c: Mochi.Condition;
+  care: Care;
+  options: Act[];
+  disabled: boolean;
+  onPick(act: Act): void;
+  onClose(): void;
+}) {
+  const known = new Set(s.known ?? []);
+  const mine = ACTS.filter((a) => ACT_DEFS[a].care === care);
+  const shown = mine.filter((a) => options.includes(a) || ACT_DEFS[a].unlock === "child");
+  const moreByItems = mine.some((a) => {
+    const u = ACT_DEFS[a].unlock as Mochi.ActDef["unlock"];
+    return typeof u === "object" && "item" in u && !options.includes(a);
+  });
+  return (
+    <div className={`mochi-sheet care-${care}`} role="group" aria-label={t(`game.mochi.ask.${care}`)}>
+      <div className="mochi-sheet-head">
+        <CareIcon care={care} />
+        <span>{t(`game.mochi.ask.${care}`)}</span>
+        <button type="button" className="mochi-sheet-close" aria-label={t("game.mochi.close")} onClick={onClose}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div className="mochi-acts">
+        {shown.map((a) => {
+          const locked = !options.includes(a);
+          const feeling = known.has(a) ? feelingOf(s.seed, a) : null;
+          return (
+            <button
+              key={a}
+              type="button"
+              className={`mochi-act ${locked ? "locked" : ""} ${isFollowUp(a) ? "follow" : ""} ${feeling ?? ""}`}
+              disabled={disabled || locked}
+              onClick={() => onPick(a)}
+            >
+              <ActIcon act={a} />
+              <span className="mochi-act-text">
+                <span className="mochi-act-name">
+                  {t(`game.mochi.act.${a}`)}
+                  {feeling === "like" && <HeartMark label={t("game.mochi.likes.like")} />}
+                  {feeling === "dislike" && <span className="mochi-act-tag">{t("game.mochi.likes.dislike")}</span>}
+                </span>
+                {locked ? (
+                  <span className="mochi-act-lock">{t("game.mochi.lock.child")}</span>
+                ) : ACT_DEFS[a].care === "walk" ? (
+                  <Finds t={t} s={s} act={a} />
+                ) : (
+                  <Effects t={t} act={a} />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {moreByItems && <p className="mochi-sheet-note muted">{t("game.mochi.lock.items")}</p>}
+    </div>
+  );
+}
+
+/** おでかけの行き先で見つかるもの。持っているものは絵、まだのものは「？」 */
+function Finds({ t, s, act }: { t: T; s: State; act: Act }) {
+  const place = (ACT_DEFS[act] as Mochi.ActDef).place!;
+  const have = new Set(s.treasures.map((x) => x.item));
+  return (
+    <span className="mochi-finds">
+      {Mochi.PLACE_ITEMS[place].map((item) =>
+        have.has(item) ? (
+          <ItemSvg key={item} item={item} className="mochi-find" />
+        ) : (
+          <span key={item} className="mochi-find unknown" aria-label={t("game.mochi.notYet")}>
+            ?
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
+
+function HeartMark({ label }: { label: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="mochi-heart" role="img" aria-label={label}>
+      <path d="M12 20C6 15.6 3.6 12.6 3.6 9.6a4 4 0 0 1 8.4-1.6 4 4 0 0 1 8.4 1.6c0 3-2.4 6-8.4 10.4z" />
+    </svg>
+  );
+}
+
+/** このもちの好み（好きなこと 3 つと苦手なこと 1 つ）。分かったものだけ名前を出し、ほかは「？」 */
+function Likes({ t, s }: { t: T; s: State }) {
+  const { likes, dislike } = likesOf(s.seed);
+  const known = new Set(s.known ?? []);
+  const slot = (a: Act) =>
+    known.has(a) ? (
+      <span key={a} className="mochi-like-chip on">
+        {t(`game.mochi.act.${a}`)}
+      </span>
+    ) : (
+      <span key={a} className="mochi-like-chip">
+        ？
+      </span>
+    );
+  return (
+    <section className="mochi-likes">
+      <h3>{t("game.mochi.likes.title")}</h3>
+      <div className="mochi-like-row">
+        <span className="mochi-like-label like">
+          <HeartMark label="" />
+          {t("game.mochi.likes.like")}
+        </span>
+        {likes.map(slot)}
+      </div>
+      <div className="mochi-like-row">
+        <span className="mochi-like-label">{t("game.mochi.likes.dislike")}</span>
+        {slot(dislike)}
+      </div>
+      {known.size < likes.length + 1 && <p className="muted mochi-like-hint">{t("game.mochi.likes.hint")}</p>}
+    </section>
   );
 }
 
@@ -362,8 +598,15 @@ function Notes({
   if (finished) return null;
   const lines: { text: string; className: string; item?: Mochi.Item }[] = [];
   if (reaction) {
-    const text = reaction.egg ? t(`game.mochi.eggReact.${reaction.care}`) : t(`game.mochi.react.${reaction.care}`);
+    const text = reaction.egg
+      ? t(`game.mochi.eggReact.${reaction.care}`)
+      : reaction.act
+        ? t(`game.mochi.actReact.${reaction.act}`)
+        : t(`game.mochi.react.${reaction.care}`);
     lines.push({ text: reaction.matched ? `${t("game.mochi.react.matched")} ${text}` : text, className: "react" });
+    if (reaction.feel && reaction.act) {
+      lines.push({ text: t(`game.mochi.feel.${reaction.feel}`, { act: t(`game.mochi.act.${reaction.act}`) }), className: `feel ${reaction.feel}` });
+    }
     if (committed) lines.push({ text: happeningText(t, committed), className: "hap", item: committed.kind === "found" ? committed.item : undefined });
     if (newTreasure) lines.push({ text: t("game.mochi.newTreasure"), className: "new" });
   } else if (happening) {
@@ -466,7 +709,7 @@ function Two({
                   <>
                     <CareIcon care={last.care} />
                     <span>
-                      {t(`game.mochi.care.${last.care}`)}・{agoText(t, clock - last.at)}
+                      {actName(t, last.care, last.act)}・{agoText(t, clock - last.at)}
                     </span>
                   </>
                 ) : (
@@ -537,6 +780,7 @@ function Final({ s }: { s: State }) {
       <p className="mochi-final-lead">{t("game.mochi.final.lead")}</p>
       <h2 className="mochi-final-name">{t(`game.mochi.form.${form}`)}</h2>
       <p className="mochi-final-desc">{t(`game.mochi.formDesc.${form}`)}</p>
+      {s.accessory && <p className="mochi-final-desc accessory">{t(`game.mochi.accessoryDesc.${s.accessory}`)}</p>}
       <dl className="mochi-stats">
         <div>
           <dt>{t("game.mochi.final.days")}</dt>

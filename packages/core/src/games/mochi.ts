@@ -68,6 +68,172 @@ export const EFFECTS: Record<Care, Partial<Needs>> = {
   walk: { joy: 30, tummy: -8, sleepy: 10 },
 };
 
+// ---------- やること（お世話の中の選択肢） ----------
+
+/**
+ * お世話ごとの「やること」。お世話を選ぶと、その中から 1 つ選ぶ（おでかけなら行き先、あそぶなら何をして遊ぶか）。
+ * - base：はじめから選べる。child：こどもになったら選べる
+ * - item：そのたからものを持っていたら選べる（拾ったものを使う）
+ * - after：直前のお世話（だれのものでも）が after のどれかで、FOLLOW_HOURS 時間たっていなければ選べる「つづき」
+ *   （おでかけのあとに足をふく など）。woke なら、前のお世話のあと眠って起きたときだけ
+ * 効き方（effect）はお世話のものの代わりに使う。wake なら、なでる仲間でも眠っているのを起こす。
+ * 卵のあいだは選ばず、お世話ごとの最初のやること（DEFAULT_ACT）にする。やることのない手（LINE のボタン・前からの対局）も同じ
+ */
+export const PLACES = ["park", "market", "sea", "festival"] as const;
+export type Place = (typeof PLACES)[number];
+
+export interface ActDef {
+  care: Care;
+  unlock: "base" | "child" | { item: Item } | { after: readonly Care[]; woke?: boolean };
+  effect: Partial<Needs>;
+  wake?: boolean;
+  /** おでかけの行き先 */
+  place?: Place;
+}
+
+export const ACT_DEFS = {
+  // ごはん
+  onigiri: { care: "feed", unlock: "base", effect: { tummy: 55, joy: 5 } },
+  soup: { care: "feed", unlock: "base", effect: { tummy: 45, joy: 5, sleepy: 8 } },
+  fruit: { care: "feed", unlock: "base", effect: { tummy: 35, joy: 15 } },
+  mango: { care: "feed", unlock: { item: "mango" }, effect: { tummy: 40, joy: 20 } },
+  tapioca: { care: "feed", unlock: { item: "tapioca" }, effect: { tummy: 35, joy: 22 } },
+  coconut: { care: "feed", unlock: { item: "coconut" }, effect: { tummy: 30, joy: 12, sleepy: -10 } },
+  // あそぶ
+  ball: { care: "play", unlock: "base", effect: { joy: 35, tummy: -8, sleepy: 10 } },
+  hide: { care: "play", unlock: "base", effect: { joy: 38, tummy: -10, sleepy: 14 } },
+  draw: { care: "play", unlock: "child", effect: { joy: 28, tummy: -4, sleepy: 4 } },
+  dance: { care: "play", unlock: "child", effect: { joy: 40, tummy: -12, sleepy: 14 } },
+  marble: { care: "play", unlock: { item: "marble" }, effect: { joy: 32, tummy: -6, sleepy: 6 } },
+  origami: { care: "play", unlock: { item: "crane" }, effect: { joy: 30, tummy: -4, sleepy: 4 } },
+  // なでる
+  head: { care: "pet", unlock: "base", effect: { joy: 22 } },
+  hug: { care: "pet", unlock: "base", effect: { joy: 24, sleepy: 6 } },
+  tickle: { care: "pet", unlock: "child", effect: { joy: 26, sleepy: -6 }, wake: true },
+  jasmine: { care: "pet", unlock: { item: "jasmine" }, effect: { joy: 22, sleepy: 8 } },
+  brush: { care: "pet", unlock: { after: ["feed"] }, effect: { joy: 18 } },
+  bath: { care: "pet", unlock: { after: ["play", "walk"] }, effect: { joy: 24, sleepy: 8 } },
+  wipe: { care: "pet", unlock: { after: ["walk"] }, effect: { joy: 20 } },
+  // おしゃべり
+  today: { care: "talk", unlock: "base", effect: { joy: 28, sleepy: -5 } },
+  song: { care: "talk", unlock: "base", effect: { joy: 26, sleepy: -2 } },
+  book: { care: "talk", unlock: "child", effect: { joy: 24, sleepy: 6 } },
+  riddle: { care: "talk", unlock: "child", effect: { joy: 30, sleepy: -8 } },
+  souvenir: { care: "talk", unlock: { after: ["walk"] }, effect: { joy: 32, sleepy: -4 } },
+  dreamtalk: { care: "talk", unlock: { after: CARES, woke: true }, effect: { joy: 30, sleepy: -5 } },
+  // ねかしつける
+  lullaby: { care: "sleep", unlock: "base", effect: { sleepy: -10 } },
+  blanket: { care: "sleep", unlock: "base", effect: { sleepy: -10, joy: 3 } },
+  furin: { care: "sleep", unlock: { item: "furin" }, effect: { sleepy: -14, joy: 5 } },
+  charm: { care: "sleep", unlock: { item: "elephant" }, effect: { sleepy: -12, joy: 6 } },
+  // おでかけ（行き先で、拾ってくるものが変わる）
+  park: { care: "walk", unlock: "base", effect: { joy: 30, tummy: -8, sleepy: 10 }, place: "park" },
+  market: { care: "walk", unlock: "base", effect: { joy: 30, tummy: -4, sleepy: 8 }, place: "market" },
+  sea: { care: "walk", unlock: "child", effect: { joy: 34, tummy: -10, sleepy: 14 }, place: "sea" },
+  festival: { care: "walk", unlock: "child", effect: { joy: 36, tummy: -8, sleepy: 12 }, place: "festival" },
+} as const satisfies Record<string, ActDef>;
+export type Act = keyof typeof ACT_DEFS;
+export const ACTS = Object.keys(ACT_DEFS) as Act[];
+const defOf = (act: Act): ActDef => ACT_DEFS[act];
+
+/** やることを選ばなかったときの、お世話ごとのやること */
+export const DEFAULT_ACT: Record<Care, Act> = { feed: "onigiri", play: "ball", pet: "head", talk: "today", sleep: "lullaby", walk: "park" };
+
+/**
+ * 前のお世話からこの時間のあいだだけ「つづき」を選べる（相手が次に開いたときにも残っているように半日ほど。
+ * お試しは 1 回ごとに 12 時間すすむので、それより少し長く）
+ */
+export const FOLLOW_HOURS = 14;
+
+/** おでかけの行き先ごとに、見つけてくるもの */
+export const PLACE_ITEMS: Record<Place, readonly Item[]> = {
+  park: ["acorn", "momiji", "clover", "sakura"],
+  market: ["mango", "tapioca", "jasmine", "elephant"],
+  sea: ["shell", "coconut", "plumeria", "krathong"],
+  festival: ["bell", "furin", "crane", "marble"],
+};
+
+/** 「つづき」か（直前のお世話のあとだけ選べるもの） */
+export const isFollowUp = (act: Act) => {
+  const u = defOf(act).unlock;
+  return typeof u === "object" && "after" in u;
+};
+
+/**
+ * そのとき選べるやること（ACTS の順）。卵のあいだと、おとなになったあとは空。
+ * c は now のようす（conditionAt）
+ */
+export function actsAt(s: MochiState, c: Condition, care?: Care): Act[] {
+  if (c.stage === "egg" || s.form !== null) return [];
+  const have = new Set(s.treasures.map((t) => t.item));
+  const grown = c.stage !== "baby";
+  const recent = s.last !== null && c.at - s.last.at <= FOLLOW_HOURS * HOUR;
+  return ACTS.filter((act) => {
+    const d = defOf(act);
+    if (care && d.care !== care) return false;
+    const u = d.unlock;
+    if (u === "base") return true;
+    if (u === "child") return grown;
+    if ("item" in u) return have.has(u.item);
+    if (u.woke) return c.slept && !c.asleep;
+    return recent && u.after.includes(s.last!.care);
+  });
+}
+
+// ---------- このもちの好み ----------
+
+/** 好きになったり苦手になったりするやること（はじめから・こどもになってから選べるもの） */
+const LIKE_POOL = ACTS.filter((a) => defOf(a).unlock === "base" || defOf(a).unlock === "child");
+/** 好きなやることをすると、きげんがこれだけよけいによくなる。苦手なやることは、きげんの効きが半分 */
+export const LIKE_JOY = 12;
+
+/**
+ * このもちの好み。好きなやることが 3 つ（ちがうお世話から）、苦手なやることが 1 つ（好きなものとはちがうお世話から）。
+ * 種で決まり、ずっと変わらない。遊んでいるうちに分かっていく（known）
+ */
+export function likesOf(seed: number): { likes: Act[]; dislike: Act } {
+  const order = LIKE_POOL.map((a, i) => ({ a, r: hash(seed, i, 11) })).sort((x, y) => x.r - y.r).map((x) => x.a);
+  const likes: Act[] = [];
+  for (const a of order) if (likes.length < 3 && !likes.some((l) => defOf(l).care === defOf(a).care)) likes.push(a);
+  const dislike = order.find((a) => !likes.some((l) => defOf(l).care === defOf(a).care))!;
+  return { likes, dislike };
+}
+
+/** 好きか苦手か（どちらでもなければ null） */
+export function feelingOf(seed: number, act: Act): "like" | "dislike" | null {
+  const { likes, dislike } = likesOf(seed);
+  return likes.includes(act) ? "like" : act === dislike ? "dislike" : null;
+}
+
+// ---------- おとなの小物 ----------
+
+/** おとなになったとき、いちばんよくしたやることで身に着ける小物 */
+export const ACCESSORIES = ["strawHat", "garland", "leafPin", "uchiwa", "paint", "ribbon", "glasses", "towel", "nightcap"] as const;
+export type Accessory = (typeof ACCESSORIES)[number];
+export const ACCESSORY_OF: Partial<Record<Act, Accessory>> = {
+  sea: "strawHat",
+  market: "garland",
+  park: "leafPin",
+  festival: "uchiwa",
+  draw: "paint",
+  dance: "ribbon",
+  book: "glasses",
+  bath: "towel",
+  blanket: "nightcap",
+};
+/** 小物を身に着けるのに要る回数 */
+export const ACCESSORY_MIN = 3;
+
+/** 小物：ACCESSORY_OF にあるやることのうち、いちばん多くしたもの（同じなら ACTS の順で先）。ACCESSORY_MIN 回に届かなければ null */
+export function accessoryOf(acts: Partial<Record<Act, number>>): Accessory | null {
+  let best: Act | null = null;
+  for (const act of ACTS) {
+    if (!ACCESSORY_OF[act]) continue;
+    if ((acts[act] ?? 0) > (best ? (acts[best] ?? 0) : 0)) best = act;
+  }
+  return best && (acts[best] ?? 0) >= ACCESSORY_MIN ? ACCESSORY_OF[best]! : null;
+}
+
 // ---------- できごと ----------
 
 /** 前のお世話からこの時間たつと、できごとが 1 つ起きる */
@@ -106,7 +272,7 @@ export type Happening =
   | { kind: "egg"; topic: (typeof EGG_MOMENTS)[number] }
   | { kind: "hatched" }
   | { kind: "grew" }
-  | { kind: "found"; item: Item; walk: boolean }
+  | { kind: "found"; item: Item; walk: boolean; place?: Place }
   | { kind: "dream"; topic: (typeof DREAMS)[number] }
   | { kind: "moment"; topic: (typeof MOMENTS)[number] };
 
@@ -163,12 +329,16 @@ const SOFT_HSL = [
 
 export interface MochiMove {
   care: Care;
+  /** お世話の中のやること。なければ DEFAULT_ACT（卵のあいだは選ばない） */
+  act?: Act;
   /** サーバが受け取った時刻（stampMove が書き込む）。なければ前のお世話と同じ時刻 */
   at?: number;
 }
 
 export interface LastCare {
   care: Care;
+  /** やること。やることができる前の対局にはない */
+  act?: Act;
   seat: Seat;
   at: number;
   /** そのときほしがっていたもの */
@@ -180,6 +350,7 @@ export interface LastCare {
 /** 席ごとの、さいごにしたお世話 */
 export interface SeatCare {
   care: Care;
+  act?: Act;
   at: number;
 }
 
@@ -214,6 +385,12 @@ export interface MochiState {
   /** おとなになった時刻と姿。なるまでは null */
   adultAt: number | null;
   form: Form | null;
+  /** やることごとの回数（卵のあいだは数えない）。やることができる前の対局にはない */
+  acts?: Partial<Record<Act, number>>;
+  /** 分かった好み（好き・苦手なやること。分かった順） */
+  known?: Act[];
+  /** おとなになったときに身に着けた小物 */
+  accessory?: Accessory | null;
 }
 
 const DIARY_MAX = 60;
@@ -388,8 +565,12 @@ export function happeningOf(s: MochiState, now: number, c: Condition = condition
   const walk = s.last?.care === "walk";
   if (walk || hash(s.seed, k, 2) < FIND_CHANCE) {
     const have = new Set(s.treasures.map((t) => t.item));
-    const fresh = ITEMS.filter((i) => !have.has(i));
-    return { kind: "found", item: pick(fresh.length > 0 ? fresh : ITEMS, hash(s.seed, k, 3)), walk };
+    // おでかけのあとは、行き先で見つかるもののうち、まだ持っていないもの（全部持っていれば、ほかのまだ持っていないもの）
+    const place = walk && s.last?.act ? defOf(s.last.act).place : undefined;
+    const near = place ? PLACE_ITEMS[place].filter((i) => !have.has(i)) : [];
+    const fresh = near.length > 0 ? near : ITEMS.filter((i) => !have.has(i));
+    const item = pick(fresh.length > 0 ? fresh : ITEMS, hash(s.seed, k, 3));
+    return place ? { kind: "found", item, walk, place } : { kind: "found", item, walk };
   }
   if (c.slept) return { kind: "dream", topic: pick(DREAMS, hash(s.seed, k, 4)) };
   return { kind: "moment", topic: pick(MOMENTS, hash(s.seed, k, 5)) };
@@ -439,17 +620,24 @@ export function bodyColor(bySeat: readonly [number, number]): string {
   return hslHex(h0 + (h1 + 360 - h0) * share, s0 + (s1 - s0) * share - 0.27 * mid, l0 + (l1 - l0) * share + 0.03 * mid);
 }
 
-/** お世話を 1 つした直後の具合。卵のあいだは変わらない */
-function afterCare(c: Condition, care: Care): { needs: Needs; asleep: boolean } {
+/**
+ * お世話を 1 つした直後の具合。卵のあいだは変わらない。act があれば、その効き方を使う。
+ * 好きなやることはきげんがよけいによくなり、苦手なやることはきげんの効きが半分
+ */
+function afterCare(c: Condition, care: Care, act?: Act, feeling: "like" | "dislike" | null = null): { needs: Needs; asleep: boolean } {
   if (c.stage === "egg") return { needs: c.needs, asleep: false };
-  const e = EFFECTS[care];
+  const def = act ? defOf(act) : null;
+  const e = def?.effect ?? EFFECTS[care];
+  let joy = e.joy ?? 0;
+  if (feeling === "like") joy += LIKE_JOY;
+  else if (feeling === "dislike") joy = Math.round(joy / 2);
   return {
     needs: {
       tummy: clamp(c.needs.tummy + (e.tummy ?? 0)),
-      joy: clamp(c.needs.joy + (e.joy ?? 0)),
+      joy: clamp(c.needs.joy + joy),
       sleepy: clamp(c.needs.sleepy + (e.sleepy ?? 0)),
     },
-    asleep: care === "sleep" ? true : care === "pet" ? c.asleep : false,
+    asleep: care === "sleep" ? true : care === "pet" && !def?.wake ? c.asleep : false,
   };
 }
 
@@ -524,6 +712,7 @@ export function nextAlarm(s: MochiState): Alarm | null {
 }
 
 const isCare = (v: unknown): v is Care => typeof v === "string" && (CARES as readonly string[]).includes(v);
+const isAct = (v: unknown): v is Act => typeof v === "string" && Object.hasOwn(ACT_DEFS, v);
 
 export const mochi: GameDefinition<MochiState, MochiMove> = {
   id: "mochi",
@@ -559,23 +748,33 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
     if (state.form !== null) throw new IllegalMoveError("game_over");
     // 順番はないので、手番は見ない（同じ人が続けてもよい）
     if (!isCare(move.care)) throw new IllegalMoveError("mochi_no_such_care");
+    if (move.act !== undefined && (!isAct(move.act) || defOf(move.act).care !== move.care)) throw new IllegalMoveError("mochi_no_such_act");
 
     // 時刻は前のお世話より戻さない。時刻のない手は前のお世話と同じ時刻
     const stamped = typeof move.at === "number" && Number.isFinite(move.at) ? move.at : (state.at ?? 0);
     const t = state.at === null ? stamped : Math.max(stamped, state.at);
     const c = conditionAt(state, t);
+    // 卵のあいだはやることを選ばない。選べないやることは受け付けない
+    let act: Act | undefined;
+    if (c.stage !== "egg") {
+      act = move.act ?? DEFAULT_ACT[move.care];
+      if (move.act !== undefined && !actsAt(state, c, move.care).includes(act)) throw new IllegalMoveError("mochi_act_locked");
+    }
     const happening = happeningOf(state, t, c);
     const want = wantOf(state, c);
     const matched = want === move.care;
     const since = state.at === null ? Infinity : (t - state.at) / HOUR;
     const growth = c.growth + (matched ? CARE_MATCH : CARE_BASE) * Math.min(1, since / BONUS_HOURS);
-    const { needs, asleep } = afterCare(c, move.care);
+    const feeling = act ? feelingOf(state.seed, act) : null;
+    const { needs, asleep } = afterCare(c, move.care, act, feeling);
 
     const cares = { ...state.cares, [move.care]: state.cares[move.care] + 1 };
+    const acts = act ? { ...state.acts, [act]: (state.acts?.[act] ?? 0) + 1 } : state.acts;
+    const known = act && feeling && !(state.known ?? []).includes(act) ? [...(state.known ?? []), act] : state.known;
     const bySeat: [number, number] = [...state.bySeat];
     bySeat[seat]++;
     const lastOf: [SeatCare | null, SeatCare | null] = [lastCareOf(state, 0), lastCareOf(state, 1)];
-    lastOf[seat] = { care: move.care, at: t };
+    lastOf[seat] = act ? { care: move.care, act, at: t } : { care: move.care, at: t };
     const grown = growth >= ADULT;
     return {
       ...state,
@@ -587,23 +786,28 @@ export const mochi: GameDefinition<MochiState, MochiMove> = {
       cares,
       bySeat,
       turn: other(seat),
-      last: { care: move.care, seat, at: t, want, matched },
+      last: act ? { care: move.care, act, seat, at: t, want, matched } : { care: move.care, seat, at: t, want, matched },
       lastOf,
+      ...(acts ? { acts } : {}),
+      ...(known ? { known } : {}),
       treasures: happening?.kind === "found" ? [...state.treasures, { item: happening.item, at: t }] : state.treasures,
       diary: happening ? [...state.diary, { at: t, seat, happening }].slice(-DIARY_MAX) : state.diary,
       adultAt: grown ? t : null,
       form: grown ? formOf(cares) : null,
+      ...(grown ? { accessory: accessoryOf(acts ?? {}) } : {}),
     };
   },
 
   parseMove(raw) {
     // 時刻は送られてきても使わない（サーバが stampMove で書き込む）
-    const care = (raw as { care?: unknown } | null)?.care;
-    return isCare(care) ? { care } : null;
+    const { care, act } = (raw ?? {}) as { care?: unknown; act?: unknown };
+    if (!isCare(care)) return null;
+    if (act === undefined) return { care };
+    return isAct(act) && defOf(act).care === care ? { care, act } : null;
   },
 
   stampMove(move, now) {
-    return { care: move.care, at: now };
+    return move.act ? { care: move.care, act: move.act, at: now } : { care: move.care, at: now };
   },
 
   nextAlarm,
