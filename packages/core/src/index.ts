@@ -36,6 +36,7 @@ import { tilt } from "./games/tilt.ts";
 import { freehand } from "./games/freehand.ts";
 import { mochi } from "./games/mochi.ts";
 import { photo } from "./games/photo.ts";
+import { raid } from "./games/raid.ts";
 
 export * from "./types.ts";
 export * from "./api.ts";
@@ -79,6 +80,7 @@ export * as Tilt from "./games/tilt.ts";
 export * as Freehand from "./games/freehand.ts";
 export * as Mochi from "./games/mochi.ts";
 export * as Photo from "./games/photo.ts";
+export * as Raid from "./games/raid.ts";
 
 /** 遊べるゲームの一覧。ゲームを追加したらここに登録する（トップ画面の並びは apps/web の boards で決まる） */
 export const games: Record<string, GameDefinition<any, any>> = {
@@ -120,6 +122,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [ishin.id]: ishin,
   [mochi.id]: mochi,
   [photo.id]: photo,
+  [raid.id]: raid,
 };
 
 export function getGame(id: string): GameDefinition<any, any> | undefined {

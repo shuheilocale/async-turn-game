@@ -38,6 +38,7 @@ import { TiltBoard } from "./TiltBoard.tsx";
 import { FreehandBoard } from "./FreehandBoard.tsx";
 import { MochiBoard } from "./MochiBoard.tsx";
 import { PhotoBoard, photoMovedText } from "./PhotoBoard.tsx";
+import { RaidBoard, raidMovedText } from "./RaidBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -145,4 +146,5 @@ export const boards: Record<string, BoardUI> = {
     movedText: (t, move, name) => t(`game.mochi.did.${(move as { care: string }).care}`, { who: t("game.mochi.who", { name }) }),
   },
   photo: { Board: PhotoBoard, length: "long", hidden: true, coop: true, movedText: photoMovedText },
+  raid: { Board: RaidBoard, length: "long", hidden: true, coop: true, movedText: raidMovedText },
 };
