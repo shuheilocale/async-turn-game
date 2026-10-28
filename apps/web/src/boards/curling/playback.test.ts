@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Curling } from "@atg/core";
-import { simulateThrow } from "./physics.ts";
+import { simulateThrow, startThrow } from "./physics.ts";
 import { powerOfReach, speedOf } from "./params.ts";
-import { cameraAt, lastFrame, nearOf, stonesAt, withSim, type Anim } from "./playback.ts";
+import { cameraAt, lastFrame, nearOf, stonesAt, sweepAt, withSim, type Anim } from "./playback.ts";
 
 const { TEE_Y } = Curling;
 
@@ -16,6 +16,7 @@ function animOf(before: Curling.CurlingStone[], reach: number, target: Curling.C
     aim: 0,
     speed: speedOf(powerOfReach(reach)),
     spin: 1,
+    sweeps: [],
     sim: null,
     target,
     start: 0,
@@ -68,5 +69,23 @@ describe("カーリングの再生", () => {
     // 上から見るときは、手前のガードまで入れる
     expect(cameraAt(anim, lastFrame(anim))).toEqual({ mode: "house", focus: { x: 0, y: 18.5 } });
     expect(nearOf([])).toBe(TEE_Y);
+  });
+
+  it("自分で投げて計算している途中は、計算したとおりに描き、こすっている間はブラシの位置を出す", () => {
+    const run = startThrow([], 0, 0, speedOf(powerOfReach(TEE_Y)), 1);
+    for (let f = 0; f < 90; f++) run.step(f % 6 === 0);
+    const anim: Anim = { ...animOf([], TEE_Y), sim: run.sim, live: true, target: null, houseFrom: Infinity };
+    const i = run.sim.frames.length - 1;
+    const [x, y] = run.sim.frames[i]![0]!;
+    expect(stonesAt(anim, i)).toEqual([{ id: 0, seat: 1, x, y, angle: expect.any(Number), opacity: 1 }]);
+    // まだハウスに近くないので、石を追う
+    expect(cameraAt(anim, i).mode).toBe("follow");
+    const brush = sweepAt(anim, i)!;
+    expect(brush.level).toBeGreaterThan(0.5);
+    expect(brush.y).toBe(y);
+    expect(Math.abs(brush.heading)).toBeLessThan(0.1);
+    // こすらなくなれば出さない
+    for (let f = 0; f < 60; f++) run.step(false);
+    expect(sweepAt(anim, run.sim.frames.length - 1)).toBeNull();
   });
 });

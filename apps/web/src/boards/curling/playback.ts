@@ -34,8 +34,15 @@ export interface Anim {
   aim: number;
   speed: number;
   spin: Curling.Spin;
+  /** ブラシでこすったコマの番号 */
+  sweeps: number[];
   /** 物理演算の結果。読み込み・計算が済むまでは null */
   sim: Simulation | null;
+  /**
+   * 自分で投げて、連打を受けながら計算している途中（sim のコマは時間とともに伸び、止まった位置はまだわからない）。
+   * 止まったら withSim で、ふつうの再生に切り替える
+   */
+  live?: boolean;
   /** 最後にそろえる位置（保存された位置。自分で投げたときは計算した位置） */
   target: Curling.CurlingStone[] | null;
   /** 1 コマ目を出す時刻（performance.now()） */
@@ -72,7 +79,7 @@ function seatsOf(anim: Pick<Anim, "before" | "id" | "seat">): Map<number, Seat> 
  * ハウスを上から見るのに切り替えるコマ。投げた石がハウスの手前まで来たとき・遅くなってきたとき・
  * 外に出たとき（強く投げたときは、当たる前に切り替えて当たるところを上から見せる）
  */
-export function houseFromOf(sim: Simulation): number {
+export function houseFromOf(sim: Simulation, live = false): number {
   const k = sim.ids.length - 1;
   for (let i = 1; i < sim.frames.length; i++) {
     const [x, y] = sim.frames[i]![k]!;
@@ -80,14 +87,23 @@ export function houseFromOf(sim: Simulation): number {
     const speed = Math.hypot(x - px, y - py) / STEP;
     if (y > TEE_Y - 5.2 || (y > HOG_Y - 3 && speed < 3.4) || (sim.outAt[k] !== null && i >= sim.outAt[k]!)) return i;
   }
-  return sim.frames.length - 1;
+  // 計算の途中なら、まだ切り替えない
+  return live ? Infinity : sim.frames.length - 1;
 }
 
 /** 物理演算の結果を入れた Anim にする */
 export function withSim(anim: Anim, sim: Simulation, now: number): Anim {
   const seats = seatsOf(anim);
   const target = anim.target ?? sim.stones.map(([id, x, y, angle]) => ({ id, seat: seats.get(id)!, x, y, angle }));
-  return { ...anim, sim, target, start: Math.max(anim.start, now), houseFrom: houseFromOf(sim), near: nearOf(target) };
+  return {
+    ...anim,
+    sim,
+    live: false,
+    target,
+    start: Math.max(anim.start, now),
+    houseFrom: houseFromOf(sim),
+    near: nearOf(target),
+  };
 }
 
 export const lastFrame = (anim: Anim) => (anim.sim ? anim.sim.frames.length - 1 : 0);
@@ -108,6 +124,15 @@ export function stonesAt(anim: Anim, i: number): Shown[] {
   }
   const last = sim.frames.length - 1;
   const f = Math.max(0, Math.min(last, i));
+  if (anim.live) {
+    // 計算の途中：止まる位置はまだわからないので、計算したとおりに描く（外に出た石だけ消していく）
+    return sim.ids.map((id, k) => {
+      const [x, y, angle] = sim.frames[f]![k]!;
+      const out = sim.outAt[k];
+      const opacity = out !== null && out !== undefined ? 1 - (f - out) / FADE_FRAMES : 1;
+      return { id, seat: seats.get(id)!, x, y, angle, opacity: clamp01(opacity) };
+    });
+  }
   const end = sim.frames[last]!;
   const goal = new Map((anim.target ?? []).map((s) => [s.id, s]));
   const w = smooth(last > 0 ? f / last : 1);
@@ -129,7 +154,31 @@ export function stonesAt(anim: Anim, i: number): Shown[] {
 export function cameraAt(anim: Anim, i: number): Camera {
   const sim = anim.sim;
   if (!sim || i <= 0) return { mode: "aim" };
-  if (i >= anim.houseFrom) return { mode: "house", focus: { x: 0, y: anim.near } };
+  // 計算の途中は、止まったあとに残る石がまだわからないので、いま止まっている石で手前を決める
+  const houseFrom = anim.live ? houseFromOf(sim, true) : anim.houseFrom;
+  if (i >= houseFrom) return { mode: "house", focus: { x: 0, y: anim.live ? nearOf(anim.before) : anim.near } };
   const [x, y] = sim.frames[Math.min(i, sim.frames.length - 1)]![sim.ids.length - 1]!;
   return { mode: "follow", focus: { x, y } };
+}
+
+/** こすっているブラシ（scene3d.ts の SweepView と同じ形）。投げた石の位置・進む向きと、こすりの強さ（0〜1） */
+export interface Sweep {
+  x: number;
+  y: number;
+  /** 進む向き（ラジアン。0 が奥、正なら右） */
+  heading: number;
+  level: number;
+}
+
+/** i コマ目にこすっているブラシ。こすっていなければ null */
+export function sweepAt(anim: Anim, i: number): Sweep | null {
+  const sim = anim.sim;
+  if (!sim) return null;
+  const f = Math.max(1, Math.min(sim.frames.length - 1, i));
+  const level = sim.sweep[f] ?? 0;
+  if (level < 0.02) return null;
+  const k = sim.ids.length - 1;
+  const [x, y] = sim.frames[f]![k]!;
+  const [px, py] = sim.frames[f - 1]![k]!;
+  return { x, y, heading: Math.atan2(x - px, y - py), level };
 }

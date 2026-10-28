@@ -5,7 +5,12 @@ import { DECEL, releaseAngle, STEP } from "./params.ts";
 /**
  * カーリングの物理演算（planck = Box2D の移植）。上から見た平面で、重力はなし。
  * 盤から dynamic import で読み込むので、ほかの画面の読み込みは重くならない。
- * 同じ入力からは同じ結果になる（端末によって三角関数などがわずかにずれることはある）
+ * 同じ入力からは同じ結果になる（端末によって三角関数などがわずかにずれることはある）。
+ *
+ * ブラシでこする：すべっている間に画面を連打すると、投げた石の前の氷をこする。こすっている間は石が遅くなりにくく、
+ * 曲がりにくい（本物と同じく、こするとよく伸びて、まっすぐ進む）。連打した 1 回ごとに「こすりの強さ」が上がり、
+ * すぐに下がっていくので、続けて連打している間だけ効く。連打したコマの番号を手に残し、相手の画面でも同じに計算する。
+ * 自分で投げたときは、連打を受けながら 1 コマずつ計算する（startThrow）
  */
 
 const { STONE_R, SHEET_W, BACK_Y } = Curling;
@@ -13,8 +18,6 @@ const { STONE_R, SHEET_W, BACK_Y } = Curling;
 /** [x, y, 向き（ラジアン、反時計回り）] */
 export type Pose = [x: number, y: number, angle: number];
 
-/** これだけ計算しても止まらなければ、そこで結果を決める */
-const MAX_TIME = 30;
 /** シートの外に出た石を、消えるまで動かして見せる時間（秒） */
 const FADE_TIME = 0.5;
 
@@ -38,6 +41,14 @@ export interface Tuning {
   bounceThreshold: number;
   /** 1 コマを何回に分けて計算するか */
   subSteps: number;
+  /** こすりの強さが 1 のとき、遅くなる割合をどれだけ減らすか（0.2 なら 2 割減らす） */
+  sweepDecel: number;
+  /** こすりの強さが 1 のとき、曲がる力をどれだけ減らすか */
+  sweepCurl: number;
+  /** 1 回の連打で上がる、こすりの強さ（最大 1） */
+  sweepTap: number;
+  /** こすりの強さが半分に下がるまでの時間（秒） */
+  sweepHalfLife: number;
 }
 
 /**
@@ -54,6 +65,11 @@ export const TUNING: Tuning = {
   friction: 0.08,
   bounceThreshold: 0.02,
   subSteps: 4,
+  // 1 秒に 6〜8 回くらい連打すると強さが 0.8〜0.9 くらいになる。ずっとこすり続けると 4〜5 m 伸びる
+  sweepDecel: 0.2,
+  sweepCurl: 0.55,
+  sweepTap: 0.5,
+  sweepHalfLife: 0.15,
 };
 
 export interface Simulation {
@@ -65,6 +81,22 @@ export interface Simulation {
   outAt: (number | null)[];
   /** 止まったあと、シートに残った石（0.1 mm 単位にそろえたもの。向きは -π〜π）。ホッグラインを越えなかった石も除く */
   stones: Curling.Placed[];
+  /** 1 コマごとの、こすりの強さ（0〜1）。sweep[コマ] */
+  sweep: number[];
+}
+
+/** 自分で投げた 1 投を、連打を受けながら 1 コマずつ計算する */
+export interface ThrowRun {
+  /** ここまでの計算。frames・outAt・sweep は step のたびに伸びる。stones は止まったあと（done）に入る */
+  sim: Simulation;
+  /** 連打したコマの番号（手に入れて送る） */
+  taps: number[];
+  /** 全部の石が止まった（か、計算の上限まで来た） */
+  done: boolean;
+  /** 1 コマ進める。tap はこのコマで連打したか。止まったあとは何もしない */
+  step(tap: boolean): void;
+  /** 投げた石がまだ動いていて、こすれるか */
+  canSweep(): boolean;
 }
 
 const round4 = (v: number) => Math.round(v * 1e4) / 1e4 || 0;
@@ -85,7 +117,8 @@ interface Ghost {
 
 /**
  * before の石が止まっているところへ、投げる場所（原点）から id 番の石を投げ、全部の石が止まるか
- * MAX_TIME 秒たつまで計算する。aim は向き（正なら右）、speed は速さ、spin は回転（1 = 右回り）
+ * MAX_FRAMES コマ計算するまで進める。aim は向き（正なら右）、speed は速さ、spin は回転（1 = 右回り）、
+ * taps はブラシでこすった（連打した）コマの番号
  */
 export function simulateThrow(
   before: readonly Curling.CurlingStone[],
@@ -93,26 +126,24 @@ export function simulateThrow(
   aim: number,
   speed: number,
   spin: Curling.Spin,
+  taps: readonly number[] = [],
   tuning: Tuning = TUNING,
 ): Simulation {
-  // ゆっくり当てても跳ねるよう、planck 全体の設定を計算の間だけ変える（いしつみの計算には影響させない）
-  const threshold = Settings.velocityThreshold;
-  Settings.velocityThreshold = tuning.bounceThreshold;
-  try {
-    return run(before, id, aim, speed, spin, tuning);
-  } finally {
-    Settings.velocityThreshold = threshold;
-  }
+  const run = startThrow(before, id, aim, speed, spin, tuning);
+  const tapped = new Set(taps);
+  while (!run.done) run.step(tapped.has(run.sim.frames.length));
+  return run.sim;
 }
 
-function run(
+/** 1 投の計算をはじめる。step で 1 コマずつ進める */
+export function startThrow(
   before: readonly Curling.CurlingStone[],
   id: number,
   aim: number,
   speed: number,
   spin: Curling.Spin,
-  tuning: Tuning,
-): Simulation {
+  tuning: Tuning = TUNING,
+): ThrowRun {
   const world = new World({ gravity: { x: 0, y: 0 }, allowSleep: false });
   const dt = STEP / tuning.subSteps;
 
@@ -131,28 +162,32 @@ function run(
   };
 
   const ids = [...before.map((s) => s.id), id];
+  const thrown = ids.length - 1;
   const bodies: (Body | null)[] = [
     ...before.map((s) => addStone(s.x, s.y, s.angle, false)),
     addStone(0, 0, releaseAngle(spin), true),
   ];
   // 回転で曲がるのは投げた石だけ（当てられた石はほとんど回らないので曲げない）
-  const curls = ids.map((_, k) => (k === ids.length - 1 ? spin : 0));
+  const curls = ids.map((_, k) => (k === thrown ? spin : 0));
   const ghosts: (Ghost | null)[] = ids.map(() => null);
   const outAt: (number | null)[] = ids.map(() => null);
+  /** こすりの強さが 1 コマで下がる割合 */
+  const cool = Math.pow(0.5, STEP / tuning.sweepHalfLife);
+  let heat = 0;
 
-  /** 氷の上をすべる：速さを一定の割合で落とし、回転の向きへ進む向きを少しずつ曲げる */
-  const slide = (body: Body, curl: number) => {
+  /** 氷の上をすべる：速さを一定の割合で落とし、回転の向きへ進む向きを少しずつ曲げる。swept はこすりの強さ */
+  const slide = (body: Body, curl: number, swept: number) => {
     const v = body.getLinearVelocity();
     const sp = Math.hypot(v.x, v.y);
     if (sp === 0) return;
-    const next = sp - tuning.decel * dt;
+    const next = sp - tuning.decel * (1 - tuning.sweepDecel * swept) * dt;
     if (next <= 0) {
       body.setLinearVelocity({ x: 0, y: 0 });
       body.setAngularVelocity(0);
       return;
     }
     // 右回りなら時計回りに曲げる（右へ寄る）
-    const turn = (-curl * tuning.curl * dt) / Math.max(sp, tuning.curlMinSpeed);
+    const turn = (-curl * tuning.curl * (1 - tuning.sweepCurl * swept) * dt) / Math.max(sp, tuning.curlMinSpeed);
     const c = Math.cos(turn);
     const s = Math.sin(turn);
     const k = next / sp;
@@ -183,42 +218,67 @@ function run(
       return [g.x, g.y, g.angle];
     });
 
-  const frames: Pose[][] = [poses()];
-  const maxFrames = Math.ceil(MAX_TIME / STEP);
-  for (let f = 1; f <= maxFrames; f++) {
-    for (let sub = 0; sub < tuning.subSteps; sub++) {
-      bodies.forEach((b, k) => b && slide(b, curls[k]!));
-      world.step(dt, 8, 3);
-    }
-    ghosts.forEach((g) => g && drift(g));
-    bodies.forEach((b, k) => {
-      if (!b) return;
-      const p = b.getPosition();
-      if (!leftSheet(p.x, p.y)) return;
-      // シートの外に出た石はすぐに取り除く（ほかの石に当たらないようにする）
-      const v = b.getLinearVelocity();
-      ghosts[k] = { x: p.x, y: p.y, vx: v.x, vy: v.y, angle: b.getAngle(), spin: b.getAngularVelocity() };
-      outAt[k] = f;
-      world.destroyBody(b);
-      bodies[k] = null;
-    });
-    frames.push(poses());
+  const isMoving = (b: Body | null) => {
+    if (!b) return false;
+    const v = b.getLinearVelocity();
+    return v.x !== 0 || v.y !== 0;
+  };
 
-    const moving = bodies.some((b) => {
-      if (!b) return false;
-      const v = b.getLinearVelocity();
-      return v.x !== 0 || v.y !== 0;
-    });
-    const fading = outAt.some((o) => o !== null && (f - o) * STEP < FADE_TIME);
-    if (!moving && !fading) break;
-  }
+  const sim: Simulation = { ids, frames: [poses()], outAt, stones: [], sweep: [0] };
+  const taps: number[] = [];
+  const run: ThrowRun = {
+    sim,
+    taps,
+    done: false,
+    canSweep: () => !run.done && isMoving(bodies[thrown]!),
+    step(tap) {
+      if (run.done) return;
+      const f = sim.frames.length;
+      // 動いている投げた石の前だけこする。止まった・外に出たあとの連打は数えない
+      if (tap && run.canSweep()) {
+        taps.push(f);
+        heat = Math.min(1, heat * cool + tuning.sweepTap);
+      } else heat *= cool;
+      const swept = bodies[thrown] ? heat : 0;
 
-  const last = frames[frames.length - 1]!;
-  const stones: Curling.Placed[] = [];
-  bodies.forEach((b, k) => {
-    if (!b) return;
-    const [x, y, angle] = last[k]!;
-    if (Curling.inPlay(round4(x), round4(y))) stones.push([ids[k]!, round4(x), round4(y), round4(wrap(angle))]);
-  });
-  return { ids, frames, outAt, stones };
+      // ゆっくり当てても跳ねるよう、planck 全体の設定を計算の間だけ変える（いしつみの計算には影響させない）
+      const threshold = Settings.velocityThreshold;
+      Settings.velocityThreshold = tuning.bounceThreshold;
+      try {
+        for (let sub = 0; sub < tuning.subSteps; sub++) {
+          bodies.forEach((b, k) => b && slide(b, curls[k]!, k === thrown ? swept : 0));
+          world.step(dt, 8, 3);
+        }
+      } finally {
+        Settings.velocityThreshold = threshold;
+      }
+      ghosts.forEach((g) => g && drift(g));
+      bodies.forEach((b, k) => {
+        if (!b) return;
+        const p = b.getPosition();
+        if (!leftSheet(p.x, p.y)) return;
+        // シートの外に出た石はすぐに取り除く（ほかの石に当たらないようにする）
+        const v = b.getLinearVelocity();
+        ghosts[k] = { x: p.x, y: p.y, vx: v.x, vy: v.y, angle: b.getAngle(), spin: b.getAngularVelocity() };
+        outAt[k] = f;
+        world.destroyBody(b);
+        bodies[k] = null;
+      });
+      sim.frames.push(poses());
+      sim.sweep.push(swept);
+
+      const moving = bodies.some(isMoving);
+      const fading = outAt.some((o) => o !== null && (f - o) * STEP < FADE_TIME);
+      if ((moving || fading) && f < Curling.MAX_FRAMES) return;
+
+      run.done = true;
+      const last = sim.frames[sim.frames.length - 1]!;
+      bodies.forEach((b, k) => {
+        if (!b) return;
+        const [x, y, angle] = last[k]!;
+        if (Curling.inPlay(round4(x), round4(y))) sim.stones.push([ids[k]!, round4(x), round4(y), round4(wrap(angle))]);
+      });
+    },
+  };
+  return run;
 }

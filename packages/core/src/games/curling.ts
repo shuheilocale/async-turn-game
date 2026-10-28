@@ -8,7 +8,7 @@ import { IllegalMoveError, other, type GameDefinition, type GameStatus, type Sea
  * 同点なら延長を 1 エンドだけして、それでも同点なら引き分け。
  *
  * 物理演算（石がすべって曲がり、ぶつかる）は画面側でする。手には投げ方（向き・速さ・回転）と、
- * 止まったあとシートに残った全部の石の位置を入れて送る。ここでは形と範囲を確かめて保存するだけ
+ * すべっている間にブラシでこすった（画面を連打した）コマの番号と、止まったあとシートに残った全部の石の位置を入れて送る。ここでは形と範囲を確かめて保存するだけ
  * （身内で遊ぶものなので、計算結果は送った人を信じる）。
  *
  * 座標はメートル単位で、上から見た平面。投げる場所（石を放す所）を原点に、x は右、y はハウスの方向。
@@ -42,6 +42,12 @@ export const AIM_MAX = 0.2;
 export const SPEED_MIN = 1;
 export const SPEED_MAX = 12;
 
+/** 物理演算の 1 コマの時間（秒）と、計算するのは最大で何コマまでか（30 秒） */
+export const FRAME_S = 1 / 60;
+export const MAX_FRAMES = 30 * 60;
+/** 1 投でこすった（連打した）回数の上限 */
+export const MAX_SWEEPS = 600;
+
 /** 回転。1 = 右回り（時計回り。右へ曲がる）、-1 = 左回り（反時計回り。左へ曲がる） */
 export type Spin = 1 | -1;
 
@@ -64,6 +70,8 @@ export interface CurlingMove {
   /** 投げる速さ（m/s） */
   speed: number;
   spin: Spin;
+  /** ブラシでこすった（連打した）コマの番号（1〜MAX_FRAMES、小さい順）。こすらなければない */
+  sweeps?: number[];
   /** 止まったあと、シートに残った石の位置（取り除いた石は入れない） */
   stones: Placed[];
 }
@@ -89,6 +97,8 @@ export interface LastThrow {
   aim: number;
   speed: number;
   spin: Spin;
+  /** ブラシでこすったコマの番号。こすらなければない */
+  sweeps?: number[];
   /** 投げる前の石 */
   before: CurlingStone[];
   /** 止まったあとの石 */
@@ -222,6 +232,7 @@ export const curling: GameDefinition<CurlingState, CurlingMove> = {
       aim: round4(move.aim),
       speed: round4(move.speed),
       spin: move.spin,
+      ...(move.sweeps?.length ? { sweeps: move.sweeps } : {}),
       before: state.stones,
       after: stones,
     };
@@ -249,6 +260,16 @@ export const curling: GameDefinition<CurlingState, CurlingMove> = {
       if (!placed) return null;
       stones.push(placed);
     }
-    return { aim: m.aim, speed: m.speed, spin: m.spin, stones };
+    let sweeps: number[] | undefined;
+    if (m.sweeps !== undefined) {
+      if (!Array.isArray(m.sweeps) || m.sweeps.length > MAX_SWEEPS) return null;
+      let prev = 0;
+      for (const f of m.sweeps as unknown[]) {
+        if (typeof f !== "number" || !Number.isInteger(f) || f <= prev || f > MAX_FRAMES) return null;
+        prev = f;
+      }
+      if (m.sweeps.length) sweeps = m.sweeps as number[];
+    }
+    return { aim: m.aim, speed: m.speed, spin: m.spin, ...(sweeps ? { sweeps } : {}), stones };
   },
 };

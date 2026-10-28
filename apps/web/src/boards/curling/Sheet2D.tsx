@@ -1,5 +1,5 @@
 import { Curling } from "@atg/core";
-import type { Shown } from "./playback.ts";
+import type { Shown, Sweep } from "./playback.ts";
 
 /**
  * WebGL が使えない端末で出す、シートを上から見た 2D の図（SVG）。ホッグラインからハウスの奥までを描く。
@@ -23,7 +23,20 @@ export interface Aim2D {
   seat: 0 | 1;
 }
 
-export function Sheet2D({ stones, aim, label }: { stones: Shown[]; aim: Aim2D | null; label: string }) {
+export function Sheet2D({
+  stones,
+  aim,
+  sweep,
+  label,
+}: {
+  stones: Shown[];
+  aim: Aim2D | null;
+  /** こすっているブラシ（seat はこする人の色） */
+  sweep: (Sweep & { seat: 0 | 1 }) | null;
+  label: string;
+}) {
+  // ブラシは石の前で左右に揺らす（3D と同じ）
+  const wiggle = sweep ? Math.sin((performance.now() / 1000) * Math.PI * 2 * 4.5) * 0.13 * (0.4 + 0.6 * sweep.level) : 0;
   // ねらいの点線：投げる場所（原点）からまっすぐ進んだ線が、図の下の端を通る所から
   const dots = aim
     ? Array.from({ length: Math.round(5 + aim.power * 9) }, (_, i) => {
@@ -52,6 +65,16 @@ export function Sheet2D({ stones, aim, label }: { stones: Shown[]; aim: Aim2D | 
         {dots.map(([x, y], i) => (
           <circle key={i} className={`c2-dot seat${aim!.seat}`} cx={x} cy={y} r={0.045 * (1 - (0.4 * i) / dots.length)} />
         ))}
+
+        {sweep && (
+          <g
+            className={`c2-brush seat${sweep.seat}`}
+            transform={`translate(${sweep.x} ${sweep.y}) rotate(${(-sweep.heading * 180) / Math.PI})`}
+          >
+            <rect x={-0.16 + wiggle} y={0.32} width={0.32} height={0.085} rx={0.03} />
+            <rect x={-0.16 - wiggle} y={0.58} width={0.32} height={0.085} rx={0.03} />
+          </g>
+        )}
 
         {stones.map((s) => (
           <g

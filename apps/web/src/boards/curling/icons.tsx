@@ -45,3 +45,14 @@ export function ThrowerViewIcon() {
     </svg>
   );
 }
+
+/** 「連打でこする」：斜めの柄と、氷をこするブラシの頭 */
+export function BrushIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="curling-icon" aria-hidden>
+      <path d="M17.5 3.5 9.8 13.6" />
+      <rect x="4" y="13.4" width="10" height="4.2" rx="1.6" transform="rotate(-8 9 15.5)" />
+      <path d="M4.5 20.5h3M10 20.5h3" />
+    </svg>
+  );
+}

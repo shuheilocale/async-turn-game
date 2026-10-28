@@ -82,6 +82,15 @@ export interface AimView {
   seat: Seat;
 }
 
+/** すべっている石の前をこするブラシ。投げた石の位置・進む向き（0 が奥、正なら右）と、こすりの強さ（0〜1） */
+export interface SweepView {
+  x: number;
+  y: number;
+  heading: number;
+  level: number;
+  seat: Seat;
+}
+
 export interface Palette {
   p0: string;
   p1: string;
@@ -93,6 +102,8 @@ export interface CurlingScene {
   setPalette(palette: Palette): void;
   setStones(stones: StoneView[]): void;
   setAim(aim: AimView | null): void;
+  /** こすっているブラシ。こすっていなければ null */
+  setSweep(sweep: SweepView | null): void;
   /** カメラの向け方。follow のときは追いかける石の位置を渡す。instant なら動かさずにすぐ切り替える */
   setView(mode: ViewMode, focus?: { x: number; y: number }, instant?: boolean): void;
   dispose(): void;
@@ -645,6 +656,35 @@ export function createScene(canvas: HTMLCanvasElement, initial: Palette): Curlin
   scene.add(arrow);
   const tmp = new Object3D();
 
+  // ---------- ブラシ（すべっている石の前の氷をこする） ----------
+  /** ブラシの頭（氷をこする所）と柄。柄は頭から斜め上へのびる（こする人は石の横を一緒にすべっている） */
+  const padGeo = own(new BoxGeometry(0.34, 0.045, 0.1));
+  padGeo.translate(0, 0.0225, 0);
+  const shaftGeo = own(new BoxGeometry(0.026, 1.0, 0.026));
+  shaftGeo.translate(0, 0.5, 0);
+  const padMat = own(new MeshStandardMaterial({ color: 0x1d2433, roughness: 0.85 }));
+  const shaftMat = own(new MeshStandardMaterial({ roughness: 0.4, metalness: 0.1 }));
+  const brushes = new Group();
+  brushes.visible = false;
+  scene.add(brushes);
+  /** 石の前の、2 本のブラシ。石からの距離・柄を傾ける側・揺らすときのずれ */
+  const BRUSHES = [
+    { ahead: 0.36, side: -1, phase: 0 },
+    { ahead: 0.62, side: 1, phase: Math.PI },
+  ];
+  const brushParts = BRUSHES.map(({ side }) => {
+    const holder = new Group();
+    const pad = new Mesh(padGeo, padMat);
+    pad.castShadow = true;
+    const shaft = new Mesh(shaftGeo, shaftMat);
+    shaft.castShadow = true;
+    // 柄はこする人の側（横）へ倒し、少し手前へ傾ける
+    shaft.rotation.set(0.3, 0, side * 0.6);
+    holder.add(pad, shaft);
+    brushes.add(holder);
+    return holder;
+  });
+
   // ---------- 色 ----------
   const applyPalette = (p: Palette) => {
     const sky = new Color(p.dark ? 0x141a26 : 0xe6ebf2);
@@ -793,6 +833,22 @@ export function createScene(canvas: HTMLCanvasElement, initial: Palette): Curlin
         dots.instanceMatrix.needsUpdate = true;
         // 矢印は時計回りの形。左回りなら裏返す
         arrow.scale.set(a.spin === 1 ? 1 : -1, 1, 1);
+      }
+      invalidate();
+    },
+
+    setSweep(sw) {
+      brushes.visible = !!sw;
+      if (sw) {
+        shaftMat.color.copy(seatColor(sw.seat));
+        brushes.position.copy(v3(sw.x, 0, sw.y));
+        brushes.rotation.y = -sw.heading;
+        // 左右にすばやく揺らす。こすりが強いほど大きく
+        const t = performance.now() / 1000;
+        brushParts.forEach((holder, k) => {
+          const { ahead, phase } = BRUSHES[k]!;
+          holder.position.set(Math.sin(t * Math.PI * 2 * 4.5 + phase) * 0.13 * (0.4 + 0.6 * sw.level), 0, -ahead);
+        });
       }
       invalidate();
     },

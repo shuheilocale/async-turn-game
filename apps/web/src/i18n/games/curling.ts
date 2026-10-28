@@ -5,7 +5,7 @@ export default {
   ja: {
     "game.curling.desc": "氷の上に石をすべらせ、的（ハウス）の中心の近くに止めた方が点を取る。2 エンドの合計で勝負。",
     "game.curling.rules":
-      "2 エンドの試合です。1 エンドに 1 人 4 投ずつ、交互に石を投げます。自分の番では、画面をドラッグして向き（左右）と強さ（下へ引くほど強い）を決め、回転（左回り・右回り）を選んで「投げる」を押します。石は回転の向きへ少しずつ曲がり、ほかの石に当たるとはじきます。シートの横や奥から出た石と、手前の太い線（ホッグライン）を越えなかった石は取り除きます。8 投が終わったら、ハウス（的）の中心にいちばん近い石を持つ人が、相手のいちばん近い石より中心に近い自分の石の数だけ点を取ります。エンドの最後の 1 投（ハンマー）は、1 エンド目は後手が持ち、次のエンドからは点を取られた側が持ちます（どちらも 0 点なら変わりません）。2 エンドの合計が多い方の勝ちです。同点なら延長を 1 エンドして、それでも同点なら引き分けです。",
+      "2 エンドの試合です。1 エンドに 1 人 4 投ずつ、交互に石を投げます。自分の番では、画面をドラッグして向き（左右）と強さ（下へ引くほど強い）を決め、回転（左回り・右回り）を選んで「投げる」を押します。石は回転の向きへ少しずつ曲がり、ほかの石に当たるとはじきます。投げた石がすべっている間は、画面を連打すると石の前の氷をブラシでこすれます。こすっている間は石がよく伸び、曲がりにくくなります。シートの横や奥から出た石と、手前の太い線（ホッグライン）を越えなかった石は取り除きます。8 投が終わったら、ハウス（的）の中心にいちばん近い石を持つ人が、相手のいちばん近い石より中心に近い自分の石の数だけ点を取ります。エンドの最後の 1 投（ハンマー）は、1 エンド目は後手が持ち、次のエンドからは点を取られた側が持ちます（どちらも 0 点なら変わりません）。2 エンドの合計が多い方の勝ちです。同点なら延長を 1 エンドして、それでも同点なら引き分けです。",
     "game.curling.seat0": "青",
     "game.curling.seat1": "オレンジ",
     "game.curling.you": "あなた",
@@ -27,6 +27,7 @@ export default {
     "game.curling.throwerView": "投げる人から見る",
     "game.curling.replay": "もう一度見る",
     "game.curling.skip": "とばす",
+    "game.curling.sweep": "連打でこする",
     "game.curling.power": "強さ",
     "game.curling.zone.short": "とどかない",
     "game.curling.zone.guard": "ガード",
@@ -49,14 +50,14 @@ export default {
     "game.curling.tour.aim":
       "画面を下へ引くほど強く、左右に動かすと向きが変わります（引いた反対へ飛びます）。点線が向き、右の目盛りが強さの目安です。",
     "game.curling.tour.spin": "回転を選びます。石は回る向きへ少しずつ曲がるので、曲がる分だけ反対側をねらいます。",
-    "game.curling.tour.throw": "「投げる」を押すとすぐに投げ、やり直しはできません。1 投投げてみてください。",
+    "game.curling.tour.throw": "「投げる」を押すとすぐに投げ、やり直しはできません。すべっている間に画面を連打すると、ブラシでこすってよく伸ばせます。1 投投げてみてください。",
     "game.curling.tour.score":
       "エンドごとの点はこの表に出ます。かなづちの印はハンマー（そのエンドの最後の 1 投）を持つ人、丸は残りの投数です。",
   },
   en: {
     "game.curling.desc": "Slide stones down the ice and stop them closest to the center of the house. Two ends; the higher total wins.",
     "game.curling.rules":
-      "A match of two ends. In each end, each player throws 4 stones, taking turns. On your turn, drag on the screen to set the direction (left/right) and the strength (pull down for more), choose the spin (counterclockwise or clockwise), then press Throw. A stone curls slowly in the direction it spins and knocks other stones away when it hits them. Stones that leave the sheet at the side or back, and stones that don't fully cross the thick near line (the hog line), are removed. After 8 throws, whoever has the stone closest to the center of the house scores one point for each of their stones closer than the opponent's closest stone. The last throw of an end (the hammer) belongs to the second player in end 1; after that it goes to the player who was scored on (it stays the same if nobody scores). The higher total after two ends wins. If tied, one extra end is played; if still tied, it's a draw.",
+      "A match of two ends. In each end, each player throws 4 stones, taking turns. On your turn, drag on the screen to set the direction (left/right) and the strength (pull down for more), choose the spin (counterclockwise or clockwise), then press Throw. A stone curls slowly in the direction it spins and knocks other stones away when it hits them. While your stone is sliding, tap the screen rapidly to sweep the ice in front of it. Sweeping makes it travel farther and curl less. Stones that leave the sheet at the side or back, and stones that don't fully cross the thick near line (the hog line), are removed. After 8 throws, whoever has the stone closest to the center of the house scores one point for each of their stones closer than the opponent's closest stone. The last throw of an end (the hammer) belongs to the second player in end 1; after that it goes to the player who was scored on (it stays the same if nobody scores). The higher total after two ends wins. If tied, one extra end is played; if still tied, it's a draw.",
     "game.curling.seat0": "Blue",
     "game.curling.seat1": "Orange",
     "game.curling.you": "You",
@@ -78,6 +79,7 @@ export default {
     "game.curling.throwerView": "Thrower view",
     "game.curling.replay": "Watch again",
     "game.curling.skip": "Skip",
+    "game.curling.sweep": "Tap fast to sweep",
     "game.curling.power": "Power",
     "game.curling.zone.short": "Short",
     "game.curling.zone.guard": "Guard",
@@ -100,14 +102,14 @@ export default {
     "game.curling.tour.aim":
       "Pull down for more strength, and drag left or right to change direction (the stone goes the opposite way). The dots show the direction; the scale on the right shows the strength.",
     "game.curling.tour.spin": "Choose the spin. The stone curls the way it spins, so aim a little to the other side.",
-    "game.curling.tour.throw": "Press Throw and the stone goes right away. No take-backs. Try one throw.",
+    "game.curling.tour.throw": "Press Throw and the stone goes right away. No take-backs. While it slides, tap the screen rapidly to sweep and make it go farther. Try one throw.",
     "game.curling.tour.score":
       "Points for each end appear in this table. The hammer mark shows who has the last throw of the end; the dots are the throws left.",
   },
   th: {
     "game.curling.desc": "ไถลหินไปบนน้ำแข็ง ใครหยุดหินได้ใกล้จุดกลางเป้า (เฮาส์) ที่สุดได้คะแนน แข่ง 2 เอนด์ รวมคะแนนมากกว่าชนะ",
     "game.curling.rules":
-      "แข่ง 2 เอนด์ ในแต่ละเอนด์ผู้เล่นแต่ละคนโยนหินคนละ 4 ครั้งสลับกัน ในตาของคุณ ให้ลากบนหน้าจอเพื่อกำหนดทิศทาง (ซ้าย/ขวา) และแรง (ยิ่งดึงลงยิ่งแรง) เลือกการหมุน (ทวนเข็ม/ตามเข็มนาฬิกา) แล้วกด “โยน” หินจะค่อย ๆ เลี้ยวไปตามทิศที่หมุน และกระเด็นหินก้อนอื่นเมื่อชน หินที่ออกนอกลานด้านข้างหรือด้านหลัง และหินที่ข้ามเส้นหนาด้านหน้า (ฮอกไลน์) ไม่พ้น จะถูกนำออก เมื่อโยนครบ 8 ครั้ง คนที่มีหินใกล้จุดกลางเฮาส์ที่สุดได้คะแนนเท่ากับจำนวนหินของตัวเองที่อยู่ใกล้กว่าหินที่ใกล้ที่สุดของอีกฝ่าย การโยนครั้งสุดท้ายของเอนด์ (แฮมเมอร์) ในเอนด์แรกเป็นของผู้เล่นคนที่สอง หลังจากนั้นเป็นของฝ่ายที่เสียคะแนน (ถ้าไม่มีใครได้คะแนนจะไม่เปลี่ยน) รวม 2 เอนด์ใครได้มากกว่าชนะ ถ้าเท่ากันจะเล่นต่ออีก 1 เอนด์ ถ้ายังเท่ากันถือว่าเสมอ",
+      "แข่ง 2 เอนด์ ในแต่ละเอนด์ผู้เล่นแต่ละคนโยนหินคนละ 4 ครั้งสลับกัน ในตาของคุณ ให้ลากบนหน้าจอเพื่อกำหนดทิศทาง (ซ้าย/ขวา) และแรง (ยิ่งดึงลงยิ่งแรง) เลือกการหมุน (ทวนเข็ม/ตามเข็มนาฬิกา) แล้วกด “โยน” หินจะค่อย ๆ เลี้ยวไปตามทิศที่หมุน และกระเด็นหินก้อนอื่นเมื่อชน ระหว่างที่หินที่โยนกำลังไถล ให้แตะหน้าจอรัว ๆ เพื่อกวาดน้ำแข็งข้างหน้าหิน ยิ่งกวาด หินจะไปได้ไกลขึ้นและเลี้ยวน้อยลง หินที่ออกนอกลานด้านข้างหรือด้านหลัง และหินที่ข้ามเส้นหนาด้านหน้า (ฮอกไลน์) ไม่พ้น จะถูกนำออก เมื่อโยนครบ 8 ครั้ง คนที่มีหินใกล้จุดกลางเฮาส์ที่สุดได้คะแนนเท่ากับจำนวนหินของตัวเองที่อยู่ใกล้กว่าหินที่ใกล้ที่สุดของอีกฝ่าย การโยนครั้งสุดท้ายของเอนด์ (แฮมเมอร์) ในเอนด์แรกเป็นของผู้เล่นคนที่สอง หลังจากนั้นเป็นของฝ่ายที่เสียคะแนน (ถ้าไม่มีใครได้คะแนนจะไม่เปลี่ยน) รวม 2 เอนด์ใครได้มากกว่าชนะ ถ้าเท่ากันจะเล่นต่ออีก 1 เอนด์ ถ้ายังเท่ากันถือว่าเสมอ",
     "game.curling.seat0": "สีน้ำเงิน",
     "game.curling.seat1": "สีส้ม",
     "game.curling.you": "คุณ",
@@ -129,6 +131,7 @@ export default {
     "game.curling.throwerView": "มุมผู้โยน",
     "game.curling.replay": "ดูอีกครั้ง",
     "game.curling.skip": "ข้าม",
+    "game.curling.sweep": "แตะรัว ๆ เพื่อกวาด",
     "game.curling.power": "แรง",
     "game.curling.zone.short": "ไม่ถึง",
     "game.curling.zone.guard": "การ์ด",
@@ -151,7 +154,7 @@ export default {
     "game.curling.tour.aim":
       "ยิ่งดึงลงยิ่งแรง ลากซ้ายขวาเพื่อเปลี่ยนทิศ (หินจะไปทางตรงข้ามกับที่ดึง) จุดประบอกทิศทาง แถบด้านขวาบอกแรง",
     "game.curling.tour.spin": "เลือกการหมุน หินจะค่อย ๆ เลี้ยวไปตามทิศที่หมุน จึงต้องเล็งเผื่อไปอีกด้าน",
-    "game.curling.tour.throw": "กด “โยน” แล้วหินจะไปทันที แก้ไม่ได้ ลองโยนดูหนึ่งครั้ง",
+    "game.curling.tour.throw": "กด “โยน” แล้วหินจะไปทันที แก้ไม่ได้ ระหว่างที่หินไถล แตะหน้าจอรัว ๆ เพื่อกวาดให้ไปได้ไกลขึ้น ลองโยนดูหนึ่งครั้ง",
     "game.curling.tour.score": "คะแนนของแต่ละเอนด์แสดงในตารางนี้ เครื่องหมายค้อนคือคนที่ได้โยนครั้งสุดท้าย จุดกลมคือจำนวนครั้งที่เหลือ",
   },
 } satisfies GameMessages;

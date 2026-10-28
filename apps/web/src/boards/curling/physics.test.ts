@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Settings } from "planck";
 import { Curling, type Seat } from "@atg/core";
-import { simulateThrow } from "./physics.ts";
+import { simulateThrow, startThrow } from "./physics.ts";
 import { DEFAULT_POWER, powerOfReach, powerOfSpeed, reachOf, speedOf, zoneOf } from "./params.ts";
 
 const { TEE_Y, HOG_Y, STONE_R } = Curling;
@@ -13,6 +13,51 @@ const stone = (id: number, seat: Seat, x: number, y: number, angle = 0): Curling
 
 /** 投げた石（最後の石）の止まった位置 */
 const endOf = (sim: ReturnType<typeof simulateThrow>) => sim.frames[sim.frames.length - 1]!.at(-1)!;
+
+/** 1 秒に 8 回、from 秒から to 秒まで連打したコマの番号 */
+const tapping = (from: number, to: number) => {
+  const taps: number[] = [];
+  for (let f = Math.ceil(from * 60); f <= to * 60; f += 8) taps.push(Math.max(1, f));
+  return taps;
+};
+
+describe("ブラシでこする", () => {
+  it("こすると、こすらないときより伸びて、曲がりにくい。こする時間が長いほど伸びる", () => {
+    const plain = endOf(simulateThrow([], 0, 0, speedFor(TEE_Y), 1));
+    const some = endOf(simulateThrow([], 0, 0, speedFor(TEE_Y), 1, tapping(2, 4)));
+    const all = endOf(simulateThrow([], 0, 0, speedFor(TEE_Y), 1, tapping(0, 30)));
+    expect(some[1]).toBeGreaterThan(plain[1] + 0.3);
+    expect(all[1]).toBeGreaterThan(some[1] + 0.5);
+    // ずっとこすっても、伸びるのは 6 m まで（ハウスをねらった石が奥の壁まで行くほどではない）
+    expect(all[1] - plain[1]).toBeLessThan(6);
+    // 曲がりにくい（伸びた分を差し引いても、横のずれが小さい）
+    expect(Math.abs(all[0])).toBeLessThan(Math.abs(plain[0]));
+  });
+
+  it("連打を受けながら 1 コマずつ計算した結果と、連打したコマから計算し直した結果は同じ（相手の画面で同じに再生できる）", () => {
+    const before = [stone(0, 0, 0.2, TEE_Y + 0.3)];
+    const run = startThrow(before, 1, 0.01, speedFor(TEE_Y + 1), -1);
+    while (!run.done) run.step(run.sim.frames.length % 7 === 0 && run.sim.frames.length < 200);
+    expect(run.taps.length).toBeGreaterThan(10);
+    const again = simulateThrow(before, 1, 0.01, speedFor(TEE_Y + 1), -1, run.taps);
+    expect(again.stones).toEqual(run.sim.stones);
+    expect(again.frames.length).toBe(run.sim.frames.length);
+    expect(again.sweep).toEqual(run.sim.sweep);
+  });
+
+  it("投げた石が止まった・外に出たあとの連打は数えない。こすりの強さは連打をやめるとすぐ下がる", () => {
+    const run = startThrow([], 0, 0, speedFor(TEE_Y), 1);
+    run.step(true);
+    expect(run.sim.sweep[1]).toBeCloseTo(0.5, 6);
+    for (let i = 0; i < 60; i++) run.step(false);
+    expect(run.sim.sweep.at(-1)!).toBeLessThan(0.01);
+    while (!run.done) run.step(false);
+    const n = run.taps.length;
+    expect(run.canSweep()).toBe(false);
+    run.step(true);
+    expect(run.taps.length).toBe(n);
+  });
+});
 
 describe("カーリングの物理演算", () => {
   it("まっすぐ投げると、強さで決めた距離のあたりで止まる", () => {

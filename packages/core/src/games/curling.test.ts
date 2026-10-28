@@ -7,6 +7,8 @@ import {
   curling,
   ENDS,
   EXTRA_ENDS,
+  MAX_FRAMES,
+  MAX_SWEEPS,
   HOG_Y,
   HOUSE_R,
   inPlay,
@@ -357,6 +359,26 @@ describe("curling", () => {
       expect(curling.parseMove({ ...ok, stones: Array.from({ length: THROWS + 1 }, (_, i) => [i, 0, 21, 0]) })).toBeNull();
       expect(curling.parseMove(null)).toBeNull();
       expect(curling.parseMove({ aim: 0, speed: 6 })).toBeNull();
+    });
+
+    it("こすったコマの番号は、1〜MAX_FRAMES の整数を小さい順に MAX_SWEEPS 個まで。空なら持たない", () => {
+      expect(curling.parseMove({ ...ok, sweeps: [3, 10, 11] })).toEqual({ ...ok, sweeps: [3, 10, 11] });
+      expect(curling.parseMove({ ...ok, sweeps: [] })).toEqual(ok);
+      expect(curling.parseMove({ ...ok, sweeps: [MAX_FRAMES] })).toEqual({ ...ok, sweeps: [MAX_FRAMES] });
+      expect(curling.parseMove({ ...ok, sweeps: [0] })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: [MAX_FRAMES + 1] })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: [5, 5] })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: [6, 5] })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: [1.5] })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: "1" })).toBeNull();
+      expect(curling.parseMove({ ...ok, sweeps: Array.from({ length: MAX_SWEEPS + 1 }, (_, i) => i + 1) })).toBeNull();
+    });
+
+    it("こすったコマは直前の 1 投に残す（相手の画面で同じように再生する）", () => {
+      const s = curling.applyMove(curling.initialState(() => 0), { aim: 0, speed: 6.6, spin: 1, sweeps: [4, 9], stones: [[0, 0, 22, 0]] }, 0);
+      expect(s.last?.sweeps).toEqual([4, 9]);
+      const plain = curling.applyMove(curling.initialState(() => 0), { aim: 0, speed: 6.6, spin: 1, stones: [[0, 0, 22, 0]] }, 0);
+      expect(plain.last && "sweeps" in plain.last).toBe(false);
     });
   });
 });

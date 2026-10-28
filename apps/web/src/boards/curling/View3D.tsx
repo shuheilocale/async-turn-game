@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type * as Scene3D from "./scene3d.ts";
-import type { Camera, Shown } from "./playback.ts";
+import type { Camera, Shown, Sweep } from "./playback.ts";
 
 /** three と 3D の場面は、この盤を開いたときに初めて読み込む（ほかの画面を重くしない） */
 let three: Promise<typeof Scene3D> | null = null;
@@ -44,11 +44,14 @@ function paletteOf(el: Element): Scene3D.Palette {
 export function View3D({
   stones,
   aim,
+  sweep,
   camera,
   onFail,
 }: {
   stones: Shown[];
   aim: Scene3D.AimView | null;
+  /** こすっているブラシ（seat はこする人の色） */
+  sweep: (Sweep & { seat: Scene3D.SweepView["seat"] }) | null;
   camera: Camera;
   onFail(): void;
 }) {
@@ -96,6 +99,10 @@ export function View3D({
   useLayoutEffect(() => {
     scene.current?.setStones(stones);
   }, [stones, ready]);
+
+  useLayoutEffect(() => {
+    scene.current?.setSweep(sweep);
+  }, [sweep, ready]);
 
   useLayoutEffect(() => {
     scene.current?.setAim(aim);

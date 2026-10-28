@@ -495,3 +495,71 @@
   stroke-width: 0.035;
   opacity: 0.9;
 }
+
+/* ---------- ブラシでこする ---------- */
+
+/* すべっている間は連打するので、ダブルタップでの拡大をさせない */
+.curling-view.sliding {
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+/* 「連打でこする」の案内と、こすりの強さ */
+.curling-sweep {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--ink);
+  box-shadow: 0 2px 10px rgba(10, 20, 40, 0.18);
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.curling-sweep-meter {
+  display: block;
+  width: 64px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  overflow: hidden;
+}
+
+.curling-sweep-meter b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--p0);
+  transition: width 80ms linear;
+}
+
+.curling-sweep.seat1 .curling-sweep-meter b {
+  background: var(--p1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curling-sweep-meter b {
+    transition: none;
+  }
+}
+
+.curling-sheet2d .c2-brush rect {
+  fill: #1d2433;
+  stroke-width: 0.025;
+}
+
+.curling-sheet2d .c2-brush.seat0 rect {
+  stroke: var(--p0);
+}
+
+.curling-sheet2d .c2-brush.seat1 rect {
+  stroke: var(--p1);
+}
