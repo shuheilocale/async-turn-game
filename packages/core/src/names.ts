@@ -42,4 +42,5 @@ export const gameNames: Record<string, Record<NameLang, string>> = {
   heart: { ja: "はんぶんこハート", en: "Half & Half Heart", th: "หัวใจคนละครึ่ง" },
   ishin: { ja: "ふたりの以心伝心", en: "In Sync", th: "ใจตรงกัน" },
   mochi: { ja: "ふたりのもち", en: "Mochi for Two", th: "โมจิของเรา" },
+  photo: { ja: "きょうのおだい写真", en: "Photo of the Day", th: "ภาพถ่ายตามโจทย์วันนี้" },
 };

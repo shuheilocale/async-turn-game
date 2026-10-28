@@ -67,6 +67,17 @@ export interface GameDefinition<S = unknown, M = unknown> {
    * サーバが時刻になったら LINE で知らせるのに使う（手が指されて state が変われば、知らせる時刻も決め直す）
    */
   nextAlarm?(state: S): { at: number; kind: string } | null;
+  /**
+   * 写真を使うゲームだけ実装する（photo.ts が例）。手が使う写真の ID（POST /api/games/:id/photos でアップロードしたもの）を返す。
+   * applyMove は写真が本物か見られないので、サーバは parseMove のあと、ここで返した写真がどれも
+   * 「その対局・その席の人がアップロードしたもの」か確かめてから applyMove に渡す。実装したゲームだけ写真をアップロードできる
+   */
+  photosOfMove?(move: M): string[];
+  /**
+   * 写真を使うゲームだけ実装する。その対局でアップロードされた写真 photoId を、viewer（合言葉のない人は null）に見せてよいか。
+   * true を返す写真のうち、viewer が null でも true になるもの（だれでも見てよいもの）は、サーバが長くキャッシュさせる
+   */
+  canSeePhoto?(state: S, photoId: string, viewer: Seat | null): boolean;
 }
 
 /** code は画面側で各言語の文に置き換える（例: "not_your_turn"） */

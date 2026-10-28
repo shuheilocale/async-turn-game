@@ -521,6 +521,68 @@ export class GameStore {
     );
     return row?.name ?? null;
   }
+
+  // ---------- 写真を使うゲーム（photos.ts） ----------
+
+  /**
+   * 写真を保存して、推測できない長い ID を返す。その対局・その席の写真がもう limit 枚あれば保存せずに null
+   * （数えるのと足すのを 1 つの文にして、同時に送られても上限を超えないようにする）
+   */
+  async addPhoto(gameId: string, seat: Seat, mime: string, bytes: Uint8Array, limit: number): Promise<string | null> {
+    const id = newToken(18);
+    const [inserted] = await this.db.batch([
+      q(
+        `INSERT INTO photos (id, game_id, seat, mime, size, data, created_at)
+         SELECT ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM photos WHERE game_id = ? AND seat = ?) < ?`,
+        id,
+        gameId,
+        seat,
+        mime,
+        bytes.length,
+        toBase64(bytes),
+        now(),
+        gameId,
+        seat,
+        limit,
+      ),
+    ]);
+    return inserted === 1 ? id : null;
+  }
+
+  /** 写真の中身と、どの対局・どの席の人がアップロードしたか。なければ null */
+  async photo(id: string): Promise<{ id: string; gameId: string; seat: Seat; mime: string; bytes: Uint8Array } | null> {
+    const [row] = await this.db.all<{ id: string; gameId: string; seat: Seat; mime: string; data: string }>(
+      "SELECT id, game_id AS gameId, seat, mime, data FROM photos WHERE id = ?",
+      id,
+    );
+    return row ? { id: row.id, gameId: row.gameId, seat: row.seat, mime: row.mime, bytes: fromBase64(row.data) } : null;
+  }
+
+  /** その対局の写真を、だれ（席）がアップロードしたか。その対局の写真でなければ null（中身は読まない） */
+  async photoSeat(gameId: string, id: string): Promise<Seat | null> {
+    const [row] = await this.db.all<{ seat: Seat }>("SELECT seat FROM photos WHERE id = ? AND game_id = ?", id, gameId);
+    return row ? row.seat : null;
+  }
+
+  /** その対局・その席がアップロードした写真の数 */
+  async countPhotos(gameId: string, seat: Seat): Promise<number> {
+    const [row] = await this.db.all<{ n: number }>("SELECT COUNT(*) AS n FROM photos WHERE game_id = ? AND seat = ?", gameId, seat);
+    return row?.n ?? 0;
+  }
+}
+
+/** バイト列を base64 の文字にする（Node.js と Workers の両方にある btoa を使う。大きいので少しずつ文字にする） */
+function toBase64(bytes: Uint8Array): string {
+  let raw = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) raw += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(raw);
+}
+
+function fromBase64(text: string): Uint8Array {
+  const raw = atob(text);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
 }
 
 /** 予定と、受け取る人（dueAlarms・gameAlarms の共通部分） */

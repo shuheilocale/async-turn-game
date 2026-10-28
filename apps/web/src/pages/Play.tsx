@@ -358,6 +358,7 @@ export function Play({ id }: { id: string }) {
           selected={selected}
           onSelect={(m) => setSelected(m)}
           onSubmit={(m) => submit(m)}
+          game={{ id, token }}
         />
         {view.status.kind === "finished" && view.you !== null && (
           <div className="after-game">

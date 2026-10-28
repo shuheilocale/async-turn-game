@@ -37,6 +37,7 @@ import { SodaBoard } from "./SodaBoard.tsx";
 import { TiltBoard } from "./TiltBoard.tsx";
 import { FreehandBoard } from "./FreehandBoard.tsx";
 import { MochiBoard } from "./MochiBoard.tsx";
+import { PhotoBoard, photoMovedText } from "./PhotoBoard.tsx";
 
 export interface BoardProps {
   /** サーバから届いた状態（隠す情報があるゲームでは、自分が見てよい形に加工済み） */
@@ -55,6 +56,11 @@ export interface BoardProps {
    * 送れたら true
    */
   onSubmit(move: unknown): Promise<boolean>;
+  /**
+   * サーバの対局（ID と自分の合言葉）。手とは別にサーバとやりとりする盤（写真をアップロードする など）だけが使う。
+   * お試しでは渡さない（盤は端末の中だけで動かす）
+   */
+  game?: { id: string; token?: string };
 }
 
 /** ゲームの一覧画面で出す情報 */
@@ -138,4 +144,5 @@ export const boards: Record<string, BoardUI> = {
     coop: true,
     movedText: (t, move, name) => t(`game.mochi.did.${(move as { care: string }).care}`, { who: t("game.mochi.who", { name }) }),
   },
+  photo: { Board: PhotoBoard, length: "long", hidden: true, coop: true, movedText: photoMovedText },
 };

@@ -42,6 +42,7 @@
 | はんぶんこハート | `heart` | 協力ゲーム（2 人で半分ずつ描いて 1 つのハートにする。先に描いた半分は、もう 1 人が描き終えるまで隠れている） |
 | ふたりの以心伝心 | `ishin` | 協力ゲーム（6 問の質問に、自分の答えと相手の答えの予想を出し合う。先に出した答えは相手が出すまで隠れている） |
 | ふたりのもち | `mochi` | 協力ゲーム（交代でお世話して、卵からかえる「もち」を育てる放置ゲーム。お世話のあいだも本物の時計で育ち、5〜7 日ほどでおとなになる） |
+| きょうのおだい写真 | `photo` | 協力ゲーム（同じお題で写真を 1 枚ずつ出し合う。相手の写真は 2 人とも出すまで隠れている。7 つのお題で 1 冊のアルバム） |
 
 公開中: https://async-turn-game.shuhei-yamamoto-fukuoka-japan.workers.dev （Cloudflare Workers + D1）
 
@@ -129,6 +130,7 @@ docs/企画書.md
 - 相手の手は 5 秒ごとにサーバへ確認しに行って反映する（画面が見えているときだけ）
 - **隠す情報があるゲーム**は、ルールに `viewState`（見る人ごとに状態を加工する関数）を持たせる。サーバは必ずこれを通してから返すので、相手の秘密の数字や手札はブラウザにも届かない。終局後は全部公開する
 - サーバのエラーは `not_your_turn` のような**コード**で返し、画面側で各言語の文に置き換える
+- **写真を使うゲーム**（`photo`）は、ルールに `photosOfMove`（手が使う写真の ID）と `canSeePhoto`（その写真を見てよいか）を持たせる。写真は画面で長い辺 1024px・300KB くらいの JPEG に描きなおしてから（位置情報などの EXIF は消える）、D1 の `photos` 表に base64 で保存する（[apps/server/src/photos.ts](apps/server/src/photos.ts)）。手を受け取るときに、手の写真が「その対局・その席の人がアップロードしたもの」かを確かめる（[moves.ts](apps/server/src/moves.ts)）。2 人そろったときの LINE のカードには、2 枚の写真を上に並べる（`card.ts` の `images`。画面の `cards/<ゲームID>.ts` でカードを手直しする）
 
 ### API
 
@@ -139,6 +141,8 @@ docs/企画書.md
 | POST | `/api/games/:id/join` | 招待コードで参加 `{ inviteCode, name }` |
 | POST | `/api/games/:id/moves` | 手を指す `{ version, move }` |
 | GET | `/api/games/:id/moves` | 手の記録 |
+| POST | `/api/games/:id/photos` | 写真を使うゲームで写真を 1 枚アップロードする（本文は画像そのもの。`image/jpeg` か `image/webp`、512KB まで、1 対局・1 人 30 枚まで。参加者だけ）→ `{ id }` |
+| GET | `/api/photos/:photoId` | 写真。2 人そろった写真はだれでも（長くキャッシュ）、まだの写真は出した本人（合言葉）だけ。ほかは 404 |
 | GET | `/api/config` | 画面に渡す設定 `{ lineOaId }`（LINE の公式アカウントの ID。なければ null）。`?game=<対局ID>` と合言葉を付けると、その 2 人がそろったグループがあるか（`noticeGroup`）も返す |
 | POST | `/api/line/webhook` | LINE の公式アカウントの Webhook（`X-Line-Signature` を確かめる） |
 
@@ -211,7 +215,7 @@ LINE Developers に「LINE ミニアプリ」のチャネルを作ってある�
    - グループで開いているとき：「知らせを受け取るには、このグループに公式アカウントを招待してください（グループのメニュー → 招待）」
    - 1 対 1 のトーク（やトークの外）で開いているとき：「知らせを受け取るには、2 人と公式アカウントのグループを作って、そこから遊んでください」
    - この対局の 2 人がそろったグループがもうあれば出さない（`/api/config?game=`）。閉じたらその端末では出さない
-5. 先に `npm run db:migrate`（`0005_alarms.sql`・`0006_line_groups.sql`）を流してから `npm run deploy` する
+5. 先に `npm run db:migrate`（`0005_alarms.sql`・`0006_line_groups.sql`。写真のゲームは `0007_photos.sql`）を流してから `npm run deploy` する
 6. 2 人のグループに公式アカウントを招待し、**2 人ともグループで 1 回ずつ何かひとこと話す**（話した人がメンバーとして記録され、2 人そろうとそのグループに届く）
 
 - 手元の確かめ方：`npm run dev` のサーバは 1 分ごとに予定を処理する。開発のときだけ `POST /api/dev/alarms`（本文 `{ "now": ミリ秒, "fake": true }`）で今すぐ処理できる。`now` を先にするとその時刻として、`fake` なら LINE に送らずに送るはずだった中身を返す（本番の Node.js と Workers にはこの口はない）

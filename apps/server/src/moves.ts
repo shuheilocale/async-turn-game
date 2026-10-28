@@ -46,6 +46,10 @@ export async function playMove(
   if (parsed === null) return { ok: false, status: 400, error: "bad_move" };
   // 時間を使うゲームは、受け取った時刻をサーバの時計で手に書き込む（送られてきた時刻は使わない）。記録にもこの手が残る
   const move = def.stampMove ? def.stampMove(parsed, Date.now()) : parsed;
+  // 写真を使うゲームは、手に載せた写真がこの対局・この席の人がアップロードしたものか確かめる（applyMove には見られない）
+  for (const photoId of def.photosOfMove?.(move) ?? []) {
+    if ((await store.photoSeat(game.id, photoId)) !== seat) return { ok: false, status: 422, error: "photo_not_found" };
+  }
 
   let next: unknown;
   try {

@@ -16,6 +16,11 @@ export interface Card {
   /** 今の局面（apps/web の snapshot.ts の snapshotToFlex で作った箱）。なければ出さない */
   board?: object;
   /**
+   * カードの上に大きく並べる写真（https の JPEG か PNG。2 枚までがきれいに並ぶ）。あれば、左の局面・アイコンは出さない。
+   * 写真を使うゲームで、2 人の写真がそろったときに使う
+   */
+  images?: string[];
+  /**
    * 主なボタンの上に並べる小さなボタン。url はリンク（開く）、data はトークのまま押せるボタン（postback）。
    * postback はサーバ（公式アカウント）が送るカードでしか使えない（画面から送る liff.sendMessages・shareTargetPicker はリンクだけ）
    */
@@ -32,7 +37,11 @@ export function flexMessage(card: Card): { type: "flex"; altText: string; conten
     { type: "text", text: card.title, size: "md", weight: "bold", wrap: true, color: "#171c28" },
   ];
   if (card.body) texts.push({ type: "text", text: card.body, size: "xs", wrap: true, color: "#3a4254" });
-  const visual = card.board
+  // 写真があれば上に大きく出すので、左の局面・アイコンは出さない
+  const images = card.images?.slice(0, 4) ?? [];
+  const visual = images.length > 0
+    ? null
+    : card.board
     ? card.board
     : card.icon
       ? {
@@ -53,6 +62,17 @@ export function flexMessage(card: Card): { type: "flex"; altText: string; conten
     contents: {
       type: "bubble",
       size: "kilo",
+      // 写真は上に横並びで、同じ大きさの正方形に切りそろえる
+      ...(images.length > 0
+        ? {
+            hero: {
+              type: "box",
+              layout: "horizontal",
+              spacing: "xs",
+              contents: images.map((url) => ({ type: "image", url, size: "full", aspectMode: "cover", aspectRatio: "1:1", flex: 1 })),
+            },
+          }
+        : {}),
       body: {
         type: "box",
         layout: "horizontal",

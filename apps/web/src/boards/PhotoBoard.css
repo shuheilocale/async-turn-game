@@ -1,0 +1,524 @@
+/*
+ * きょうのおだい写真。styles.css より先に読み込まれるので、共通の部品（button など）を変えるときは .photo を頭に付けて優先させる。
+ * 写真が主役なので、まわりは白黒で静かにまとめ、2 人の色は名前のしるしにだけ使う
+ */
+.photo {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 640px);
+}
+
+.photo-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- お題 ---------- */
+
+.photo-topic {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 18px 16px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.photo-round {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.photo-topic-text {
+  margin: 0;
+  font-size: clamp(1.35rem, 5.4vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.35;
+  font-feature-settings: "palt";
+  text-wrap: balance;
+}
+
+.photo button.photo-redraw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  border-color: transparent;
+}
+
+/* ---------- 2 人の写真の枠 ---------- */
+
+.photo-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photo-slot {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.photo-frame {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.photo-frame.empty {
+  border-style: dashed;
+  border-width: 1.5px;
+}
+
+.photo-frame.hidden-entry {
+  border-style: solid;
+  background: color-mix(in srgb, var(--seat-color) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--seat-color) 35%, var(--line));
+}
+
+.photo-frame img,
+.photo-loading,
+.photo-missing {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo button.photo-frame-button,
+.photo button.photo-thumb-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.photo-loading {
+  background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface) 50%, var(--surface-2) 70%) 0 0 / 300% 100%;
+  animation: photo-shimmer 1.4s linear infinite;
+}
+
+@keyframes photo-shimmer {
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.photo-missing {
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.photo-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 10px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.photo-empty strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.photo button.photo-pick {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.photo button.photo-pick .photo-icon {
+  width: 44px;
+  height: 44px;
+  padding: 9px;
+  border-radius: 50%;
+  background: var(--ink);
+  stroke: var(--surface);
+  margin-bottom: 4px;
+}
+
+.photo button.photo-sample {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-color: transparent;
+}
+
+.photo-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgb(15 18 26 / 0.62);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.photo-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.photo-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--ink);
+  animation: photo-spin 0.8s linear infinite;
+}
+
+@keyframes photo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.photo figcaption {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.photo-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--seat-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-who::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--seat-color);
+}
+
+.photo-said {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.photo-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- 出す・待つ ---------- */
+
+.photo-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.photo-compose,
+.photo-wait,
+.photo-met {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.photo-note {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.photo-note input {
+  grid-column: 1 / -1;
+}
+
+.photo-count {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 0.72rem;
+}
+
+.photo-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.photo-actions {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+}
+
+.photo-wait {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.photo-wait p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.photo-met {
+  justify-items: center;
+  text-align: center;
+}
+
+.photo-met-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.photo-met button.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 200px;
+}
+
+.photo-met .photo-icon {
+  stroke: currentColor;
+}
+
+/* ---------- アルバム ---------- */
+
+.photo-album {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.photo-album-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.photo-album-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.photo-album-head .num {
+  font-size: 0.78rem;
+}
+
+.photo-album-empty {
+  margin: 0;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1.5px dashed var(--line);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.photo-pages {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-page {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.photo-page-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.photo-page-no {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.72rem;
+}
+
+.photo-page-topic {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.photo-page-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-thumb {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.photo .photo-thumb button.photo-thumb-button {
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.photo-thumb img,
+.photo-thumb .photo-loading,
+.photo-thumb .photo-missing {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (min-width: 640px) {
+  .photo-pages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* PC では写真の枠を少し低くして、お題・写真・アルバムが 1 画面に入りやすくする */
+@media (min-width: 960px) {
+  .photo-frame {
+    aspect-ratio: 4 / 5;
+  }
+}
+
+/* ---------- 大きく見る ---------- */
+
+dialog.photo-zoom {
+  width: min(92vw, 720px);
+  max-height: 92dvh;
+  padding: 14px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+dialog.photo-zoom::backdrop {
+  background: rgb(10 12 18 / 0.72);
+}
+
+dialog.photo-zoom figure {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+dialog.photo-zoom img {
+  display: block;
+  width: 100%;
+  max-height: calc(92dvh - 150px);
+  object-fit: contain;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+dialog.photo-zoom figcaption {
+  display: grid;
+  gap: 2px;
+  font-size: 0.95rem;
+}
+
+dialog.photo-zoom > button {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-loading,
+  .photo-spinner {
+    animation: none;
+  }
+}

@@ -11,6 +11,7 @@ import {
 import { cleanTimeZone } from "./alarms.ts";
 import type { VerifyLine } from "./line.ts";
 import { cleanLang, playMove, replan as replanGame } from "./moves.ts";
+import { photoRoutes } from "./photos.ts";
 import type { GameRecord, GameStore } from "./store.ts";
 import { handleEvents, verifySignature } from "./webhook.ts";
 
@@ -230,6 +231,9 @@ export function createApp(store: GameStore, { verifyLine, lineOaId, messaging }:
     const viewer = await store.seatOf(id, bearer(c));
     return c.json((await store.moves(id)).map((m) => ({ ...m, move: viewMove(m.move, m.seat, viewer) })));
   });
+
+  // 写真を使うゲームの写真のアップロードと表示
+  photoRoutes(app, store);
 
   return app;
 }

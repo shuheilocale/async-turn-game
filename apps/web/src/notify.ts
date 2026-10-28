@@ -30,10 +30,22 @@ export function inviteCard(t: T, gameType: string, id: string, inviteCode: strin
 }
 
 /**
+ * ゲームごとにカードを手直しする関数（cards/<ゲームID>.ts の default export。置くだけで読み込まれる）。
+ * 2 人の写真がそろったら写真を載せる など、局面の絵（snapshots/）では足りないゲームだけ置く
+ */
+type CardFinish = (t: T, v: GameView, card: Card) => Card;
+const cardFiles = import.meta.glob<{ default: CardFinish }>(["./cards/*.ts", "!./cards/*.test.ts"], { eager: true });
+
+/**
  * 指した・参加したあとに、今の状況（次は誰の番か・勝敗）を知らせるカード。what は「〇〇さんが指しました」など。
  * 順番のないゲーム（free）では「次は〇〇さんの番」は添えない。t は受け取る人（相手）の言語のものを渡す
  */
 export function progressCard(t: T, v: GameView, what: string): Card {
+  const card = baseProgressCard(t, v, what);
+  return cardFiles[`./cards/${v.gameType}.ts`]?.default(t, v, card) ?? card;
+}
+
+function baseProgressCard(t: T, v: GameView, what: string): Card {
   const names = namesOf(v);
   const game = t(`game.${v.gameType}.name`);
   const url = miniAppUrl(`/g/${v.id}`);
