@@ -1,0 +1,1386 @@
+/*
+ * ふたりのボス戦。styles.css より先に読み込まれるので、共通の部品（button など）を変えるときは .raid を頭に付けて優先させる。
+ * スマホでも PC でも縦に 1 列（PC では右に対局の情報が出るので、盤は 560px までにする）
+ */
+.raid {
+  /* 役の色（攻め = 朱、守り = 青緑、回復 = 緑、支え = 紫） */
+  --role-attack: #d4502a;
+  --role-tank: #127f8c;
+  --role-healer: #23864b;
+  --role-support: #7650d4;
+  --hp-good: #2ba765;
+  --hp-mid: #e19a12;
+  --hp-low: #d93d3d;
+  --boss-hp: #e2583e;
+  --heal: #1f9b57;
+  /* 舞台は昼の空と地面 */
+  --sky-top: #bfe3ff;
+  --sky-bottom: #eef7ff;
+  --ground: #9fd08a;
+  --ground-line: #7cb867;
+  --ink-line: #232838;
+  display: grid;
+  gap: 14px;
+  width: min(100%, 560px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .raid {
+    --role-attack: #ff8259;
+    --role-tank: #3cc3d6;
+    --role-healer: #56d18c;
+    --role-support: #ad8fff;
+    --hp-good: #48d088;
+    --hp-mid: #ffbf3c;
+    --hp-low: #ff6b6b;
+    --boss-hp: #ff7a5c;
+    --heal: #5bdc94;
+    /* 夜の舞台 */
+    --sky-top: #1a2340;
+    --sky-bottom: #2b3657;
+    --ground: #2f5a3a;
+    --ground-line: #3d7049;
+  }
+}
+
+.raid h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.raid-main,
+.raid-side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* ---------- 共通の小さな部品 ---------- */
+
+.raid-icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.raid-icon-cut {
+  stroke: var(--surface);
+}
+
+.raid-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #fff;
+  background: var(--role-color);
+  white-space: nowrap;
+}
+
+.raid-role.attack,
+.raid-role-tab.attack {
+  --role-color: var(--role-attack);
+}
+.raid-role.tank,
+.raid-role-tab.tank {
+  --role-color: var(--role-tank);
+}
+.raid-role.healer,
+.raid-role-tab.healer {
+  --role-color: var(--role-healer);
+}
+.raid-role.support,
+.raid-role-tab.support {
+  --role-color: var(--role-support);
+}
+
+@media (prefers-color-scheme: dark) {
+  .raid-role {
+    color: #10131c;
+  }
+}
+
+.raid-hp {
+  position: relative;
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+
+.raid-hp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--hp-good);
+  transition: width 0.6s ease-out;
+}
+
+.raid-hp.mid .raid-hp-fill {
+  background: var(--hp-mid);
+}
+.raid-hp.low .raid-hp-fill {
+  background: var(--hp-low);
+}
+.raid-hp.boss .raid-hp-fill {
+  background: var(--boss-hp);
+}
+
+/* ---------- 舞台 ---------- */
+
+.raid-arena {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: linear-gradient(var(--sky-top), var(--sky-bottom) 78%);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--boss-hp) 60%, transparent);
+}
+
+.raid-arena.small {
+  box-shadow: none;
+}
+
+.raid-scene {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.raid-ground {
+  fill: var(--ground);
+  stroke: var(--ground-line);
+  stroke-width: 2;
+}
+
+/* 2D の人たち：地面の色に合わせて、線をはっきりさせる */
+.raid-scene .fs2-fig {
+  --fig: var(--ink-line);
+}
+
+@media (prefers-color-scheme: dark) {
+  .raid-scene .fs2-fig {
+    --fig: #e6eaf4;
+  }
+}
+
+.raid-bossbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.raid-bossname {
+  max-width: 11em;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raid-bosshp {
+  font-size: 0.78rem;
+}
+
+.raid-effects {
+  position: absolute;
+  top: 48px;
+  left: 10px;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  max-width: 42%;
+}
+
+.raid-effect {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--role-support);
+  white-space: nowrap;
+}
+
+.raid-effect.hype {
+  background: var(--role-attack);
+}
+.raid-effect.weaken {
+  background: var(--role-tank);
+}
+.raid-effect .muted {
+  color: inherit;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+.raid-skip {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+
+/* 人の動き：攻撃した人は前へ、攻撃を受けた人はゆれる（再生のたびに舞台を作り直すので、毎回動く） */
+.raid-hero {
+  transform-box: fill-box;
+}
+
+.raid-hero.lunge {
+  animation: raid-lunge 0.55s ease-out both;
+}
+
+.raid-hero.hit {
+  animation: raid-shake 0.45s ease-out 1.05s both;
+}
+
+.raid-hero.lunge.hit {
+  animation:
+    raid-lunge 0.55s ease-out both,
+    raid-shake 0.45s ease-out 1.05s both;
+}
+
+@keyframes raid-lunge {
+  40% {
+    transform: translateX(26px);
+  }
+}
+
+@keyframes raid-shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+.raid-aura {
+  fill: #ffd447;
+  opacity: 0.7;
+  animation: raid-pulse 1.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes raid-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(1.25);
+  }
+}
+
+.raid-target {
+  fill: none;
+  stroke: var(--hp-low);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  animation: raid-blink 1.2s ease-in-out infinite;
+}
+
+.raid-target.smash,
+.raid-target.nova {
+  stroke-width: 3.2;
+}
+
+@keyframes raid-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ボスの動き */
+.raid-boss {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.raid-boss.idle {
+  animation: raid-bob 2.6s ease-in-out infinite;
+}
+
+.raid-boss.hurt {
+  animation: raid-hurt 0.5s ease-out 0.25s both;
+}
+
+.raid-boss.attacks {
+  animation: raid-attack 0.6s ease-in-out 0.8s both;
+}
+
+.raid-boss.hurt.attacks {
+  animation:
+    raid-hurt 0.5s ease-out 0.25s both,
+    raid-attack 0.6s ease-in-out 0.8s both;
+}
+
+.raid-boss.defeated {
+  animation:
+    raid-hurt 0.5s ease-out 0.25s both,
+    raid-fall 0.9s ease-in 0.8s both;
+}
+
+@keyframes raid-bob {
+  50% {
+    transform: translateY(-3px) scaleY(1.02);
+  }
+}
+
+@keyframes raid-hurt {
+  20% {
+    transform: translateX(8px) rotate(3deg);
+    filter: brightness(1.6);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+}
+
+@keyframes raid-attack {
+  45% {
+    transform: translateX(-70px) scale(1.06);
+  }
+}
+
+@keyframes raid-fall {
+  to {
+    transform: translateY(10px) rotate(14deg) scale(0.85);
+    opacity: 0;
+  }
+}
+
+.raid-shield {
+  fill: none;
+  stroke: #5fb4ff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.raid-charge {
+  fill: rgb(255 196 61 / 0.18);
+  stroke: rgb(255 176 32 / 0.6);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  animation: raid-spin 6s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes raid-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.raid-zz {
+  font-family: var(--font-num);
+  font-size: 16px;
+  font-weight: 700;
+  fill: var(--ink);
+  opacity: 0.7;
+  animation: raid-bob 2s ease-in-out infinite;
+}
+
+/* 結果の数字。与えたダメージはボスの上に、受けたダメージと回復は人の上に、順に浮かぶ */
+.raid-num {
+  font-family: var(--font-num);
+  font-weight: 800;
+  font-size: 22px;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: raid-float 1.3s ease-out both;
+}
+
+.raid-num.dealt {
+  fill: var(--boss-hp);
+  animation-delay: 0.25s;
+}
+
+.raid-num.taken {
+  fill: var(--hp-low);
+  animation-delay: 1.05s;
+}
+
+.raid-num.healed {
+  fill: var(--heal);
+}
+
+.raid-num.healed.late {
+  animation-delay: 1.3s;
+}
+
+@keyframes raid-float {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  15%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* ---------- ボスの絵 ---------- */
+
+.raid-boss-art {
+  --b-body: #ffd86b;
+  --b-accent: #f2a33a;
+  --b-plate: #fff8e6;
+}
+
+.raid-boss-art .rb-body {
+  fill: var(--b-body);
+  stroke: var(--ink-line, #232838);
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-accent {
+  fill: var(--b-accent);
+  stroke: var(--ink-line, #232838);
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-face-plate {
+  fill: var(--b-plate);
+}
+
+.raid-boss-art .rb-ink-fill {
+  fill: var(--ink-line, #232838);
+}
+
+.raid-boss-art .rb-line,
+.raid-boss-art .rb-leg,
+.raid-boss-art .rb-hand,
+.raid-boss-art .rb-brow,
+.raid-boss-art .rb-tick {
+  fill: none;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-line.thin,
+.raid-boss-art .rb-tick {
+  stroke-width: 2.2;
+}
+
+.raid-boss-art .rb-brow {
+  stroke-width: 4.5;
+}
+
+.raid-boss-art .rb-leg {
+  stroke-width: 5;
+}
+
+.raid-boss-art .rb-soft {
+  opacity: 0.35;
+}
+
+.raid-boss-art .rb-eye {
+  fill: #fff;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2.5;
+}
+
+.raid-boss-art .rb-pupil {
+  fill: var(--ink-line, #232838);
+}
+
+.raid-boss-art .rb-mouth {
+  fill: #7a2330;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-teeth {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art.rain {
+  --b-body: #9aa6bd;
+  --b-accent: #6c7894;
+}
+
+.raid-boss-art .rb-drop {
+  fill: #4aa3ff;
+  animation: raid-rain 1.1s linear infinite;
+}
+
+@keyframes raid-rain {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+.raid-boss-art .rb-bolt {
+  fill: none;
+  stroke: #ffc928;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art.traffic {
+  --b-body: #e8553f;
+  --b-accent: #b93a2a;
+}
+
+.raid-boss-art .rb-cone {
+  fill: #ff8a1f;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-cone-stripe {
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+.raid-boss-art .rb-hub {
+  fill: #c9ced9;
+}
+
+.raid-boss-art .rb-lamp {
+  fill: #fff2a6;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2;
+}
+
+.raid-boss-art .rb-smoke {
+  fill: #b9bfca;
+  opacity: 0.7;
+  animation: raid-bob 1.8s ease-in-out infinite;
+}
+
+.raid-boss-art.deadline {
+  --b-body: #ffffff;
+  --b-accent: #e5483b;
+}
+
+.raid-boss-art .rb-horn {
+  fill: #8f2d2d;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.raid-boss-art .rb-ring {
+  fill: #c9ced9;
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2;
+}
+
+.raid-boss-art .rb-cell {
+  fill: #e4e8f0;
+}
+
+.raid-boss-art .rb-circle-mark {
+  fill: none;
+  stroke: #e5483b;
+  stroke-width: 3;
+}
+
+.raid-boss-art.mosquito {
+  --b-body: #5c6172;
+  --b-accent: #7c8294;
+}
+
+.raid-boss-art .rb-wing {
+  fill: rgb(214 232 255 / 0.65);
+  stroke: var(--ink-line, #232838);
+  stroke-width: 2;
+}
+
+.raid-boss-art .rb-wings {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: raid-buzz 0.12s linear infinite alternate;
+}
+
+@keyframes raid-buzz {
+  to {
+    transform: scaleY(0.82);
+  }
+}
+
+.raid-boss-art .rb-hover {
+  animation: raid-bob 1.6s ease-in-out infinite;
+}
+
+.raid-boss-art .rb-stripe {
+  stroke: #e8eaf0;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.raid-boss-art .rb-nose {
+  stroke: var(--ink-line, #232838);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.raid-boss-art .rb-shadow {
+  fill: rgb(20 28 48 / 0.18);
+}
+
+.raid-boss-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* アイコンでは動かさない */
+.raid-boss-icon * {
+  animation: none !important;
+}
+
+/* ---------- 上の帯（ボスの並び・ラウンド） ---------- */
+
+.raid-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.raid-track {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.raid-track li {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.raid-track li.now {
+  border-color: var(--boss-hp);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--boss-hp) 30%, transparent);
+}
+
+.raid-track li.next {
+  opacity: 0.55;
+}
+
+.raid-track li.done .raid-boss-icon {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.raid-track-check {
+  position: absolute;
+  inset: 6px;
+  fill: none;
+  stroke: var(--hp-good);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.raid-round {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* ---------- 予告 ---------- */
+
+.raid-intent {
+  --intent: var(--boss-hp);
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--intent);
+}
+
+.raid-intent.guard,
+.raid-intent.rest {
+  --intent: var(--role-tank);
+}
+
+.raid-intent.charge {
+  --intent: var(--hp-mid);
+}
+
+.raid-intent-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.raid-intent-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.raid-intent-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--intent);
+  font-size: 1.3rem;
+}
+
+.raid-intent-text {
+  display: grid;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.raid-intent-text b {
+  font-size: 1.05rem;
+}
+
+.raid-intent-dmg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.raid-intent-hit {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--seat-text);
+  background: color-mix(in srgb, var(--seat-color) 14%, transparent);
+}
+
+.raid-intent-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ---------- 2 人の札 ---------- */
+
+.raid-party {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.raid-hero-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--seat-color);
+}
+
+.raid-hero-card.down {
+  background: color-mix(in srgb, var(--hp-low) 7%, var(--surface));
+}
+
+.raid-hero-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.raid-hero-icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  color: var(--seat-color);
+}
+
+.raid-hero-names {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.raid-hero-names b,
+.raid-hero-names small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raid-pick-state {
+  margin-left: auto;
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.raid-pick-state.done {
+  color: #fff;
+  background: var(--seat-color);
+}
+
+@media (prefers-color-scheme: dark) {
+  .raid-pick-state.done {
+    color: #10131c;
+  }
+}
+
+.raid-pick-state.wait {
+  animation: raid-blink 1.6s ease-in-out infinite;
+}
+
+.raid-hero-hp {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.raid-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
+.raid-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.raid-tag.down {
+  color: #fff;
+  background: var(--hp-low);
+}
+
+.raid-tag.charged {
+  color: #3d2a00;
+  background: #ffd447;
+}
+
+.raid-tag.sp {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.raid-tag.sp.ready {
+  color: var(--role-support);
+  background: color-mix(in srgb, var(--role-support) 12%, transparent);
+  font-weight: 700;
+}
+
+.raid-tag.sp .muted {
+  font-weight: 400;
+}
+
+/* ---------- 行動のボタン ---------- */
+
+.raid-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.raid .raid-act {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  padding: 10px 11px;
+  min-height: 74px;
+  border-radius: 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
+}
+
+.raid .raid-act:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--seat-color, var(--p0)) 50%, var(--line));
+}
+
+.raid .raid-act:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.raid .raid-act.on {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.raid .raid-act:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.raid-act.special,
+.raid-act.cheer {
+  grid-column: 1 / -1;
+}
+
+.raid-act.special {
+  background: color-mix(in srgb, var(--role-support) 7%, var(--surface));
+}
+
+.raid-act-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.98rem;
+}
+
+.raid-act.attack .raid-icon {
+  color: var(--role-attack);
+}
+.raid-act.guard .raid-icon {
+  color: var(--role-tank);
+}
+.raid-act.cover .raid-icon {
+  color: var(--p0);
+}
+.raid-act.charge .raid-icon {
+  color: #e2a50c;
+}
+.raid-act.special .raid-icon,
+.raid-act.cheer .raid-icon {
+  color: var(--role-support);
+}
+
+.raid-act-cd {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.raid-act-note {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.raid-act-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.raid-act-chips span {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--surface-2);
+}
+
+/* ---------- 結果 ---------- */
+
+.raid-result {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.raid-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.raid .raid-replay {
+  padding: 2px 10px;
+  font-size: 0.78rem;
+}
+
+.raid-result ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.raid-result li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.raid-result li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.raid-result li.dealt::before {
+  background: var(--boss-hp);
+}
+.raid-result li.taken::before {
+  background: var(--hp-low);
+}
+.raid-result li.healed::before {
+  background: var(--heal);
+}
+.raid-result li.fx::before {
+  background: var(--role-support);
+}
+.raid-result li.boss {
+  font-weight: 700;
+}
+.raid-result li.win {
+  font-weight: 800;
+  color: var(--heal);
+}
+
+/* ---------- 終わり ---------- */
+
+.raid-final {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--hp-low);
+}
+
+.raid-final.cleared {
+  border-top-color: var(--hp-good);
+}
+
+.raid-final strong {
+  font-size: 1.15rem;
+}
+
+.raid-final-mvp {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.84rem;
+}
+
+.raid-final-mvp span {
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: var(--seat-text);
+  background: color-mix(in srgb, var(--seat-color) 12%, transparent);
+}
+
+/* ---------- キャラ選び ---------- */
+
+.raid-pick-head {
+  display: grid;
+  gap: 10px;
+}
+
+.raid-lineup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.raid-lineup-boss {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border-radius: 14px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.raid-lineup-boss .raid-boss-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.raid-lineup-name {
+  font-weight: 700;
+}
+
+.raid-lineup-boss small {
+  font-size: 0.7rem;
+}
+
+.raid-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--seat-text);
+  background: color-mix(in srgb, var(--seat-color) 12%, transparent);
+}
+
+.raid-flag-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.raid-detail {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--seat-color);
+}
+
+.raid-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+}
+
+.raid-detail-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--seat-color);
+}
+
+.raid-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.raid-stats div {
+  display: grid;
+  justify-items: center;
+  padding: 6px 2px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.raid-stats dt {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.raid-stats dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.raid-sp {
+  display: grid;
+  gap: 2px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.raid-sp-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.raid-sp-label .raid-icon {
+  color: var(--role-support);
+}
+
+.raid-sp-line {
+  color: var(--muted);
+}
+
+.raid-sp-line:first-of-type {
+  color: var(--ink);
+}
+
+.raid-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.raid-picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.raid-roles {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.raid .raid-role-tab {
+  flex: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+}
+
+.raid .raid-role-tab.on {
+  color: #fff;
+  border-color: var(--role-color, var(--ink));
+  background: var(--role-color, var(--ink));
+}
+
+@media (prefers-color-scheme: dark) {
+  .raid .raid-role-tab.on {
+    color: #10131c;
+  }
+}
+
+.raid-styles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.raid .raid-style {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  row-gap: 3px;
+  align-items: center;
+  padding: 9px 10px;
+  border-radius: 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.raid .raid-style.on {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 9%, var(--surface));
+}
+
+.raid-style-icon {
+  grid-row: 1 / span 2;
+  width: 30px;
+  height: 30px;
+  color: var(--seat-color);
+}
+
+.raid-style-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.raid-style .raid-role {
+  justify-self: start;
+}
+
+.raid-style-sp {
+  grid-column: 1 / -1;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raid *,
+  .raid *::before {
+    animation-duration: 0.01s !important;
+    animation-iteration-count: 1 !important;
+  }
+}

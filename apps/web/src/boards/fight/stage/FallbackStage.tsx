@@ -85,7 +85,7 @@ const LOOK: Partial<Record<StyleId, Look>> = {
 };
 const paintClass = (p: Paint | undefined) => (p ? ` paint-${p}` : "");
 
-function Figure({ look, x, facing, hit, down }: { look: FighterLook | null; x: number; facing: 1 | -1; hit: boolean; down: boolean }) {
+export function Figure({ look, x, facing, hit, down }: { look: FighterLook | null; x: number; facing: 1 | -1; hit: boolean; down: boolean }) {
   const st = (look && STANCE[look.style]) || { low: 0.03, lean: 0.05, hands: 0.8 };
   const power = look ? statLevel(look.stats.power) : 0;
   const guard = look ? statLevel(look.stats.guard) : 0;
