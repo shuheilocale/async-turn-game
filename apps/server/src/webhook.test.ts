@@ -214,6 +214,55 @@ describe("LINE の Webhook", () => {
     expect(line.replies().at(-1)!.body.messages[0].contents.contents).toHaveLength(2);
   });
 
+  it("もちのお世話のボタン（postback）を押すと、押した人のお世話として指し、返信でようすと次のボタンを返す", async () => {
+    const post = (path: string, body: object) =>
+      app.request(`/api${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const created = (await (await post("/games", { gameType: "mochi", name: "あき", seat: 0, idToken: "line:U-aki", lang: "ja" })).json()) as CreateGameResponse;
+    await post(`/games/${created.id}/join`, { inviteCode: created.inviteCode, name: "Som", idToken: "line:U-som", lang: "th" });
+    const pressed = (userId: string, care: string, replyToken = `rt-pb-${userId}`) => ({
+      type: "postback",
+      replyToken,
+      source: group(userId),
+      postback: { data: JSON.stringify({ g: created.id, m: { care } }) },
+      timestamp: NOON,
+    });
+
+    await deliver([pressed("U-som", "pet")]);
+    const game = (await store.get(created.id))!;
+    expect(game.version).toBe(1);
+    expect((await store.moves(created.id)).map((m) => [m.seat, (m.move as { care: string }).care])).toEqual([[1, "pet"]]);
+    const card = line.replies().at(-1)!.body.messages[0];
+    expect(line.replies().at(-1)!.body.replyToken).toBe("rt-pb-U-som");
+    // 押した人（タイ語）の言語を先に、相手の言語を続けて
+    expect(card.altText).toBe("Som ลูบหัวให้แล้ว／Somさんがなでました");
+    const buttons = card.contents.footer.contents.map((b: { action: { type: string } }) => b.action.type);
+    expect(buttons).toEqual(["postback", "postback", "uri"]);
+    // ボタンでお世話したことをグループのメンバーとして記録する
+    expect((await store.lineGroup("C-g1"))?.members.map((m) => m.lineUserId)).toEqual(["U-som"]);
+
+    // 2 度押し（同じ人・同じお世話をすぐに）は何もしない
+    clock.mockReturnValue(NOON + 5_000);
+    await deliver([pressed("U-som", "pet", "rt-again")]);
+    expect((await store.get(created.id))!.version).toBe(1);
+    expect(line.replies().some((r) => r.body.replyToken === "rt-again")).toBe(false);
+    // 相手のお世話は受け付ける
+    await deliver([pressed("U-aki", "pet")]);
+    expect((await store.get(created.id))!.version).toBe(2);
+
+    // 対局にいない人は指せない
+    await deliver([pressed("U-nok", "feed")]);
+    expect((await store.get(created.id))!.version).toBe(2);
+    expect(line.replies().at(-1)!.body.messages[0].text).toContain("この対局で遊んでいる 2 人だけが使えます");
+
+    // 読めないボタン・順番のあるゲームのボタンでは指さない
+    const ttt = (await (await post("/games", { gameType: "tictactoe", name: "あき", seat: 0, idToken: "line:U-aki" })).json()) as CreateGameResponse;
+    await post(`/games/${ttt.id}/join`, { inviteCode: ttt.inviteCode, name: "Som", idToken: "line:U-som" });
+    await deliver([{ ...pressed("U-aki", "feed"), postback: { data: JSON.stringify({ g: ttt.id, m: { cell: 0 } }) } }]);
+    expect((await store.get(ttt.id))!.version).toBe(0);
+    await deliver([{ ...pressed("U-aki", "feed"), postback: { data: "broken" } }]);
+    expect((await store.get(created.id))!.version).toBe(2);
+  });
+
   it("1 対 1 のトークでのメッセージ・userId のないメッセージには何もしない（返事もしない）", async () => {
     await deliver([said("U-aki", { type: "user", userId: "U-aki" })]);
     await deliver([said("U-aki", { type: "group", groupId: "C-g2" })]);

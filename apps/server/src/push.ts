@@ -1,5 +1,6 @@
-import { flexMessage, gameNames, type Card, type NameLang } from "@atg/core";
+import { flexMessage, gameNames, type Card, type CardAction, type Mochi, type NameLang } from "@atg/core";
 import { awakeTogether, quietUntil, timeZoneOf } from "./alarms.ts";
+import { careActions } from "./mochiChat.ts";
 import type { DueAlarm, GameStore, LinePlayer, NoticeRecord } from "./store.ts";
 
 /**
@@ -101,9 +102,16 @@ const JOIN = "／";
 
 /**
  * 知らせ 1 通のカード。見た目は画面から送るカードと同じ（左にアイコン、右に文と「開く」ボタン）。
- * langs を渡すと（グループへ送るとき）その言語の文を順に並べる。なければ受け取る人の言語だけ
+ * langs を渡すと（グループへ送るとき）その言語の文を順に並べる。なければ受け取る人の言語だけ。
+ * actions は「開く」の上に並べるボタン（もちのお世話など）
  */
-export function noticeCard(alarm: DueAlarm, liffId: string, origin?: string, langs: NameLang[] = [asLang(alarm.lang)]): Card {
+export function noticeCard(
+  alarm: DueAlarm,
+  liffId: string,
+  origin?: string,
+  langs: NameLang[] = [asLang(alarm.lang)],
+  actions?: CardAction[],
+): Card {
   const text = langs.map((lang) => noticeText(lang, alarm.gameType, alarm.kind, alarm.name)).join(JOIN);
   return {
     alt: text,
@@ -112,7 +120,15 @@ export function noticeCard(alarm: DueAlarm, liffId: string, origin?: string, lan
     button: langs.map((lang) => TEXTS[lang].open!).join(JOIN),
     url: `https://miniapp.line.me/${liffId}/g/${alarm.gameId}`,
     icon: origin?.startsWith("https://") ? `${origin.replace(/\/$/, "")}/icons/${alarm.gameType}.png` : undefined,
+    ...(actions?.length ? { actions } : {}),
   };
+}
+
+/** 知らせのカードに付ける、トークのまま押せるボタン。いまは、ふたりのもちのお世話だけ（mochiChat.ts） */
+async function actionsFor(run: Run, alarm: DueAlarm, langs: NameLang[]): Promise<CardAction[] | undefined> {
+  if (alarm.gameType !== "mochi") return undefined;
+  const game = await run.store.get(alarm.gameId);
+  return game ? careActions(game.id, game.state as Mochi.MochiState, run.now, langs, alarm.kind) : undefined;
 }
 
 /** 1 回の処理（processAlarms）で共通に使うもの */
@@ -163,7 +179,9 @@ async function toPerson(run: Run, alarm: DueAlarm): Promise<PushResult> {
     await record("limited", over);
     return { ...base, result: "limited" };
   }
-  const message = flexMessage(noticeCard(alarm, run.options.liffId, run.options.origin));
+  const langs = [asLang(alarm.lang)];
+  const card = noticeCard(alarm, run.options.liffId, run.options.origin, langs, await actionsFor(run, alarm, langs));
+  const message = flexMessage(card);
   const failure = await push(run, alarm.lineUserId!, message);
   if (failure) run.log(`LINE の知らせを送れませんでした（${alarm.gameId} 席 ${alarm.seat} ${alarm.kind}）: ${failure}`);
   await record(failure ? "failed" : "sent", failure);
@@ -220,7 +238,9 @@ async function toGroup(run: Run, groupId: string, unit: DueAlarm[], players: Lin
 
   // 文は、予定の席の人（stalled なら手番の人）の言語を先に、相手の言語が違えば続けて
   const langs = [first.lang, ...players.filter((p) => p.seat !== first.seat).map((p) => p.lang)].map(asLang);
-  const message = flexMessage(noticeCard(first, run.options.liffId, run.options.origin, [...new Set(langs)]));
+  const both = [...new Set(langs)];
+  const card = noticeCard(first, run.options.liffId, run.options.origin, both, await actionsFor(run, first, both));
+  const message = flexMessage(card);
   const failure = await push(run, groupId, message);
   if (failure) run.log(`LINE の知らせをグループに送れませんでした（${first.gameId} ${first.kind} → ${groupId}）: ${failure}`);
   await record(failure ? "failed" : "sent", failure);

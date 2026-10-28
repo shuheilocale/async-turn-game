@@ -289,7 +289,14 @@ describe("2 人と公式アカウントのグループに知らせる", () => {
       "ふたりのもち／โมจิของเรา",
       "もちがおなかをすかせています／โมจิหิวแล้ว",
     ]);
-    expect(message.contents.footer.contents[0].action.label).toBe("開く／เปิด");
+    // 「開く」の上に、トークのまま押せるお世話のボタン（おなかがすいた知らせなので、まずごはん）
+    const buttons = message.contents.footer.contents.map((b: { action: { type: string; label: string; data?: string } }) => b.action);
+    expect(buttons.map((a: { type: string; label: string }) => [a.type, a.label])).toEqual([
+      ["postback", "ごはん／ให้อาหาร"],
+      ["postback", "なでる／ลูบหัว"],
+      ["uri", "開く／เปิด"],
+    ]);
+    expect(JSON.parse(buttons[0].data!)).toEqual({ g: id, m: { care: "feed" } });
     expect(await store.alarms(id)).toEqual([]);
     // 記録は 2 人それぞれに 1 行。グループへ送ったと分かる
     expect((await store.notices(id)).map((n) => [n.seat, n.lineUserId, n.status, n.groupId])).toEqual([

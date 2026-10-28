@@ -34,6 +34,8 @@ export function Play({ id }: { id: string }) {
   const [picking, setPicking] = useState(false);
   /** トークに自動で送れなかったときに、送り先を選んで送るためのカード */
   const [notice, setNotice] = useState<Card | null>(null);
+  /** 結果のカードの「もう一局」「ほかのゲームで遊ぶ」から開かれたら（?then=rematch|pick）、開いたあとにそれをする */
+  const then = useRef(new URLSearchParams(location.search).get("then"));
   /** LINE で送っている途中か（送り終わるまでボタンを押せないようにして、同じカードを何通も送らない） */
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
@@ -114,6 +116,18 @@ export function Play({ id }: { id: string }) {
       document.title = t("app.name");
     };
   }, [myTurn, t, view?.gameType]);
+
+  // 結果のカードのボタンから開かれたとき。参加者と分かってから一度だけ。すでに次の対局があれば、そちらを開く
+  useEffect(() => {
+    const what = then.current;
+    if (!what || !view || view.you === null) return;
+    then.current = null;
+    navigate(`/g/${id}`, true);
+    if (view.status.kind !== "finished") return;
+    if (view.nextGameId) goNext(view.nextGameId, true);
+    else if (what === "rematch") startNext();
+    else if (what === "pick") setPicking(true);
+  }, [view]);
 
   /** 手を送る。送れたら true */
   async function submit(move: unknown = selected): Promise<boolean> {

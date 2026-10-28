@@ -15,7 +15,14 @@ export interface Card {
   icon?: string;
   /** 今の局面（apps/web の snapshot.ts の snapshotToFlex で作った箱）。なければ出さない */
   board?: object;
+  /**
+   * 主なボタンの上に並べる小さなボタン。url はリンク（開く）、data はトークのまま押せるボタン（postback）。
+   * postback はサーバ（公式アカウント）が送るカードでしか使えない（画面から送る liff.sendMessages・shareTargetPicker はリンクだけ）
+   */
+  actions?: CardAction[];
 }
+
+export type CardAction = { label: string; url: string } | { label: string; data: string };
 
 /** カードを Flex Message 1 通にする。画面と同じく白黒を基調にする */
 export function flexMessage(card: Card): { type: "flex"; altText: string; contents: object } {
@@ -59,7 +66,18 @@ export function flexMessage(card: Card): { type: "flex"; altText: string; conten
         layout: "vertical",
         paddingAll: "12px",
         paddingTop: "0px",
+        spacing: "sm",
         contents: [
+          ...(card.actions ?? []).map((a) => ({
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            // 押したことはトークに出さない（返信で知らせる）。ボタンの文字は 40 字まで（超えると LINE に断られる）
+            action:
+              "data" in a
+                ? { type: "postback", label: a.label.slice(0, 40), data: a.data }
+                : { type: "uri", label: a.label.slice(0, 40), uri: a.url },
+          })),
           {
             type: "button",
             style: "primary",

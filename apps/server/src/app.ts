@@ -1,7 +1,6 @@
 import { Hono, type Context } from "hono";
 import {
   getGame,
-  IllegalMoveError,
   type CreateGameResponse,
   type GameView,
   type JoinGameResponse,
@@ -9,8 +8,9 @@ import {
   type AppConfig,
   type Seat,
 } from "@atg/core";
-import { cleanTimeZone, planAlarms } from "./alarms.ts";
+import { cleanTimeZone } from "./alarms.ts";
 import type { VerifyLine } from "./line.ts";
+import { cleanLang, playMove, replan as replanGame } from "./moves.ts";
 import type { GameRecord, GameStore } from "./store.ts";
 import { handleEvents, verifySignature } from "./webhook.ts";
 
@@ -20,10 +20,6 @@ function cleanName(raw: unknown): string {
   const name = typeof raw === "string" ? raw.trim().slice(0, MAX_NAME) : "";
   return name || "プレイヤー";
 }
-
-/** 画面が対応している言語だけ受け付ける */
-const LANGS = ["ja", "en", "th"];
-const cleanLang = (raw: unknown): string | null => (typeof raw === "string" && LANGS.includes(raw) ? raw : null);
 
 function bearer(c: Context): string | undefined {
   const header = c.req.header("Authorization");
@@ -80,18 +76,7 @@ export function createApp(store: GameStore, { verifyLine, lineOaId, messaging }:
   const app = new Hono().basePath("/api");
   const oaId = lineOaId?.trim() ? (lineOaId.trim().startsWith("@") ? lineOaId.trim() : `@${lineOaId.trim()}`) : null;
 
-  /**
-   * 2 人そろった対局の、次の知らせの予定を決め直す（手を受け取ったとき・参加したとき・次の対局を作ったとき）。
-   * 予定が入れられなくても対局は止めない
-   */
-  async function replan(game: GameRecord | null) {
-    if (!game || game.players.length < 2) return;
-    try {
-      await store.setAlarms(game.id, game.version, planAlarms(getGame(game.gameType)!, game.state, Date.now()));
-    } catch (e) {
-      console.error("知らせの予定を入れられませんでした", e);
-    }
-  }
+  const replan = (game: GameRecord | null) => replanGame(store, game);
 
   /**
    * 本文に idToken があれば LINE のユーザー ID にする。なければ null（LINE の外から使っている）。
@@ -229,32 +214,10 @@ export function createApp(store: GameStore, { verifyLine, lineOaId, messaging }:
     if (!game) return c.json({ error: "not_found" }, 404);
     const seat = await store.seatOf(id, bearer(c));
     if (seat === null) return c.json({ error: "not_participant" }, 401);
-    if (game.players.length < 2) return c.json({ error: "waiting_opponent" }, 409);
-
     const body = await jsonBody(c);
-    if (body.version !== game.version) return c.json({ error: "version_conflict" }, 409);
-    const def = getGame(game.gameType)!;
-    const parsed = def.parseMove(body.move);
-    if (parsed === null) return c.json({ error: "bad_move" }, 400);
-    // 時間を使うゲームは、受け取った時刻をサーバの時計で手に書き込む（送られてきた時刻は使わない）。記録にもこの手が残る
-    const move = def.stampMove ? def.stampMove(parsed, Date.now()) : parsed;
-
-    let next: unknown;
-    try {
-      next = def.applyMove(game.state, move, seat);
-    } catch (e) {
-      if (e instanceof IllegalMoveError) return c.json({ error: e.code }, 422);
-      throw e;
-    }
-    if (!(await store.recordMove(id, game.version, seat, move, next))) return c.json({ error: "version_conflict" }, 409);
-    const lang = cleanLang(body.lang);
-    const me = game.players.find((p) => p.seat === seat);
-    if (lang && me?.lang !== lang) await store.setLang(id, seat, lang);
-    const timeZone = cleanTimeZone(body.timeZone);
-    if (timeZone && me?.timeZone !== timeZone) await store.setTimeZone(id, seat, timeZone);
-    const updated = (await store.get(id))!;
-    await replan(updated);
-    return c.json(toView(updated, seat));
+    const played = await playMove(store, game, seat, body.move, body.version, { lang: body.lang, timeZone: body.timeZone });
+    if (!played.ok) return c.json({ error: played.error }, played.status);
+    return c.json(toView(played.game, seat));
   });
 
   app.get("/games/:id/moves", async (c) => {

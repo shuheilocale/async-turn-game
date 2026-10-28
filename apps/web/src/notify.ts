@@ -49,7 +49,12 @@ export function progressCard(t: T, v: GameView, what: string): Card {
       : w === null
         ? t("status.draw")
         : t("status.winner", { name: names[w], seat: t(`game.${v.gameType}.seat${w}`) });
-    return { alt: `${game}: ${result}`, label: game, title: result, body: what, button: t("line.result"), url, icon, board };
+    // トークから、そのまま次の対局を始められるように（開くと、もう一局を作る・ほかのゲームを選ぶ画面を出す）
+    const actions = [
+      { label: t("play.rematch"), url: miniAppUrl(`/g/${v.id}?then=rematch`) },
+      { label: t("play.otherGame"), url: miniAppUrl(`/g/${v.id}?then=pick`) },
+    ];
+    return { alt: `${game}: ${result}`, label: game, title: result, body: what, button: t("line.result"), url, icon, board, actions };
   }
   if (v.status.free) return { alt: what, label: game, title: what, button: t("line.open"), url, icon, board };
   const next = t("status.theirTurn", { name: names[v.status.turn] });

@@ -1,5 +1,7 @@
-import { getGame } from "@atg/core";
+import { flexMessage, getGame, Mochi, type NameLang } from "@atg/core";
 import { isMenuWord, MENU_QUICK_REPLY, menuMessage, type MenuGame } from "./menu.ts";
+import { careReply, chatMoveOf, langsOf } from "./mochiChat.ts";
+import { playMove } from "./moves.ts";
 import type { GameStore } from "./store.ts";
 
 /**
@@ -11,6 +13,7 @@ import type { GameStore } from "./store.ts";
  * - memberLeft → メンバーの記録を消す。memberJoined は記録しない（話したときに記録する）
  * - 「あそぶ」などのことば（menu.ts）を送ると、グループでも 1 対 1 のトークでも、ゲームのメニューを返信する
  * - 1 対 1 のトークでのそれ以外のメッセージには何もしない（返事もしない）
+ * - postback：カードのボタン（もちのお世話など。mochiChat.ts）を押した → 押した人の手として指して、返信でようすを返す
  * 返信は reply API で送る（push と違って無料枠を使わない）
  */
 
@@ -41,6 +44,24 @@ export function memberText(name: string | null): string {
         ]
   ).join("\n");
 }
+
+/** トークのボタンで指せなかったときの返信。押した人の言語がわからないので 3 言語を並べる */
+export const POSTBACK_TEXTS = {
+  not_participant: [
+    "このボタンは、この対局で遊んでいる 2 人だけが使えます",
+    "ปุ่มนี้ใช้ได้เฉพาะ 2 คนที่เล่นเกมนี้อยู่",
+    "Only the two players in this game can use this button",
+  ],
+  game_over: ["この対局はもう終わっています", "เกมนี้จบไปแล้ว", "This game has already finished"],
+  failed: [
+    "うまく受け付けられませんでした。「開く」から試してください",
+    "ทำรายการไม่สำเร็จ ลองกด \"เปิด\" แล้วทำในแอปนะ",
+    "That didn't go through. Please try from \"Open\"",
+  ],
+} as const;
+
+/** 同じ人が同じお世話のボタンをこの時間のうちにもう一度押したら、押し間違い（2 度押し）として何もしない */
+export const DOUBLE_TAP_MS = 30_000;
 
 /** base64 の文字列をバイト列にする。base64 でなければ null */
 function fromBase64(text: string) {
@@ -81,6 +102,7 @@ interface LineEvent {
   replyToken?: string;
   source?: { type?: string; userId?: string; groupId?: string; roomId?: string };
   message?: { type?: string; text?: string; quoteToken?: string };
+  postback?: { data?: string };
   left?: { members?: { userId?: string }[] };
 }
 
@@ -144,12 +166,62 @@ export async function handleEvents(store: GameStore, events: unknown[], options:
     }
   };
 
+  /**
+   * カードのボタン（postback）で指す。押した人を LINE のユーザー ID から対局の席に結びつけて、その人の手として指す。
+   * 同じ時に画面から指されて版がずれたら、もう一度だけ最新の局面で試す
+   */
+  const playFromChat = async (event: LineEvent, inGroup: boolean) => {
+    const chat = chatMoveOf(event.postback?.data);
+    const userId = event.source?.userId;
+    if (!chat || !userId) return;
+    const fail = (key: keyof typeof POSTBACK_TEXTS) => reply(event.replyToken, POSTBACK_TEXTS[key].join("\n"));
+    for (let tries = 0; tries < 2; tries++) {
+      const game = await store.get(chat.gameId);
+      if (!game) return fail("failed");
+      const seat = await store.seatOfLineUser(game.id, userId);
+      if (seat === null) return fail("not_participant");
+      const def = getGame(game.gameType)!;
+      const status = def.status(game.state);
+      if (status.kind === "finished") return fail("game_over");
+      // 版を持たないボタンなので、順番のないゲーム（いつ指してもよい）にかぎる
+      if (status.kind !== "playing" || !status.free) return fail("failed");
+      const move = chat.move as { care?: unknown };
+      if (game.gameType === "mochi") {
+        const last = Mochi.lastCareOf(game.state as Mochi.MochiState, seat);
+        if (last && last.care === move.care && Date.now() - last.at < DOUBLE_TAP_MS) return;
+      }
+      const played = await playMove(store, game, seat, chat.move, game.version);
+      if (!played.ok) {
+        if (played.error === "version_conflict") continue;
+        return fail(played.error === "game_over" ? "game_over" : "failed");
+      }
+      // グループなら 2 人の言語、1 対 1 なら押した人の言語
+      const me = game.players.find((p) => p.seat === seat);
+      const langs: NameLang[] = inGroup ? langsOf(game, seat) : [me?.lang === "en" || me?.lang === "th" ? me.lang : "ja"];
+      if (game.gameType === "mochi" && options.liffId) {
+        const care = (played.move as Mochi.MochiMove).care;
+        return send(event.replyToken, flexMessage(careReply(game, played.game, seat, care, langs, options.liffId, options.origin)));
+      }
+      return;
+    }
+    return fail("failed");
+  };
+
   for (const raw of events) {
     const event = (raw ?? {}) as LineEvent;
     const source = event.source;
     const kind = source?.type === "group" ? "group" : source?.type === "room" ? "room" : null;
     const chatId = kind === "group" ? source?.groupId : kind === "room" ? source?.roomId : undefined;
     const menuAsked = event.type === "message" && event.message?.type === "text" && isMenuWord(event.message.text ?? "");
+    if (event.type === "postback") {
+      try {
+        if (kind && chatId && source?.userId) await store.seeGroupMember(chatId, source.userId, at);
+        await playFromChat(event, !!kind);
+      } catch (e) {
+        log(`LINE のボタンを処理できませんでした: ${String(e instanceof Error ? e.message : e)}`);
+      }
+      continue;
+    }
     // 1 対 1 のトーク（source.type が user）では、メニューのことばにだけ返事をする
     if (!kind || !chatId) {
       if (menuAsked && source?.type === "user" && source.userId) {

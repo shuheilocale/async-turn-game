@@ -35,6 +35,16 @@ describe("LINE の知らせ", () => {
     expect(free.title).toBe("あきさんがごはんをあげました");
   });
 
+  it("終わった対局のカードには、トークからそのまま次の対局を始めるボタン（リンク）を付ける。途中のカードには付けない", () => {
+    const done = progressCard(t, view({ kind: "finished", winner: 0 }, "tictactoe"), "あきさんが指しました");
+    expect(done.actions?.map((a) => [a.label, "url" in a && a.url.endsWith("/g/g1?then=rematch")])).toEqual([
+      ["もう一局", true],
+      ["ほかのゲームで遊ぶ", false],
+    ]);
+    expect(done.actions?.every((a) => "url" in a)).toBe(true);
+    expect(progressCard(t, view({ kind: "playing", turn: 1 }, "tictactoe"), "x").actions).toBeUndefined();
+  });
+
   it("順番のないゲームで、同じ人が短い間に続けて指したときは、毎回は知らせない", () => {
     const h = 3_600_000;
     // はじめては知らせる
