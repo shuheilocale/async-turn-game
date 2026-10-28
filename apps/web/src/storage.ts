@@ -91,3 +91,14 @@ export const savedInvited = {
     if (!all.includes(id)) write("atg:invited", [...all.slice(-49), id]);
   },
 };
+
+/** もちのおでかけを、この端末で見たか（種ごとに、見たときのお世話の回数。新しい 20 匹まで） */
+export const savedMochiSeen = {
+  get: (seed: number) => read<Record<string, number>>("atg:mochiSeen", {})[seed] ?? 0,
+  set(seed: number, moves: number) {
+    const all = read<Record<string, number>>("atg:mochiSeen", {});
+    delete all[seed];
+    all[seed] = moves;
+    write("atg:mochiSeen", Object.fromEntries(Object.entries(all).slice(-20)));
+  },
+};

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Mochi, type Seat } from "@atg/core";
 import { useI18n, type T } from "../i18n/index.tsx";
 import type { BoardProps } from "./index.ts";
-import { ActIcon, CareIcon, CareShape, Creature, ItemSvg, ROOM, Room, shapeOf, SparkShape, sparkOf, type Spark } from "./mochi/art.tsx";
+import { ActIcon, CareIcon, CareShape, Creature, ItemSvg, Outdoors, ROOM, Room, shapeOf, SparkShape, sparkOf, type Spark } from "./mochi/art.tsx";
+import { savedMochiSeen } from "../storage.ts";
 import "./MochiBoard.css";
 
 const {
@@ -39,6 +40,13 @@ const MIX_BAR = `linear-gradient(90deg, ${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((k) =>
 const TICK_MS = 30_000;
 /** お世話のあとの喜ぶ動きと文を出しておく時間 */
 const REACT_MS = 3600;
+/** おでかけのときは、部屋の代わりにおでかけ先をこの時間だけ見せる */
+const OUTING_MS = 7000;
+/** 開いたとき、この時間より前のおでかけは見せない */
+const OUTING_FRESH_MS = 24 * 3_600_000;
+
+/** やることがおでかけなら、その行き先 */
+const placeOf = (act?: Act) => (act ? (ACT_DEFS[act] as Mochi.ActDef).place : undefined);
 
 /** 端末の時計。TICK_MS ごとと、画面に戻ってきたときに進める */
 function useClock(): number {
@@ -142,6 +150,7 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
       const fresh = known > knownSeen.current;
       const feel = feeling === "like" ? (fresh ? "likeNew" : "like") : feeling === "dislike" ? (fresh ? "dislikeNew" : "dislike") : undefined;
       setReaction({ key: moves, care: s.last.care, act, matched: s.last.matched, egg, feel });
+      if (placeOf(act)) savedMochiSeen.set(s.seed, moves);
     }
     if (moves < seen.current) setReaction(null);
     seen.current = moves;
@@ -149,9 +158,19 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
   }, [moves]);
   useEffect(() => {
     if (!reaction) return;
-    const timer = setTimeout(() => setReaction(null), REACT_MS);
+    const timer = setTimeout(() => setReaction(null), placeOf(reaction.act) ? OUTING_MS : REACT_MS);
     return () => clearTimeout(timer);
   }, [reaction?.key]);
+
+  // 開いたとき、この端末でまだ見ていないおでかけ（相手が連れていった など）が最後のお世話なら、その様子を見せる
+  useEffect(() => {
+    const last = s.last;
+    if (finished || !last || !placeOf(last.act) || Date.now() - last.at > OUTING_FRESH_MS) return;
+    if (savedMochiSeen.get(s.seed) >= moves) return;
+    savedMochiSeen.set(s.seed, moves);
+    setReaction({ key: moves, care: last.care, act: last.act, matched: last.matched, egg: false });
+  }, []);
+  const outing = reaction ? placeOf(reaction.act) : undefined;
 
   // さわったときの、ぷにっ（手にはならない）
   const [taps, setTaps] = useState(0);
@@ -187,35 +206,43 @@ export function MochiBoard({ state, status, you, names, interactive, onSubmit }:
           role="img"
           aria-label={t("game.mochi.room", { stage: t(`game.mochi.stage.${stage}`), mood: t(`game.mochi.mood.${mood}`) })}
         >
-          <Room shelf={s.treasures.map((x) => x.item)}>
+          <Scene key={outing ? `out-${reaction!.key}` : "room"} outing={outing} shelf={s.treasures.map((x) => x.item)}>
             <g transform={`translate(180 ${ROOM.floor})`}>
-              <g
-                className={[
-                  "mochi-hit",
-                  !carer && !finished ? "waiting" : "",
-                  reaction ? "reacting" : "",
-                  ready ? "ready" : "",
-                  finished ? "cheer" : "",
-                ].join(" ")}
-                onPointerDown={() => setTaps((n) => n + 1)}
-              >
-                <g key={taps} className={taps > 0 ? "mochi-squish" : ""}>
-                  <Creature
-                    stage={stage}
-                    form={s.form}
-                    color={color}
-                    mood={mood}
-                    eggProgress={stage === "egg" ? Math.min(1, c.growth / HATCH) : 0}
-                    delighted={!!reaction?.matched || reaction?.feel === "like" || reaction?.feel === "likeNew" || finished}
-                    accessory={s.accessory}
-                  />
+              <g className={outing ? "mochi-walk-in" : undefined}>
+                <g
+                  className={[
+                    "mochi-hit",
+                    !carer && !finished ? "waiting" : "",
+                    reaction ? "reacting" : "",
+                    outing ? "outing" : "",
+                    ready ? "ready" : "",
+                    finished ? "cheer" : "",
+                  ].join(" ")}
+                  onPointerDown={() => setTaps((n) => n + 1)}
+                >
+                  <g key={taps} className={taps > 0 ? "mochi-squish" : ""}>
+                    <Creature
+                      stage={stage}
+                      form={s.form}
+                      color={color}
+                      mood={outing ? "happy" : mood}
+                      eggProgress={stage === "egg" ? Math.min(1, c.growth / HATCH) : 0}
+                      delighted={!!reaction?.matched || reaction?.feel === "like" || reaction?.feel === "likeNew" || finished}
+                      accessory={s.accessory}
+                    />
+                  </g>
                 </g>
+                <Sparks stage={stage} form={s.form} reaction={reaction} taps={taps} asleep={mood === "asleep"} ready={ready || finished} />
+                {want && !reaction && <WantBubble stage={stage} form={s.form} care={want} />}
               </g>
-              <Sparks stage={stage} form={s.form} reaction={reaction} taps={taps} asleep={mood === "asleep"} ready={ready || finished} />
-              {want && !reaction && <WantBubble stage={stage} form={s.form} care={want} />}
             </g>
-          </Room>
+          </Scene>
         </svg>
+        {outing && (
+          <span key={reaction!.key} className="mochi-place-tag">
+            {t(`game.mochi.place.${outing}`)}
+          </span>
+        )}
         {taps > 0 && (
           <span key={taps} className="mochi-tap-text" aria-hidden>
             {t(stage === "egg" ? "game.mochi.react.tapEgg" : "game.mochi.react.tap")}
@@ -476,6 +503,11 @@ function Head({ s, stage, growth, now, finished }: { s: State; stage: Mochi.Stag
       )}
     </div>
   );
+}
+
+/** 部屋か、おでかけ先の景色。切りかわるときは、ふわっと出す */
+function Scene({ outing, shelf, children }: { outing?: Mochi.Place; shelf: Mochi.Item[]; children: ReactNode }) {
+  return <g className="mochi-scene">{outing ? <Outdoors place={outing}>{children}</Outdoors> : <Room shelf={shelf}>{children}</Room>}</g>;
 }
 
 /** ほしいもの（部屋の中の吹き出し） */

@@ -584,6 +584,276 @@ export function Room({ shelf, children }: { shelf: Item[]; children: ReactNode }
   );
 }
 
+// ---------- おでかけ先 ----------
+
+/**
+ * おでかけ先の景色（部屋と同じ大きさ。もちは ROOM.floor の高さに立つ）。おでかけしたときだけ、しばらく部屋の代わりに出す。
+ * 昼の景色は夜の画面でもそのまま（おまつりだけ夕方）
+ */
+export function Outdoors({ place, children }: { place: Mochi.Place; children: ReactNode }) {
+  const id = useSvgId();
+  const W = ROOM.w;
+  const sky = {
+    park: ["#a9daf6", "#e9f6fd"],
+    market: ["#f9c98f", "#fdeed6"],
+    sea: ["#8fcdf3", "#e0f2fc"],
+    festival: ["#2f3170", "#e9967a"],
+  }[place];
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${id}sky`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={sky[0]} />
+          <stop offset="1" stopColor={sky[1]} />
+        </linearGradient>
+        <linearGradient id={`${id}sea`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4fa6d8" />
+          <stop offset="1" stopColor="#86cdee" />
+        </linearGradient>
+        <radialGradient id={`${id}glow`} cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#ffd27a" stopOpacity="0.75" />
+          <stop offset="1" stopColor="#ffd27a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width={W} height={ROOM.h} fill={`url(#${id}sky)`} />
+      {place === "park" && <Park />}
+      {place === "market" && <Market />}
+      {place === "sea" && <Sea grad={`url(#${id}sea)`} />}
+      {place === "festival" && <Festival glow={`url(#${id}glow)`} />}
+      {children}
+    </>
+  );
+}
+
+function Cloud({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (
+    <g className="mochi-cloud">
+      <path
+        transform={`translate(${x} ${y}) scale(${s})`}
+        d="M 0 14 a 9 9 0 0 1 15 -6 a 12 12 0 0 1 22 4 a 7 7 0 0 1 2 13 h -36 a 6 6 0 0 1 -3 -11 z"
+        fill="#fff"
+        opacity="0.92"
+      />
+    </g>
+  );
+}
+
+function Park() {
+  return (
+    <g>
+      <circle cx="300" cy="44" r="16" fill="#ffe6a3" />
+      <Cloud x={40} y={30} />
+      <Cloud x={190} y={52} s={0.8} />
+      <path d="M 0 150 C 60 112 120 118 180 140 C 240 116 310 110 360 136 V 190 H 0 Z" fill="#b4dda6" />
+      <path d="M 0 168 C 80 146 160 150 230 164 C 280 152 330 152 360 160 V 200 H 0 Z" fill="#9dd18f" />
+      <rect y="176" width="360" height="74" fill="#8fc77f" />
+      <ellipse cx="180" cy="226" rx="150" ry="20" fill="#e8d8b4" opacity="0.85" />
+      {/* 木 */}
+      <g>
+        <rect x="44" y="120" width="10" height="60" rx="3" fill="#9a6a45" />
+        <circle cx="49" cy="108" r="30" fill="#6fb46c" />
+        <circle cx="34" cy="118" r="18" fill="#7cc077" />
+        <circle cx="66" cy="114" r="20" fill="#7cc077" />
+        <circle cx="42" cy="98" r="6" fill="#9fd69a" />
+      </g>
+      <g>
+        <rect x="306" y="134" width="8" height="46" rx="3" fill="#9a6a45" />
+        <circle cx="310" cy="124" r="22" fill="#e9a3b8" />
+        <circle cx="296" cy="132" r="13" fill="#f2b9c9" />
+        <circle cx="324" cy="131" r="14" fill="#f2b9c9" />
+      </g>
+      {/* ベンチ */}
+      <g fill="#c98e5c" stroke="#8a5a3a" strokeWidth="1">
+        <rect x="236" y="176" width="46" height="5" rx="2" />
+        <rect x="236" y="166" width="46" height="5" rx="2" />
+        <rect x="240" y="181" width="4" height="12" />
+        <rect x="274" y="181" width="4" height="12" />
+      </g>
+      {/* 花 */}
+      {[
+        [22, 200, "#f6a6b8"],
+        [84, 206, "#f7d774"],
+        [112, 194, "#fff"],
+        [254, 206, "#f6a6b8"],
+        [330, 200, "#f7d774"],
+        [300, 214, "#fff"],
+      ].map(([x, y, c], i) => (
+        <g key={i} transform={`translate(${x} ${y})`}>
+          <path d="M 0 0 v 8" stroke="#5f9a63" strokeWidth="1.4" />
+          {[0, 72, 144, 216, 288].map((a) => (
+            <circle key={a} cx={Math.cos((a * Math.PI) / 180) * 2.6} cy={Math.sin((a * Math.PI) / 180) * 2.6} r="2.2" fill={c as string} />
+          ))}
+          <circle r="1.5" fill="#f2b84b" />
+        </g>
+      ))}
+      {/* ちょうちょ */}
+      <g className="mochi-flutter">
+        <g transform="translate(120 120)">
+          <ellipse cx="-3" cy="0" rx="4" ry="3" fill="#f7cf63" className="mochi-wing" />
+          <ellipse cx="3" cy="0" rx="4" ry="3" fill="#f7cf63" className="mochi-wing" />
+          <path d="M 0 -3 v 6" stroke="#5b4a3a" strokeWidth="1.2" strokeLinecap="round" />
+        </g>
+      </g>
+    </g>
+  );
+}
+
+function Stall({ x, awning, children }: { x: number; awning: [string, string]; children: ReactNode }) {
+  const stripes = 6;
+  const w = 108;
+  return (
+    <g transform={`translate(${x} 0)`}>
+      <rect x="6" y="96" width="4" height="84" fill="#8a5a3a" />
+      <rect x={w - 10} y="96" width="4" height="84" fill="#8a5a3a" />
+      {Array.from({ length: stripes }, (_, i) => (
+        <path
+          key={i}
+          d={`M ${(i * w) / stripes} 84 h ${w / stripes} v 18 a ${w / stripes / 2} ${w / stripes / 2.4} 0 0 1 ${-w / stripes} 0 z`}
+          fill={awning[i % 2]}
+        />
+      ))}
+      <rect x="-2" y="80" width={w + 4} height="6" rx="3" fill="#8a5a3a" />
+      <rect x="2" y="146" width={w - 4} height="34" rx="3" fill="#d9a86e" stroke="#a8743f" strokeWidth="1" />
+      {children}
+    </g>
+  );
+}
+
+function Market() {
+  return (
+    <g>
+      <rect y="150" width="360" height="30" fill="#f3d9b6" />
+      {/* 旗 */}
+      <g className="mochi-sway-slow">
+        <path d="M 0 30 Q 180 62 360 30" fill="none" stroke="#8a5a3a" strokeWidth="1" />
+        {Array.from({ length: 11 }, (_, i) => {
+          const x = 16 + i * 32;
+          const y = 30 + 32 * (1 - ((x - 180) / 180) ** 2) * 0.98;
+          return <path key={i} d={`M ${x - 8} ${y - 1} h 16 l -8 13 z`} fill={["#ef8f6a", "#f7cf63", "#8fcb8b", "#86a3f3"][i % 4]} />;
+        })}
+      </g>
+      <rect y="176" width="360" height="74" fill="#e6cfae" />
+      <path d="M 0 200 H 360 M 0 226 H 360 M 60 176 v 24 M 180 176 v 24 M 300 176 v 24 M 120 200 v 26 M 240 200 v 26" stroke="#d6b98f" strokeWidth="1.2" />
+      <Stall x={14} awning={["#ef6f5a", "#fff4e6"]}>
+        {[18, 38, 58, 78].map((cx, i) => (
+          <g key={cx}>
+            <ellipse cx={cx} cy="142" rx="9" ry="7" fill={i % 2 ? "#f7bf45" : "#f4a93a"} stroke="#c98a2a" strokeWidth="0.8" />
+            <path d={`M ${cx + 3} 136 q 3 -4 7 -3`} stroke="#74b05e" strokeWidth="2" fill="none" />
+          </g>
+        ))}
+      </Stall>
+      <Stall x={238} awning={["#7cbf8a", "#f4fbf2"]}>
+        {[22, 50, 78].map((cx) => (
+          <g key={cx}>
+            <path d={`M ${cx - 8} 124 h 16 l -2 22 h -12 z`} fill="#f1e2cc" stroke="#b9a07a" strokeWidth="0.8" />
+            <rect x={cx - 8} y="138" width="16" height="7" fill="#5a3c33" opacity="0.85" />
+            <path d={`M ${cx + 3} 124 l 4 -12`} stroke="#ef7fa0" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        ))}
+      </Stall>
+      {/* 花のかざり（ジャスミンの輪） */}
+      <path d="M 180 50 V 106" stroke="#8a5a3a" strokeWidth="1" />
+      <g transform="translate(180 120)">
+        {Array.from({ length: 12 }, (_, i) => (
+          <circle key={i} cx={Math.cos((i / 12) * Math.PI * 2) * 14} cy={Math.sin((i / 12) * Math.PI * 2) * 14} r="3.2" fill="#fffaf0" stroke="#d8cfb5" strokeWidth="0.7" />
+        ))}
+        <circle r="4" fill="#f39a4a" />
+      </g>
+    </g>
+  );
+}
+
+function Sea({ grad }: { grad: string }) {
+  return (
+    <g>
+      <circle cx="292" cy="46" r="18" fill="#fff0b8" />
+      <Cloud x={30} y={40} s={0.9} />
+      <g className="mochi-gull">
+        <path d="M 120 60 q 6 -6 12 0 q 6 -6 12 0" fill="none" stroke="#5b6b7a" strokeWidth="1.6" strokeLinecap="round" />
+      </g>
+      <rect y="112" width="360" height="66" fill={grad} />
+      <g className="mochi-waves">
+        {[128, 146, 162].map((y, i) => (
+          <path
+            key={y}
+            d={`M -60 ${y} ${Array.from({ length: 10 }, (_, k) => `q 12 -5 24 0 q 12 5 24 0`).join(" ")}`}
+            transform={`translate(${i * 14} 0)`}
+            fill="none"
+            stroke="#d8f0fb"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            opacity={0.8 - i * 0.15}
+          />
+        ))}
+      </g>
+      <rect y="176" width="360" height="74" fill="#f4e0b4" />
+      <path className="mochi-foam" d="M -20 176 q 15 -6 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 v 6 h -400 z" fill="#ffffff" opacity="0.85" />
+      {/* パラソル */}
+      <g>
+        <path d="M 302 108 L 296 214" stroke="#8a5a3a" strokeWidth="3" strokeLinecap="round" />
+        <path d="M 252 122 Q 300 70 350 112 Z" fill="#ef6f5a" />
+        <path d="M 284 102 Q 300 78 318 96 L 302 108 Z" fill="#fff4e6" />
+        <path d="M 252 122 q 8 -6 16 -2 q 8 -6 17 -3 q 8 -6 17 -2 q 9 -5 17 -2 q 9 -5 16 -1" fill="none" stroke="#c9503d" strokeWidth="1" />
+      </g>
+      {/* 貝がらとヒトデ */}
+      <g transform="translate(64 214)">
+        <path d="M 0 0 C -7 0 -9 -6 -8 -9 C -6 -12 -3 -13 0 -13 C 3 -13 6 -12 8 -9 C 9 -6 7 0 0 0 Z" fill="#f8dccb" stroke="#d3a58a" strokeWidth="0.9" />
+      </g>
+      <path transform="translate(238 222) scale(0.9)" d="M 0 -10 L 3 -3 L 10 -3 L 4 2 L 6 9 L 0 5 L -6 9 L -4 2 L -10 -3 L -3 -3 Z" fill="#f39a6b" stroke="#d27448" strokeWidth="0.8" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+function Festival({ glow }: { glow: string }) {
+  return (
+    <g>
+      {[
+        [40, 26],
+        [120, 14],
+        [210, 34],
+        [320, 20],
+        [270, 52],
+      ].map(([x, y], i) => (
+        <circle key={i} className={`mochi-star ${i % 2 ? "s2" : ""}`} cx={x} cy={y} r="1.3" fill="#fff" />
+      ))}
+      {/* 屋台の影 */}
+      <path d="M 0 176 V 116 h 70 l 14 -14 h 80 l 14 14 V 176 Z" fill="#3c2f57" />
+      <path d="M 180 176 V 112 l 16 -16 h 90 l 16 16 h 58 V 176 Z" fill="#46365f" />
+      <rect x="18" y="128" width="54" height="30" rx="3" fill="#f4b968" opacity="0.85" />
+      <rect x="208" y="122" width="76" height="34" rx="3" fill="#f6c879" opacity="0.85" />
+      <rect y="176" width="360" height="74" fill="#5a4a6e" />
+      <ellipse cx="180" cy="226" rx="150" ry="20" fill="#6c5a80" />
+      {/* ちょうちん */}
+      <g className="mochi-sway-slow">
+        <path d="M -10 38 Q 180 74 370 38" fill="none" stroke="#2b2240" strokeWidth="1.2" />
+        {Array.from({ length: 7 }, (_, i) => {
+          const x = 24 + i * 52;
+          const y = 40 + 34 * (1 - ((x - 180) / 190) ** 2);
+          return (
+            <g key={i} transform={`translate(${x} ${y})`}>
+              <circle r="20" fill={glow} className="mochi-lantern-glow" />
+              <path d="M 0 -6 v 4" stroke="#2b2240" strokeWidth="1.2" />
+              <rect x="-6" y="-2" width="12" height="3" rx="1" fill="#2b2240" />
+              <ellipse cx="0" cy="10" rx="9" ry="10" fill="#ef5a48" />
+              <path d="M -8.5 7 h 17 M -8.5 12 h 17" stroke="#f7a493" strokeWidth="0.9" />
+              <rect x="-6" y="19" width="12" height="3" rx="1" fill="#2b2240" />
+            </g>
+          );
+        })}
+      </g>
+      {/* ほたるのような小さな光 */}
+      {[
+        [60, 190],
+        [140, 170],
+        [250, 186],
+        [320, 166],
+      ].map(([x, y], i) => (
+        <circle key={i} className="mochi-firefly" style={{ animationDelay: `${i * 0.7}s` }} cx={x} cy={y} r="2" fill="#ffe08a" />
+      ))}
+    </g>
+  );
+}
+
 // ---------- 喜んだときの小さなしるし ----------
 
 export type Spark = "heart" | "note" | "z" | "leaf" | "star" | "crumb";

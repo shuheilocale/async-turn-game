@@ -299,6 +299,173 @@
   }
 }
 
+/* ---------- おでかけ先 ---------- */
+
+/* 部屋とおでかけ先が切りかわるとき */
+.mochi-scene {
+  animation: mochi-scene-in 0.5s ease-out;
+}
+
+@keyframes mochi-scene-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* おでかけ先へ、左から跳ねながらやってくる */
+.mochi-walk-in {
+  animation: mochi-walk-in 2.2s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+@keyframes mochi-walk-in {
+  from {
+    transform: translateX(-250px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.mochi-hit.outing .mochi-bob {
+  animation: mochi-hop 0.55s ease-out 6;
+}
+
+.mochi-place-tag {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #3b3142;
+  background: rgb(255 255 255 / 0.85);
+  animation: mochi-note-in 0.4s ease-out;
+}
+
+.mochi-waves {
+  animation: mochi-waves 3.6s linear infinite;
+}
+
+@keyframes mochi-waves {
+  to {
+    transform: translateX(48px);
+  }
+}
+
+.mochi-foam {
+  animation: mochi-foam 2.8s ease-in-out infinite;
+}
+
+@keyframes mochi-foam {
+  50% {
+    transform: translate(-10px, 2px);
+  }
+}
+
+.mochi-gull {
+  animation: mochi-gull 9s linear infinite;
+}
+
+@keyframes mochi-gull {
+  from {
+    transform: translate(-160px, 10px);
+  }
+  50% {
+    transform: translate(40px, -6px);
+  }
+  to {
+    transform: translate(260px, 8px);
+  }
+}
+
+.mochi-flutter {
+  animation: mochi-flutter 6s ease-in-out infinite;
+}
+
+@keyframes mochi-flutter {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(40px, -18px);
+  }
+  50% {
+    transform: translate(90px, 4px);
+  }
+  75% {
+    transform: translate(40px, 16px);
+  }
+}
+
+.mochi-wing {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: mochi-wing 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes mochi-wing {
+  to {
+    transform: scaleX(0.35);
+  }
+}
+
+.mochi-sway-slow {
+  transform-box: view-box;
+  transform-origin: 180px 0;
+  animation: mochi-sway-slow 5s ease-in-out infinite;
+}
+
+@keyframes mochi-sway-slow {
+  0%,
+  100% {
+    transform: rotate(-0.8deg);
+  }
+  50% {
+    transform: rotate(0.8deg);
+  }
+}
+
+.mochi-lantern-glow {
+  animation: mochi-lantern 2.6s ease-in-out infinite;
+}
+
+@keyframes mochi-lantern {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.mochi-firefly {
+  opacity: 0;
+  animation: mochi-firefly 2.8s ease-in-out infinite;
+}
+
+@keyframes mochi-firefly {
+  50% {
+    opacity: 1;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mochi-scene,
+  .mochi-walk-in,
+  .mochi-waves,
+  .mochi-foam,
+  .mochi-gull,
+  .mochi-flutter,
+  .mochi-wing,
+  .mochi-sway-slow,
+  .mochi-firefly {
+    animation: none;
+  }
+  .mochi-firefly {
+    opacity: 0.8;
+  }
+}
+
 /* ---------- もちの動き ---------- */
 
 .mochi-hit {
