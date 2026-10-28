@@ -1,0 +1,446 @@
+/*
+ * ビリヤード。styles.css のあとに読み込まれるので、.stack-sm などの既定値はここで上書きできる
+ */
+.billiards-board.stack-sm {
+  gap: 10px;
+  width: 100%;
+  max-width: 760px;
+  align-items: stretch;
+  container-type: inline-size;
+}
+
+/* ---------- 2 人の組と残りの球 ---------- */
+
+.billiards-players {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.billiards-player {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.billiards-player.turn {
+  border-color: color-mix(in srgb, var(--seat-color) 70%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seat-color) 18%, transparent);
+}
+
+.billiards-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.billiards-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--seat-color);
+}
+
+.billiards-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.billiards-you {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.billiards-tag {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--seat-text);
+  background: color-mix(in srgb, var(--seat-color) 14%, transparent);
+}
+
+.billiards-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-height: 18px;
+  font-size: 0.75rem;
+}
+
+.billiards-gname {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.billiards-mini {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/* 小さな球。ストライプは白地に色の帯 */
+.billiards-ball {
+  --ball: #888;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.35), transparent 55%), var(--ball);
+  box-shadow: inset 0 -1.5px 2px rgb(0 0 0 / 0.25);
+  font-style: normal;
+}
+
+.billiards-ball.stripe {
+  background:
+    radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.35), transparent 55%),
+    linear-gradient(#f6f3ea 0 22%, var(--ball) 22% 78%, #f6f3ea 78%);
+}
+
+.billiards-ball b {
+  display: grid;
+  place-items: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f6f3ea;
+  color: #1a1a1e;
+  font-family: var(--font-num);
+  font-size: 5.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.billiards-ball.gone {
+  opacity: 0.22;
+  filter: grayscale(0.6);
+}
+
+/* ---------- 台 ---------- */
+
+.billiards-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.billiards-table {
+  position: relative;
+  max-width: 100%;
+  border-radius: 16px;
+  box-shadow:
+    0 14px 30px rgb(20 28 48 / 0.22),
+    0 2px 6px rgb(20 28 48 / 0.18);
+}
+
+.billiards-canvas {
+  display: block;
+  border-radius: 16px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ねらっている間は、ドラッグをページのスクロールに使わない */
+.billiards-canvas.aiming {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.billiards-canvas.dragging {
+  cursor: grabbing;
+}
+
+.billiards-canvas:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 3px;
+}
+
+/* 台の上に重ねる小さなボタン（上のレールのまん中。角のポケットにかからないように） */
+.billiards-pill {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: #f4efe6;
+  background: rgb(20 14 10 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.billiards-pill:hover {
+  background: rgb(20 14 10 / 0.7);
+}
+
+.billiards-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 1 打が止まったあとの結果 */
+.billiards-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  max-width: calc(100% - 40px);
+  margin: 0;
+  padding: 7px 14px;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  color: #fff;
+  background: rgb(14 20 18 / 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+  animation: billiards-pop 0.25s ease-out;
+}
+
+.billiards-caption.foul {
+  background: rgb(120 34 30 / 0.82);
+}
+
+@keyframes billiards-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}
+
+/* ---------- 打ち方 ---------- */
+
+.billiards-controls {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "spin power"
+    "spin shoot";
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.billiards-controls.off {
+  opacity: 0.6;
+}
+
+@container (min-width: 600px) {
+  .billiards-controls {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "spin power shoot";
+  }
+}
+
+.billiards-spin {
+  grid-area: spin;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+
+.billiards-spinpad {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #ffffff, #e9e5da 60%, #c9c3b5);
+  box-shadow:
+    inset 0 -3px 6px rgb(0 0 0 / 0.12),
+    0 1px 3px rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.billiards-spinpad.off {
+  cursor: default;
+}
+
+.billiards-spinpad:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.billiards-spinpad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.billiards-spin-cross {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.14);
+  stroke-width: 1;
+}
+
+.billiards-spin-dot {
+  fill: #c8342c;
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+
+.billiards-spin-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.billiards-power {
+  grid-area: power;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.billiards-power label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.billiards-power label b {
+  font-family: var(--font-num);
+  font-size: 0.74rem;
+  color: var(--ink);
+}
+
+.billiards-power input[type="range"] {
+  --p: 50%;
+  width: 100%;
+  height: 28px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  touch-action: pan-y;
+}
+
+.billiards-power input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #6fb59a, #e6b34a 60%, #d9573c) 0 0 / var(--p) 100% no-repeat,
+    color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.billiards-power input[type="range"]::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #6fb59a, #e6b34a 60%, #d9573c) 0 0 / var(--p) 100% no-repeat,
+    color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.billiards-power input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+.billiards-power input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+.billiards-power input[type="range"]:focus {
+  background: transparent;
+}
+
+.billiards-power input[type="range"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--p0) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.billiards-shootrow {
+  grid-area: shoot;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.billiards-shoot {
+  flex: 1;
+  min-height: 46px;
+  min-width: 96px;
+}
+
+.billiards-nudge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 14px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.billiards-nudge svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 横に置いた台では、上のレールのまん中に中央のポケットがあるので、左の角とのあいだに出す */
+.billiards-wrap.is-wide .billiards-pill {
+  left: 25%;
+}
