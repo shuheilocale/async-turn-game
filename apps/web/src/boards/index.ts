@@ -30,6 +30,8 @@ import { StackBoard } from "./StackBoard.tsx";
 import { CurlingBoard } from "./CurlingBoard.tsx";
 import { BilliardsBoard } from "./BilliardsBoard.tsx";
 import { billiardsMovedText } from "./billiards/text.ts";
+import { BadmintonBoard } from "./BadmintonBoard.tsx";
+import { badmintonMovedText } from "./badminton/text.ts";
 import { ArtilleryBoard } from "./ArtilleryBoard.tsx";
 import { PourBoard, PourHardBoard } from "./PourBoard.tsx";
 import { BalloonBoard } from "./BalloonBoard.tsx";
@@ -116,6 +118,7 @@ export const boards: Record<string, BoardUI> = {
   stack: { Board: StackBoard, length: "short", category: "action" },
   curling: { Board: CurlingBoard, length: "medium", category: "action" },
   billiards: { Board: BilliardsBoard, length: "medium", category: "action", movedText: billiardsMovedText },
+  badminton: { Board: BadmintonBoard, length: "medium", category: "action", movedText: badmintonMovedText },
   artillery: { Board: ArtilleryBoard, length: "medium", category: "action" },
   pour: { Board: PourBoard, length: "short", hidden: true, timing: true },
   pourhard: { Board: PourHardBoard, length: "short", hidden: true, timing: true },

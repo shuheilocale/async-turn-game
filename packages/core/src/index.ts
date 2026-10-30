@@ -27,6 +27,7 @@ import { ishin } from "./games/ishin.ts";
 import { stack } from "./games/stack.ts";
 import { curling } from "./games/curling.ts";
 import { billiards } from "./games/billiards.ts";
+import { badminton } from "./games/badminton.ts";
 import { artillery } from "./games/artillery.ts";
 import { pour, pourHard } from "./games/pour.ts";
 import { balloon } from "./games/balloon.ts";
@@ -72,6 +73,7 @@ export * as Ishin from "./games/ishin.ts";
 export * as Stack from "./games/stack.ts";
 export * as Curling from "./games/curling.ts";
 export * as Billiards from "./games/billiards.ts";
+export * as Badminton from "./games/badminton.ts";
 export * as Artillery from "./games/artillery.ts";
 export * as Pour from "./games/pour.ts";
 export * as Balloon from "./games/balloon.ts";
@@ -97,6 +99,7 @@ export const games: Record<string, GameDefinition<any, any>> = {
   [stack.id]: stack,
   [curling.id]: curling,
   [billiards.id]: billiards,
+  [badminton.id]: badminton,
   [artillery.id]: artillery,
   [pour.id]: pour,
   [pourHard.id]: pourHard,

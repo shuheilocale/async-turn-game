@@ -16,6 +16,7 @@ export const gameNames: Record<string, Record<NameLang, string>> = {
   stack: { ja: "いしつみ", en: "Stone Stack", th: "ซ้อนหิน" },
   curling: { ja: "3D カーリング", en: "3D Curling", th: "เคอร์ลิง 3D" },
   billiards: { ja: "ビリヤード", en: "8-Ball Pool", th: "พูล 8 ลูก" },
+  badminton: { ja: "バドミントン", en: "Badminton", th: "แบดมินตัน" },
   artillery: { ja: "たまうちバトル", en: "Cannon Duel", th: "ดวลปืนใหญ่" },
   pour: { ja: "みずそそぎ", en: "Don't Spill", th: "รินน้ำ" },
   pourhard: { ja: "みずそそぎ・ハード", en: "Don't Spill: Hard", th: "รินน้ำ: โหมดยาก" },
